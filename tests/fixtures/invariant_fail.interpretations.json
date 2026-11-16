@@ -1,0 +1,59 @@
+{
+  "dipm_interpretations": 1,
+  "design": "invariant_fail",
+  "key": {
+    "design_source_sha256": "06bd47a09b136e2d67a35b3a663bdd054b37efefcbbb771c2aef40086a3041dc",
+    "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
+    "dipm": "0.0.1"
+  },
+  "prefs": null,
+  "sample_points": [
+    {},
+    {
+      "t": 4.0
+    },
+    {
+      "t": 8.0
+    },
+    {
+      "hole_u": 0.1
+    },
+    {
+      "hole_u": 0.9
+    },
+    {
+      "t": 4.0,
+      "hole_u": 0.1
+    },
+    {
+      "t": 8.0,
+      "hole_u": 0.9
+    }
+  ],
+  "choices": {},
+  "assumptions": [
+    {
+      "id": "H.hole/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "H.hole",
+      "node": "H",
+      "statement": "H.hole: hole extent given explicitly as through(t)",
+      "chosen": "through(t)",
+      "made_by": "author",
+      "rationale": "explicit in the design; not interpreted",
+      "status": "accepted",
+      "sensitivity": "n/a",
+      "sensitivity_detail": "",
+      "readings": [],
+      "alternatives": [],
+      "eliminated": [],
+      "supports": [
+        "H.hole"
+      ]
+    }
+  ],
+  "questions": [],
+  "notices": []
+}

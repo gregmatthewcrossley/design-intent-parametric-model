@@ -27,9 +27,11 @@ word declares its candidate **readings**, and the system decides as follows.
    eliminations and sensitivity).
 6. **Ask only when it matters**: a `Question` only when >= 2 readings survive, they diverge
    within range, and no preference decides.  When the package default is eliminated and
-   another reading survives, a non-blocking "default overridden" `Notice` is raised with
-   high sensitivity: nothing intent-level (e.g. tool access, NOTES TODO 4) has verified
-   the survivor.
+   the chosen survivor **interacts with features the default did not** (its tool touches,
+   or it references, another feature), a non-blocking "default overridden" `Notice` is
+   raised with high sensitivity: nothing intent-level (e.g. tool access, NOTES TODO 4) has
+   verified the survivor.  An elimination for structural impossibility with no extra
+   interaction is an ordinary elimination (NOTES DECISIONS #32).
 7. **Remember answers** in a JSON `Preferences` file, keyed by word + slot + context.
 
 Slots are resolved one at a time in build order, with every other slot at its current
@@ -341,6 +343,7 @@ class _Outcome:
     roles: str | None
     volume: float | None
     slots: tuple
+    touch: dict = field(default_factory=dict)   # feature id -> frozenset of features it interacts with
 
 
 def _summarize(design, b) -> _Outcome:
@@ -352,8 +355,10 @@ def _summarize(design, b) -> _Outcome:
         check = e.invariant or type(e).__name__
         fail = (idx.get(feat, len(design.features)), feat, check, " ".join(str(e.message).split())[:200])
     sig = b.signature
+    touched = b.touched()
+    touch = {r.id: b.interactions(r.id, touched) for r in b.records}
     return _Outcome(fail, sig.VEFRSH if sig else None, sig.roles_geom if sig else None,
-                    sig.volume if sig else None, tuple(b.slots))
+                    sig.volume if sig else None, tuple(b.slots), touch)
 
 
 def sample_points(design) -> list:
@@ -540,12 +545,19 @@ def _analyse(design, u: SlotUse, choices: dict, points: list, prefs: Preferences
                               f"{u.feature}: every reading of {u.word} {u.slot} fails a check; using "
                               f"'{chosen.name}' and the build will fail. " + "; ".join(str(e) for e in eliminated.values())))
     elif pack.name in eliminated and chosen.name != pack.name and made_by != MADE_BY_USER:
-        sens = "high"
-        detail = f"package default overridden; {detail}"
-        notices.append(Notice(u.id, "default_overridden",
-                              f"{u.feature}: package default '{pack.name}' for {u.word} {u.slot} was eliminated "
-                              f"({eliminated[pack.name]}); using '{chosen.name}'. No intent-level check (e.g. tool "
-                              f"access; NOTES TODO 4) has confirmed '{chosen.name}' is what the design means."))
+        # DECISIONS #32: a notice only if the survivor interacts with features the default did not
+        extra = _extra_interactions(outs[chosen.name], outs[pack.name], u.feature)
+        if extra:
+            sens = "high"
+            detail = f"package default overridden; {detail}"
+            names = ", ".join(extra)
+            notices.append(Notice(u.id, "default_overridden",
+                                  f"{u.feature}: package default '{pack.name}' for {u.word} {u.slot} was eliminated "
+                                  f"({eliminated[pack.name]}); using '{chosen.name}', which also interacts with "
+                                  f"{names} (the default did not). No intent-level check (e.g. tool access; NOTES "
+                                  f"TODO 4) has confirmed '{chosen.name}' is what the design means."))
+        else:
+            detail = f"package default eliminated (no extra interaction); {detail}"
     if pref and not pref_ok:
         notices.append(Notice(u.id, "preference_overridden",
                               f"{u.feature}: remembered answer '{pref[0]}' ({pref[1]}) "
@@ -573,6 +585,19 @@ def _analyse(design, u: SlotUse, choices: dict, points: list, prefs: Preferences
                    [r.name for r in survivors if r is not chosen],
                    [asdict(e) for e in eliminated.values()], [u.feature])
     return {"chosen": chosen.name, "assumption": a, "questions": questions, "notices": notices}
+
+
+def _extra_interactions(chosen_outs: list, default_outs: list, feature: str) -> list:
+    """Features the chosen reading's feature interacts with (references or touches with its
+    tool) at some sample point where the default reading's feature does not (DECISIONS #32).
+    When the default never ran its operation (e.g. its placement was impossible), its
+    interactions are just what it resolved before failing, i.e. the features it references."""
+    extra: set = set()
+    for a, d in zip(chosen_outs, default_outs):
+        if a.fail is not None and a.fail[1] == feature:
+            continue
+        extra |= set(a.touch.get(feature, ())) - set(d.touch.get(feature, ()))
+    return sorted(extra)
 
 
 # ---------------------------------------------------------------- lock file

@@ -19,3 +19,12 @@ __pycache__/
 # Packaging / CLI output
 *.egg-info/
 out/
+
+# GUI (gui/): dependencies, build output served by `dipm serve`, test output
+node_modules/
+src/dipm/server/static/
+gui/test-results/
+gui/playwright-report/
+
+# Preferences written by answering questions in fixtures (local state)
+tests/fixtures/*.prefs.json

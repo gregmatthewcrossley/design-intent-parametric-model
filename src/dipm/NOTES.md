@@ -2,7 +2,7 @@
 
 *Written 2026-11-16, unattended. First non-spike code in the repo. Nothing in `docs/`, `spikes/`, `CLAUDE.md` or `README.md` was edited; doc updates are left for the coordinator. Section references (§) are to `docs/dsl.md` unless marked "arch" (`docs/architecture.md`).*
 
-`dipm` ("design-intent parametric model") is a **placeholder name** (DECISIONS #1).
+`dipm` ("design-intent parametric model", pronounced "dip-em") is the project and package name, confirmed by the user on 2026-11-16 (DECISIONS #1).
 
 ---
 
@@ -22,7 +22,9 @@ A design is an ordered list of features plus declared parameters. Feature argume
 | `program.py` | `Design` (params, features, exports, convenience constructors, `use_lock`), `IntentTag`, `Context` (the resolver, which logs every resolution, and `interpret()` for ambiguous slots), `Build` (records, exports, signature, `canonical()`, **`why(sub)`**, `slots`, `interpretation`), `FeatureRecord`. | §1 (tags survive lowering); arch §2, §7 |
 | `interpret.py` | **Interpretations** of ambiguous intent-word slots: `Reading`/`ReadingSet`, elimination by checks over the stability sample points, sensitivity, ranked default, `Assumption`/`Question`/`Notice` records, `Preferences` (remembered answers), the lock file. See §6. | arch §10 item 2, §4.8, §7 |
 | `stability.py` | The stability harness. Snapshots exports, every feature's input resolutions and every ledger tag (cardinality + genealogy), plus VEFRSH and the topology hash. `run()` (one-at-a-time sweep plus corners), `grid_points()`, `edit_test()`. | §5.7; arch §6 edit stability, §8.6 |
-| `report.py`, `cli.py`, `__main__.py` | Human-readable report and the `python -m dipm` CLI. | — |
+| `report.py`, `cli.py`, `__main__.py` | Human-readable report and the `python -m dipm` CLI (`build`, `stability`, `interpret`, `answer`, `serve`). | — |
+| `connections.py` | Intent ⇄ feature ⇄ parameter views for the GUI: parameter dependencies (deep walk of feature arguments), the intent tree derived from tags, connection diagnostics (#34–#36). | docs/gui.md §2 items 4, 9 |
+| `server/` | `dipm serve`: Starlette app (`app.py`), build → JSON (`serialize.py`), deterministic tessellation with face/edge identity (`mesh.py`). The browser frontend lives in `gui/` and builds into `server/static/` (gitignored). | docs/gui.md §5 |
 | `errors.py` | Structured errors: `InvariantError`, `CardinalityError`, `PolicyError`, `InteractionError`, `SketchError`, `KernelError`, `ParameterError`. Each names the feature, its intent tags, the invariant, and expected vs. got. | §4.3 failure classes |
 
 **Where intent lives in a result.** Each `FeatureRecord` holds its intent tags, the core op it ran (`op`), and the intent word it was lowered from (`lowered_from`, e.g. `hole(countersink, through_all)`). It also holds per-instance tags (`k=1 → hole@A.P.2`). `Build.why(face_or_edge)` joins the ledger entry, the record and the event history:
@@ -49,6 +51,7 @@ uv pip install --python .venv/bin/python -e .          # deps pinned to spike 01
 .venv/bin/python -m dipm interpret examples/shelf_bracket.py                   # re-resolve interpretations, write the lock
 .venv/bin/python -m dipm answer examples/shelf_bracket.py <assumption-id> <reading> --prefs prefs.json
 .venv/bin/python examples/shelf_bracket.py                                     # same report, as a script
+.venv/bin/python -m dipm serve examples/shelf_bracket.py                       # web GUI on 127.0.0.1 (build gui/ first)
 
 .venv/bin/python -m pytest -q                                                  # all tests (~25 s)
 .venv/bin/python -m pytest -q tests/test_bracket.py::test_edit_t_5_to_8        # one test
@@ -56,7 +59,7 @@ uv pip install --python .venv/bin/python -e .          # deps pinned to spike 01
 
 The CLI exits 0 on PASS, 1 if any invariant or reference fails (the report says which), and 2 on bad parameters.
 
-Tests: `test_refs.py` (resolution, cardinality, split/merge policies, `edges_between`, draft follow-Generated, IsDeleted distrust), `test_invariants.py` (counting rule, the ΔH/ΔS/volume negative controls, signature, canonical fallback, readable errors), `test_ops.py`, `test_sketch.py`, `test_why.py`, `test_bracket.py` (§8.6 edits, the stability harness, in-process and cross-process determinism), `test_cli.py`, `test_interpret.py` (§6: the bracket's zero-question outcome, elimination, divergence/questions on a C-channel, preferences, explicit bypass, opt-in `between_siblings`, the default-overridden notice on the spike-01 negative control, determinism, lock round trip and staleness, the `interpret`/`answer`/`build` CLI round trip).
+Tests: `test_refs.py` (resolution, cardinality, split/merge policies, `edges_between`, draft follow-Generated, IsDeleted distrust), `test_invariants.py` (counting rule, the ΔH/ΔS/volume negative controls, signature, canonical fallback, readable errors), `test_ops.py`, `test_sketch.py`, `test_why.py`, `test_bracket.py` (§8.6 edits, the stability harness, in-process and cross-process determinism), `test_cli.py`, `test_interpret.py` (§6: the bracket's zero-question outcome, elimination, divergence/questions on a C-channel, preferences, explicit bypass, opt-in `between_siblings`, the default-overridden notice on the spike-01 negative control, determinism, lock round trip and staleness, the `interpret`/`answer`/`build` CLI round trip). `test_connections.py` (intent tree, parameter dependencies, diagnostics) and `test_server.py` (every `dipm serve` endpoint, mesh format and determinism, the answer round trip, failure payloads, reload and WebSocket events). Frontend tests live in `gui/` (`npm test`, `npm run e2e`; see `gui/README.md`).
 
 ## 3. DECISIONS
 
@@ -67,7 +70,7 @@ Items marked **[REVIEW]** are the ones most worth your attention in the morning.
 > - **Questioned:** #8, which led to the general "interpretations" mechanism proposed in `docs/architecture.md` §10 item 2.
 > - **Change requested:** #11. Hole extents should be resolved by the same interpretation mechanism rather than hard-coded per hole.
 
-1. **[REVIEW] Package name `dipm`** is a placeholder ("design-intent parametric model"). Renaming means one directory rename plus the imports and `pyproject.toml`.
+1. **Package name `dipm`**: confirmed 2026-11-16 as the project and package name, pronounced "dip-em" (plain `dip` is taken on PyPI, npm, crates.io and RubyGems). Originally a placeholder ("design-intent parametric model"). Renaming means one directory rename plus the imports and `pyproject.toml`.
 2. **[REVIEW] Embedded Python, design-as-data.** Features are frozen dataclasses with lazy arguments, appended to a `Design` in order. A build re-evaluates them against a parameter dict in a fresh `Context`. I preferred this to a CadQuery-style imperative script that would be re-run, because it keeps the program inspectable: relations vs. literals can be counted, references are listed, and tags are attached. It is not yet a separate textual DSL or a canonical core IR.
 3. **Hierarchical feature ids are prefixed by the intent node** (`R.body`, `C.gusset`, `A.P.holes`, `A.3.cable`, `B.1.screw`, `R.fillet`). They also carry explicit `IntentTag(node, word, note)`s, including the parent node (`wall_mount@A`) and per-instance tags (`A.P.1`, `A.P.2`). Reference strings therefore read `A.P.holes.wall(0)`.
 4. **[REVIEW] Lowering happens inside each intent feature** (`Hole.apply` emits one core boolean cut). It is recorded as `op` + `lowered_from`. There is no separate core-IR pass yet, so "equivalence is decided on the core" (§1) is **not** implemented.
@@ -122,7 +125,7 @@ Items marked **[REVIEW]** are the ones most worth your attention in the morning.
     - **Learned prior:** `set_learned_prior()` is an interface stub only.
     - **`made_by` values:** `pack default` (the prior-1 reading was chosen), `model` (anything else chosen by ranking, e.g. after the default was eliminated), `user preference`, `author`.
     - **Status:** `accepted` for user and author; otherwise `proposed`. `supports` lists the feature.
-28. **[REVIEW] "Default overridden" is a notice, never a question, and applies uniformly.** When the package default is eliminated and another reading survives (and no preference chose), the report shows a `default_overridden` notice and sensitivity is high.
+28. **[REVIEW] "Default overridden" is a notice, never a question, and applies uniformly.** *(Narrowed 2026-11-16 by #32, per the user's review: the notice now fires only when the survivor interacts with features the default did not. The bracket's A.3 elimination is now an ordinary elimination with no notice. Original text kept for the record.)* When the package default is eliminated and another reading survives (and no preference chose), the report shows a `default_overridden` notice and sensitivity is high.
     - **Bracket:** this fires for **A.3** (`face_centroid` lies in the gusset notch, so the "centre inside face" check eliminates it). The bracket therefore shows **0 questions and 1 notice**.
     - **Known gap (spike-01 negative control, `shelf_hole_u=0.4`):** `through_plate` turns blind and is eliminated by ΔH. `through_all` drills through the arm *and the gusset*, passes every invariant, and is chosen; `up_to_next` is identical. Nothing checks whether a screw can actually reach or seat there: that needs intent-level checks such as tool access (TODO 4, checks as first-class objects). Until those exist, this notice is the only signal.
     - The existing negative-control test still builds with the bracket's lock (B.1 = `through_plate`), so ΔH still fails loudly. A new test asserts that re-resolving that variant raises the notice.
@@ -139,6 +142,35 @@ Items marked **[REVIEW]** are the ones most worth your attention in the morning.
     - **Designs opt in** with `d.use_lock(__file__)` (the bracket does); the CLI attaches `<file stem>.interpretations.json` automatically. A Python `Design.build()` with no lock uses **unchecked** ranked defaults, and the report says so.
     - **Coarse key:** any edit to the design file (even a comment) makes the lock stale. A variant built by the same file (`make_design(shelf_hole_u=0.4)`) reuses the lock as-is.
 31. **`interpret` CLI exit code** is 0 even when questions are pending (questions aren't failures). It is 1 only if some slot has no surviving reading.
+
+*Decisions 32–43 were added 2026-11-16 with GUI iteration 1 (`dipm serve`, `gui/`; spec in `docs/gui.md`).*
+
+32. **[REVIEW] "Default overridden" only for extra interaction** (user-approved rule change to #28). The notice is raised only when the chosen survivor **interacts with features the default reading would not have**.
+    - **Interaction set** of a feature at one sample point = the features named by the structural references it resolved (`Build.references`) ∪ the features whose ledger-tagged sub-shapes its operation modified, split, regenerated, merged or deleted (`Build.touched`, from genealogy events). It is computed per build in `interpret._summarize`.
+    - **Extra** = the union over sample points of (chosen's set − default's set), skipping points where the chosen reading itself fails at the slot's feature. If the default never ran its operation (its placement was impossible), its set is just what it resolved before failing: the face it is placed on.
+    - **Bracket A.3:** `face_centroid` is eliminated (centre not on the face); `exposed_region_midpoint`'s tool touches only `R.body`, as the default's reference did → **no notice**, sensitivity graded normally ("none": one survivor), detail "package default eliminated (no extra interaction)". The bracket now has **0 notices**.
+    - **Negative control (`shelf_hole_u=0.4`):** `through_all` touches `C.gusset`; `through_plate` (which ran and went blind) touched only `R.body` → notice, naming `C.gusset`.
+    - **Limits:** geometry read without a reference (#33) does not count as interaction, and `between_siblings` reads sibling holes' centres without a reference, so its coupling is invisible to this rule (it is opt-in). Touching is detected through the ledger, so a tool that meets material *without changing any tagged face* (e.g. ending inside a body) is not an interaction.
+33. **[REVIEW] *Uses* = references + implicit reads.** `Build.uses(f)` is the features `f` resolved references to, plus features whose geometry its lowering read without a reference, logged with `Context.note_read`. `exposed_region_midpoint` logs the features owning the faces that bound its winning chord, so `A.3.cable` uses `C.gusset` (gui.md criterion 9). Reads are kept on `FeatureRecord.reads`, not as `Resolution`s, so stability snapshots are unchanged. `ref_features` maps reference text to feature ids (longest id wins: `A.P.holes.wall(0)` names `A.P.holes`, not `A.P`).
+34. **[REVIEW] Intent tree derivation** (`connections.intent_tree`). Dotted ids give the hierarchy and missing ancestors are created (marked implicit). By convention **`R` is the root** and parents every other top-level id (A, B, C …); a design without `R` gets an implicit one. Siblings sort **named before numbered** (A.P before A.3), then by name or number. **Labels:** `Design.label_intent(node, label)` (new, optional) wins, else the first tag note, else the intent words. The bracket now labels R, A, B, C (its source changed, so its lock was regenerated). **Status** = the worst of the features at or beneath the node: fail > warn (a question or notice on one of its slots) > not built > ok. Each feature is shown as a callout at its *most specific* feature-level nodes (`A.P.holes` at A.P, not at A); instance tags (A.P.1, A.P.2) become instance callouts.
+35. **[REVIEW] Diagnostics** (`connections.diagnostics`).
+    - *No intent:* a feature with no tags.
+    - *Intent with no feature:* a node (e.g. one only labelled) with no feature at or beneath it.
+    - *Serves several intents:* more than one feature-level node after dropping ancestors (`[A.P, A]` → `[A.P]`). Instance tags are not counted.
+    - *Cross-intent dependency:* `f` uses `g` and none of `f`'s nodes is related (equal, ancestor, descendant) to any of `g`'s. This is a prompt to review for false coupling (architecture §5.1), not an error. The bracket shows two, `A.P.holes → C.gusset` (R.c4 driver access) and `A.3.cable → C.gusset` (exposed region), both legitimate; the GUI styles them as info, not warnings.
+36. **Parameter dependencies** are static: a deep walk of each feature's arguments (expressions, dataclass fields, profiles, placements, and closure cells, since `centerline(...).before(...)` segments are closures). `params_all` adds the parameters of everything a feature uses, transitively; selecting `shelf_depth` lights `R.body`, `C.gusset` directly and the other four through uses. The walk cannot see parameters read by plain Python outside lazy expressions (none today).
+37. **[REVIEW] Mesh** (`server/mesh.py`). `BRepMesh_IncrementalMesh` on a **copy** of the solid (meshing in place would put triangulations into the canonical BRep text), single-threaded, linear deflection 0.05 mm, angular 0.2 rad. Face id i / edge id j = position in `Build.faces()` / `Build.edges()`, the same order as the genealogy table. Vertices are per face. `ComputeNormals` ignores face orientation, so normals are negated (and winding flipped) on reversed faces; outward normals are tested. The mesh id is a content hash. Deterministic in-process and across processes (tested); the solid's canonical bytes are unchanged by meshing (tested). Edges are polylines from `GCPnts_TangentialDeflection` with the same deflections.
+38. **[REVIEW] Server behaviour** (`server/app.py`).
+    - Bound to 127.0.0.1 only; if the port is busy it tries the next 19.
+    - **A stale or missing lock never blocks a rebuild:** the old lock's choices (or unchecked defaults) are used at once, interpretations are re-resolved in a background thread, and a second `rebuilt` event follows. This is what keeps "save → rebuilt" under a second (measured ~100 ms end to end for the fixtures; the bracket's re-resolution then takes ~2.5 s).
+    - The server writes the lock **only** for `/api/answer`, exactly as `dipm answer` does (shared `cli.record_answer` + `_interpret_and_write` semantics). Answers go to `--prefs`, else the prefs file the lock records, else `<design stem>.prefs.json`. Its own prefs/lock writes are ignored by the watcher (paths marked as being written, then content hashes).
+    - Watched: the design file, its lock and its prefs (resolved with `realpath`: macOS `/var` → `/private/var` broke matching). Each reload is a fresh import of the design file; **modules the design itself imports are cached by Python and are not reloaded**.
+    - Builds are serialized; parameters persist across reloads while still declared and valid.
+39. **Failure display.** On a failed build the viewport shows the failed build's geometry (if any) with faces *created* by a failing feature in red and faces it only modified lightly tinted, plus the **last good model as a translucent grey ghost** (toggleable). The checks panel, tree dots and a banner show the failure.
+40. **[REVIEW] Frontend toolchain pinned to what runs on Node 20** (the local default is 20.12): Vite 6.4.6, Vitest 4.1.12 (3.x had open advisories), Preact 10.29.8 (not the month-old 11), TypeScript 5.9.3 (not 7), three 0.187.0, @preact/signals 2.11.4, Playwright 1.65.1, @types/node 20.19.43. Vite 8 and Vitest 5 need Node ≥ 20.19/22.12.
+41. **Fonts are vendored** in `gui/public/fonts/` from Google Fonts (latin, latin-ext and, for Plex Sans, greek subsets, so ΔH/ΔS render in Plex), with the three SIL OFL 1.1 license files from `google/fonts`.
+42. **Test hook:** the page exposes `window.__dipm = {viewer, build}` so Playwright can find a visible point of a face and read face display states. Harmless, but it is a global.
+43. **Python test client:** Starlette 1.10 deprecates `httpx` for `TestClient`, so the test extra pins `httpx2==2.16.2`.
 
 ## 4. Implemented vs. TODO
 
@@ -195,7 +227,7 @@ Items marked **[REVIEW]** are the ones most worth your attention in the morning.
 3. **It compares the survivors** (VEFRSH, role-geometry fingerprint, volume) and grades the sensitivity (#25).
 4. **It ranks** (#27), **records an assumption** (§4.8 fields: id, statement, chosen, alternatives, eliminated, sensitivity, made_by, rationale, status, supports), and **asks a question only if** ≥ 2 readings survive, they diverge, and no preference decides.
 5. **Notices** report decisions the system made automatically that a reviewer should still see:
-   - `default_overridden` (#28);
+   - `default_overridden` (#28, narrowed by #32: only when the survivor interacts with features the default did not);
    - `preference_overridden`;
    - `undecidable` (every reading fails identically: the design is broken there for another reason);
    - `no_survivor`;
@@ -207,12 +239,12 @@ Items marked **[REVIEW]** are the ones most worth your attention in the morning.
 | Slot | Chosen | Eliminated | Survivors / sensitivity |
 |---|---|---|---|
 | `A.P.holes/hole.extent` | `through_plate` (pack default) | none | `through_all`, `up_to_next` identical: none |
-| `A.3.cable/centered_on.point` | `exposed_region_midpoint` (model) | `face_centroid`: "centre inside face" at 9/9 points (it lies in the gusset notch) | only one: **high** (default overridden; notice) |
+| `A.3.cable/centered_on.point` | `exposed_region_midpoint` (model) | `face_centroid`: "centre inside face" at 9/9 points (it lies in the gusset notch) | only one: none (an ordinary elimination since #32; no notice) |
 | `A.3.cable/hole.extent` | `through_plate` | none | identical: none |
 | `B.1.screw/hole.extent` | `through_plate` | none | identical: none |
 
-That gives **0 questions and 1 notice** (A.3, default overridden). The cable hole lands at z = 32.5 at the defaults, exactly where DECISIONS #8 put it by hand, and the existing layout and §8.6 edit tests pass unchanged. The extents being equivalent to the old hand-written choices (`THROUGH_ALL` for A.P/A.3, `through(t)` for B.1) is what sensitivity "none" means.
+That gives **0 questions and 0 notices** (since #32; it was 1 notice, A.3 default overridden, before). The cable hole lands at z = 32.5 at the defaults, exactly where DECISIONS #8 put it by hand, and the existing layout and §8.6 edit tests pass unchanged. The extents being equivalent to the old hand-written choices (`THROUGH_ALL` for A.P/A.3, `through(t)` for B.1) is what sensitivity "none" means.
 
-**Spike-01 negative control** (`shelf_hole_u=0.4`, re-resolved): `through_plate` is eliminated by ΔH at 9/9 points. `through_all` is chosen (`up_to_next` is identical), and a `default_overridden` notice is raised with high sensitivity; there are no questions. This is the documented gap (#28, TODO 4).
+**Spike-01 negative control** (`shelf_hole_u=0.4`, re-resolved): `through_plate` is eliminated by ΔH at 9/9 points. `through_all` is chosen (`up_to_next` is identical), and a `default_overridden` notice is raised with high sensitivity, naming the extra interaction (`through_all` also cuts `C.gusset`, which `through_plate` never touched); there are no questions. This is the documented gap (#28, #32, TODO 4).
 
 **Tests changed because behaviour legitimately changed:** two `lowered_from` strings in `test_invariants.py::test_blind_hole_caught_by_delta_h_on_bracket` and `test_why.py::test_why_countersink_names_pattern_instance` now read `through_plate` instead of `through` and `through_all`. No other existing test was edited.

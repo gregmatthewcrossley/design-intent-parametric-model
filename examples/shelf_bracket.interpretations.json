@@ -2,7 +2,7 @@
   "dipm_interpretations": 1,
   "design": "shelf_bracket",
   "key": {
-    "design_source_sha256": "609cb7babbc017ff1a0fadf2f614d57b1da849a8b90e74a84ae1aaada499957b",
+    "design_source_sha256": "8f9a16baa3d7dc630b90d6b527e343e650838d7dbac7c58618f5775641c98c11",
     "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
     "dipm": "0.0.1"
@@ -82,8 +82,8 @@
       "made_by": "model",
       "rationale": "package default 'face_centroid' eliminated; next by prior/simplicity: the middle of the face's exposed region: the longest material chord through its bounding centre, bridging holes but stopped by material attached to the face",
       "status": "proposed",
-      "sensitivity": "high",
-      "sensitivity_detail": "package default overridden; only one reading survives",
+      "sensitivity": "none",
+      "sensitivity_detail": "package default eliminated (no extra interaction); only one reading survives",
       "readings": [
         "face_centroid",
         "exposed_region_midpoint"
@@ -160,12 +160,5 @@
     }
   ],
   "questions": [],
-  "notices": [
-    {
-      "id": "A.3.cable/centered_on.point",
-      "kind": "default_overridden",
-      "text": "A.3.cable: package default 'face_centroid' for centered_on point was eliminated (face_centroid: fails relation: centre inside face at A.3.cable at (defaults) (9/9 points): hole instance 0: centre (0, 5, 70.4122) is not inside face R.body.side(mount)); using 'exposed_region_midpoint'. No intent-level check (e.g. tool access; NOTES TODO 4) has confirmed 'exposed_region_midpoint' is what the design means.",
-      "sensitivity": "high"
-    }
-  ]
+  "notices": []
 }

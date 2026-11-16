@@ -5,6 +5,7 @@
   python -m dipm stability FILE
   python -m dipm interpret FILE [--prefs P] [--lock L] [--no-write]
   python -m dipm answer FILE ASSUMPTION_ID READING --prefs P [--scope node|design|house] [--note TEXT]
+  python -m dipm serve FILE [--port N] [--no-open] [--prefs P]     (web GUI on 127.0.0.1; docs/gui.md)
 
 The design file must define a module-level `design` (a `dipm.Design`) or a `make_design()`.
 Interpretations (architecture §10 item 2): `build` reads `<FILE stem>.interpretations.json`
@@ -70,6 +71,40 @@ def _interpret_and_write(design: Design, path: str, write: bool) -> int:
     return 1 if any(n.kind == "no_survivor" for n in interp.notices) else 0
 
 
+class AnswerError(ValueError):
+    """Bad assumption id or reading for `answer` (CLI exit code 2, HTTP 400)."""
+
+
+def record_answer(design: Design, path: str, assumption_id: str, reading: str, prefs_path: str,
+                  scope: str = "node", note: str = "", lock: str | None = None) -> tuple:
+    """Record a designer's answer as a preference (`dipm answer` and `POST /api/answer` share this).
+
+    Attaches the lock with `prefs_path`, finds the assumption, checks the reading is offered,
+    writes the preference at `scope` (node | design | house).  Returns (key, warning or "").
+    Re-resolving and rewriting the lock is left to the caller (`_interpret_and_write`)."""
+    from .interpret import Preferences
+    _attach_lock(design, path, lock, prefs_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        interp = design.ensure_interpretations()
+    try:
+        asm = interp.assumption(assumption_id)
+    except KeyError as e:
+        raise AnswerError(e.args[0]) from None
+    if reading not in asm.readings:
+        raise AnswerError(f"{reading!r} is not a reading of {asm.id}; offered: {asm.readings}")
+    if scope not in ("node", "design", "house"):
+        raise AnswerError(f"scope must be node|design|house, got {scope!r}")
+    prefs = Preferences.load(prefs_path)
+    ctx = {"node": f"{design.name}:{asm.node}", "design": f"{design.name}:*", "house": "*"}[scope]
+    key = prefs.record(asm.word, asm.slot, ctx, reading, note)
+    prefs.save()
+    warn = ""
+    if any(e["reading"] == reading for e in asm.eliminated):
+        warn = f"{reading!r} is currently eliminated by a check; it will be overridden"
+    return key, warn
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="dipm", description="design-intent parametric model: v0 DSL core")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -100,8 +135,16 @@ def main(argv=None) -> int:
     an.add_argument("--note", default="", help="why (kept in the preferences file)")
     an.add_argument("--lock", help="lock file to update")
     an.add_argument("--no-resolve", action="store_true", help="only record the preference")
+    sv = sub.add_parser("serve", help="serve the web GUI for a design on 127.0.0.1 (docs/gui.md)")
+    sv.add_argument("file")
+    sv.add_argument("--port", type=int, default=8765, help="first port to try (default 8765)")
+    sv.add_argument("--no-open", action="store_true", help="do not open a browser")
+    sv.add_argument("--prefs", help="preferences JSON for answers (default: the lock's, else <file stem>.prefs.json)")
     a = ap.parse_args(argv)
 
+    if a.cmd == "serve":
+        from .server.app import serve
+        return serve(a.file, a.port, not a.no_open, a.prefs)
     design = load_design(a.file)
     if a.cmd == "build":
         _attach_lock(design, a.file, a.lock, a.prefs)
@@ -134,26 +177,14 @@ def main(argv=None) -> int:
         _attach_lock(design, a.file, a.lock, a.prefs)
         return _interpret_and_write(design, a.file, not a.no_write)
     if a.cmd == "answer":
-        from .interpret import Preferences
-        _attach_lock(design, a.file, a.lock, a.prefs)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            interp = design.ensure_interpretations()
         try:
-            asm = interp.assumption(a.assumption_id)
-        except KeyError as e:
-            print(e.args[0], file=sys.stderr)
+            key, warn = record_answer(design, a.file, a.assumption_id, a.reading, a.prefs, a.scope, a.note, a.lock)
+        except AnswerError as e:
+            print(e, file=sys.stderr)
             return 2
-        if a.reading not in asm.readings:
-            print(f"{a.reading!r} is not a reading of {asm.id}; offered: {asm.readings}", file=sys.stderr)
-            return 2
-        prefs = Preferences.load(a.prefs)
-        ctx = {"node": f"{design.name}:{asm.node}", "design": f"{design.name}:*", "house": "*"}[a.scope]
-        key = prefs.record(asm.word, asm.slot, ctx, a.reading, a.note)
-        prefs.save()
         print(f"recorded {key} = {a.reading} in {a.prefs}")
-        if any(e["reading"] == a.reading for e in asm.eliminated):
-            print(f"warning: {a.reading!r} is currently eliminated by a check; it will be overridden", file=sys.stderr)
+        if warn:
+            print(f"warning: {warn}", file=sys.stderr)
         if a.no_resolve:
             return 0
         return _interpret_and_write(design, a.file, True)

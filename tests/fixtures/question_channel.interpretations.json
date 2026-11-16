@@ -1,0 +1,68 @@
+{
+  "dipm_interpretations": 1,
+  "design": "channel_question",
+  "key": {
+    "design_source_sha256": "eb0f32c857de26a7cf6e852edcd42406fddbf7f9d7caa15eb2f7ad2c68b3bc75",
+    "prefs_sha256": "dfced4c3af549bcdb4825df7e3965bfc305ac691ef88166e1edd886a59d740e8",
+    "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
+    "dipm": "0.0.1"
+  },
+  "prefs": "question_channel.prefs.json",
+  "sample_points": [
+    {},
+    {
+      "g": 6.0
+    },
+    {
+      "g": 12.0
+    },
+    {
+      "hole_u": 0.4
+    },
+    {
+      "hole_u": 0.9
+    },
+    {
+      "g": 6.0,
+      "hole_u": 0.4
+    },
+    {
+      "g": 12.0,
+      "hole_u": 0.9
+    }
+  ],
+  "choices": {
+    "D.drain/hole.extent": "through_plate"
+  },
+  "assumptions": [
+    {
+      "id": "D.drain/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "D.drain",
+      "node": "D",
+      "statement": "D.drain: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
+      "chosen": "through_plate",
+      "made_by": "user preference",
+      "rationale": "remembered answer (hole.extent@channel_question:D)",
+      "status": "accepted",
+      "sensitivity": "high",
+      "sensitivity_detail": "survivors differ at 7/7 points, max |ΔV|/V = 0.00489, topology differs",
+      "readings": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "alternatives": [
+        "through_all",
+        "up_to_next"
+      ],
+      "eliminated": [],
+      "supports": [
+        "D.drain"
+      ]
+    }
+  ],
+  "questions": [],
+  "notices": []
+}

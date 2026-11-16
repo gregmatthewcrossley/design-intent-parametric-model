@@ -225,10 +225,31 @@ def exposed_region_midpoint(ctx, face) -> Vec3:
             chords.append((s0, s1))
         for s0, s1 in chords:
             if best is None or (s1 - s0) > best[0] + 1e-9:
-                best = (s1 - s0, start + a * (0.5 * (s0 + s1)))
+                best = (s1 - s0, start + a * (0.5 * (s0 + s1)), (start + a * s0, start + a * s1))
     if best is None:
         raise SketchError("exposed_region_midpoint: the face has no material chord through its centre")
+    ctx.note_read("exposed region bounded by", _features_bounding(ctx, face, best[2]))
     return best[1]
+
+
+def _features_bounding(ctx, face, points) -> list:
+    """Features that made the faces meeting `face` at the given boundary points (what bounds a
+    chord of the face).  Deterministic: edges in map order, tags sorted."""
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex
+    out = []
+    edges = K.subshapes(face, K.KINDS["edge"])
+    for p in points:
+        v = BRepBuilderAPI_MakeVertex(p.pnt()).Vertex()
+        for e in edges:
+            if K.distance(v, e) > 1e-5:
+                continue
+            for g in K.faces_of_edge(ctx.shape, e):
+                if g.IsSame(face):
+                    continue
+                for t in sorted({en.tag for en in ctx.ledger.who(g)}):
+                    if t.feature not in out:
+                        out.append(t.feature)
+    return out
 
 
 def between_siblings(ctx, face_ref) -> Vec3:

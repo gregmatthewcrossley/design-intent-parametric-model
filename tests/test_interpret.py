@@ -58,8 +58,10 @@ def test_bracket_zero_questions_and_expected_choices(bracket_interp):
     assert e["reading"] == "face_centroid" and e["feature"] == "A.3.cable"
     assert e["check"] == "relation: centre inside face" and e["failed_points"] == e["of_points"] == 9
     assert "between_siblings" not in c.readings      # opt-in only
-    (n,) = it.notices                                # default overridden: visible, not a question
-    assert n.kind == "default_overridden" and n.id == "A.3.cable/centered_on.point" and c.sensitivity == "high"
+    # DECISIONS #32: face_centroid is structurally impossible (not on the face) and the survivor's
+    # tool meets nothing the default would not have: an ordinary elimination, no notice
+    assert it.notices == [] and c.sensitivity == "none"
+    assert "no extra interaction" in c.sensitivity_detail
 
 
 def test_committed_lock_matches_a_fresh_resolution(bracket, bracket_interp):
@@ -78,8 +80,8 @@ def test_resolution_is_deterministic(bracket, bracket_interp):
 
 def test_report_has_interpretations_section(bracket_build):
     out = build_report(bracket_build)
-    assert "Interpretations (4 slot(s), 0 question(s), 1 notice(s); lock" in out
-    assert "eliminated face_centroid" in out and "NOTICE [default_overridden]" in out
+    assert "Interpretations (4 slot(s), 0 question(s), 0 notice(s); lock" in out
+    assert "eliminated face_centroid" in out and "NOTICE" not in out
 
 
 def test_default_overridden_notice_on_spike01_negative_control(bracket_mod, bracket):
@@ -95,6 +97,7 @@ def test_default_overridden_notice_on_spike01_negative_control(bracket_mod, brac
     assert b1.alternatives == ["up_to_next"]
     notes = [n for n in it.notices if n.id == "B.1.screw/hole.extent"]
     assert [n.kind for n in notes] == ["default_overridden"] and "tool" in notes[0].text
+    assert "also interacts with C.gusset" in notes[0].text   # DECISIONS #32: the extra interaction is named
     assert it.questions == []                         # survivors agree: not a question
 
 
@@ -276,3 +279,22 @@ def test_interpretation_json_has_assumption_fields(bracket_interp):
               "status", "supports"):
         assert k in a, k
     assert Interpretation.from_json(bracket_interp.to_json()).choices == bracket_interp.choices
+
+
+def test_interactions_and_uses_on_the_bracket(bracket_build):
+    """What each feature references, reads and touches (DECISIONS #32, #33)."""
+    b = bracket_build
+    touched = b.touched()
+    assert sorted(touched["B.1.screw"]) == ["R.body"] and sorted(touched["C.gusset"]) == ["R.body"]
+    assert b.references("A.P.holes") == ["R.body", "C.gusset"]
+    assert b.references("A.3.cable") == ["R.body"]
+    assert b.uses("A.3.cable") == ["R.body", "C.gusset"]        # the exposed region is bounded by the gusset
+    assert b.interactions("A.3.cable") == frozenset({"R.body"})
+
+
+def test_ref_features_longest_id_wins():
+    from dipm.program import ref_features
+    ids = ["A.P", "A.P.holes", "R.body", "C.gusset"]
+    assert ref_features("A.P.holes.wall(0)", ids) == ["A.P.holes"]
+    assert ref_features("edges_between(R.body.side(a), C.gusset.side(b))", ids) == ["R.body", "C.gusset"]
+    assert ref_features("R.fillet.blend(R.body.lateral_edge(inner))", ids + ["R.fillet"]) == ["R.fillet", "R.body"]

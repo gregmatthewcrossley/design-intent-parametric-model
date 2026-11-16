@@ -1,0 +1,110 @@
+{
+  "dipm_interpretations": 1,
+  "design": "diagnostics",
+  "key": {
+    "design_source_sha256": "dde0e8829f832e0ba599e4b106e4c047521deac0f8479a12e53b59d90cd8caa9",
+    "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
+    "dipm": "0.0.1"
+  },
+  "prefs": null,
+  "sample_points": [
+    {},
+    {
+      "t": 3.0
+    },
+    {
+      "t": 8.0
+    }
+  ],
+  "choices": {
+    "A.1.shared/hole.extent": "through_plate",
+    "X.untagged/hole.extent": "through_plate",
+    "D.1.drain/hole.extent": "through_plate"
+  },
+  "assumptions": [
+    {
+      "id": "A.1.shared/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "A.1.shared",
+      "node": "A.1",
+      "statement": "A.1.shared: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
+      "chosen": "through_plate",
+      "made_by": "pack default",
+      "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+      "status": "proposed",
+      "sensitivity": "none",
+      "sensitivity_detail": "survivors identical at every sample point",
+      "readings": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "alternatives": [
+        "through_all",
+        "up_to_next"
+      ],
+      "eliminated": [],
+      "supports": [
+        "A.1.shared"
+      ]
+    },
+    {
+      "id": "X.untagged/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "X.untagged",
+      "node": "X.untagged",
+      "statement": "X.untagged: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
+      "chosen": "through_plate",
+      "made_by": "pack default",
+      "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+      "status": "proposed",
+      "sensitivity": "none",
+      "sensitivity_detail": "survivors identical at every sample point",
+      "readings": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "alternatives": [
+        "through_all",
+        "up_to_next"
+      ],
+      "eliminated": [],
+      "supports": [
+        "X.untagged"
+      ]
+    },
+    {
+      "id": "D.1.drain/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "D.1.drain",
+      "node": "D.1",
+      "statement": "D.1.drain: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
+      "chosen": "through_plate",
+      "made_by": "pack default",
+      "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+      "status": "proposed",
+      "sensitivity": "none",
+      "sensitivity_detail": "survivors identical at every sample point",
+      "readings": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "alternatives": [
+        "through_all",
+        "up_to_next"
+      ],
+      "eliminated": [],
+      "supports": [
+        "D.1.drain"
+      ]
+    }
+  ],
+  "questions": [],
+  "notices": []
+}

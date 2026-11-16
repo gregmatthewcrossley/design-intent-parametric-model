@@ -17,6 +17,7 @@ intent tags survive lowering), §5 (invariants after every feature).
 from __future__ import annotations
 
 import os
+import re
 import time
 from dataclasses import dataclass, field
 
@@ -50,6 +51,27 @@ def _tags(tags) -> tuple:
     if isinstance(tags, IntentTag):
         return (tags,)
     return tuple(tags)
+
+
+def ref_features(ref_text: str, feature_ids) -> list:
+    """Feature ids named in a reference's text, in order of first appearance.
+
+    `R.body.side(mount)` -> ["R.body"]; `edges_between(R.body.side(a), C.gusset.side(b))` ->
+    ["R.body", "C.gusset"].  Ids contain dots, so the longest id wins at each position
+    (`A.P.holes.wall(0)` names A.P.holes, not A.P)."""
+    found, taken = [], [False] * len(ref_text)
+    for fid in sorted(set(feature_ids), key=lambda f: (-len(f), f)):
+        for m in re.finditer(r"(?<![\w.])" + re.escape(fid) + r"(?=\.)", ref_text):
+            if any(taken[m.start():m.end()]):
+                continue
+            for i in range(m.start(), m.end()):
+                taken[i] = True
+            found.append((m.start(), fid))
+    out = []
+    for _, fid in sorted(found):
+        if fid not in out:
+            out.append(fid)
+    return out
 
 
 # ---------------------------------------------------------------- evaluation context
@@ -86,6 +108,15 @@ class Context:
         self.resolutions: list[Resolution] = []
         self.hole_tools: list = []        # (feature_id, instance k, tool shape, node) for interaction checks
         self.notes: list[str] = []
+        self.reads: list = []             # (feature id, description, features) geometry read without a reference
+
+    def note_read(self, desc: str, features) -> None:
+        """Log that the current feature's lowering read geometry made by `features` without
+        resolving a structural reference (e.g. the exposed region of a face is bounded by
+        the gusset).  These are dependencies (`Build.uses`) but not references."""
+        feats = tuple(f for f in dict.fromkeys(features) if f != self.current_feature)
+        if feats:
+            self.reads.append((self.current_feature, desc, feats))
 
     def interpret(self, reading_set, explicit: str | None = None, consider=(), key: str = ""):
         """Which reading of an ambiguous intent-word slot to lower (architecture §10.2).
@@ -128,6 +159,7 @@ class FeatureRecord:
     checks: FeatureChecks | None = None
     expect: object = None
     inputs: list = field(default_factory=list)   # Resolutions made while evaluating this feature
+    reads: list = field(default_factory=list)    # (description, features) geometry read without a reference
     error: DipmError | None = None
     ms: float = 0.0
     byte_deterministic: bool = True
@@ -243,6 +275,48 @@ class Build:
             w.derived_from = [self.why(f) for f in K.faces_of_edge(self.shape, sub)]
         return w
 
+    # feature interactions ------------------------------------------------------------
+    def references(self, fid: str) -> list:
+        """Features whose structural references `fid` resolved while it was evaluated, in
+        order of first use; the feature itself is excluded."""
+        ids = [r.id for r in self.records]
+        out = []
+        for res in self.record(fid).inputs:
+            for f in ref_features(res.ref, ids):
+                if f != fid and f not in out:
+                    out.append(f)
+        return out
+
+    def uses(self, fid: str) -> list:
+        """Every feature `fid` depends on: its resolved references, then geometry its lowering
+        read without a reference (`Context.note_read`, e.g. an exposed region bounded by the
+        gusset).  This is the *uses* relation the GUI draws (docs/gui.md §2 item 9)."""
+        out = self.references(fid)
+        for _desc, feats in self.record(fid).reads:
+            for f in feats:
+                if f != fid and f not in out:
+                    out.append(f)
+        return out
+
+    def touched(self) -> dict:
+        """feature id -> set of *other* features whose tagged sub-shapes that feature's
+        operation modified, split, regenerated, merged or deleted (from the ledger's
+        genealogy events).  This is what the feature's tool actually met."""
+        out: dict = {r.id: set() for r in self.records}
+        gens = [(e.tag.feature, e.genealogy) for e in self.ledger.items]
+        gens += [(t.feature, gen + ((op, "deleted"),)) for t, op, gen in self.ledger.deleted]
+        for owner, gen in gens:
+            for op, _ev in gen:
+                if op != owner:
+                    out.setdefault(op, set()).add(owner)
+        return out
+
+    def interactions(self, fid: str, touched: dict | None = None) -> frozenset:
+        """Everything `fid` interacts with: the features it references plus the features its
+        operation touched (NOTES DECISIONS #32)."""
+        t = (touched if touched is not None else self.touched()).get(fid, set())
+        return frozenset(set(self.references(fid)) | t)
+
     def faces(self) -> list:
         return K.subshapes(self.shape, K.KINDS["face"])
 
@@ -281,6 +355,13 @@ class Design:
         self.lock = None                            # interpret.LockSpec
         self.prefs = None                           # interpret.Preferences used for resolution
         self._interp_source = ""
+        self.intent_labels: dict = {}               # intent node id -> label (optional; see label_intent)
+
+    def label_intent(self, node: str, label: str) -> "Design":
+        """Name an intent-tree node for display (docs/gui.md §2 item 4).  Optional: without it
+        the label comes from the node's tag notes, then its intent words."""
+        self.intent_labels[node] = label
+        return self
 
     # interpretations -------------------------------------------------------------
     def use_lock(self, design_file: str, lock: str | None = None, prefs: str | None = None) -> "Design":
@@ -436,6 +517,7 @@ class Design:
                     e.args = (e.render(),)
                 rec.error = e
                 rec.inputs = ctx.resolutions[n_res:]
+                rec.reads = [(d_, f_) for fid_, d_, f_ in ctx.reads if fid_ == f.id]
                 errors.append(e)
                 if on_fail == "raise":
                     raise
@@ -454,6 +536,7 @@ class Design:
             rec.detail = dict(out.detail)
             rec.expect = out.expect
             rec.inputs = ctx.resolutions[n_res:]
+            rec.reads = [(d_, f_) for fid_, d_, f_ in ctx.reads if fid_ == f.id]
             prev = records[-2].checks if len(records) > 1 else None
             rec.checks = run_feature_invariants(f.id, before, out.shape, out.expect, prev)
             rec.ms = (time.perf_counter() - t0) * 1000
