@@ -14,6 +14,11 @@
 
 During consolidation the bibliographic data of key disputed references was re-checked against Crossref, and the DOIs in the reference list were resolved there.
 
+> **Corrections (2026-11-16).** Errata from the fresh-eyes review ([`Fresh eyes review.md`](Fresh%20eyes%20review.md), MATH-01, MATH-02). The body below is left as written.
+>
+> - **Laman (§5.3, §7.2 item 5).** Laman / Pollaczek-Geiringer counting characterizes generic rigidity of 2D *bar-joint* frameworks, i.e. distance constraints only. It does not cover CAD sketches, which mix distance with angle, incidence, parallelism and tangency and are non-generic by design. Bouma et al.'s normalization to distance + angle does not restore the theorem. Mixed direction–length frameworks have their own counts (Servatius & Whiteley, *SIAM J. Discrete Math.* 12(1), 1999). Use structural counting only as a heuristic, and numeric Jacobian rank at a witness configuration (Michelucci & Foufou, *CAD* 2006) as the source of truth. "Laman-style counting" in §7.2 should be read that way. See [`docs/dsl.md` §5.5](../docs/dsl.md#5-invariants-checked-on-every-compiled-solution).
+> - **Euler–Poincaré (§3.7 item 1c, §7.2 item 2).** As implemented in dipm, H is solved from the formula, not measured. The check "holds with an integer H ≥ 0" can then only fail when V − E + F − R is odd or H < 0: it is a parity and integrality test. The diagnostic power is in the per-feature ΔH/ΔS assertions (§3.7 item 2), which compare against an independent expectation. A real genus check would compute H independently, e.g. via the first Betti number.
+
 ---
 
 ## 1. Executive summary

@@ -9,16 +9,18 @@ A running list of threads worth pulling on. Each entry says why it matters, what
 ## 1. Mathematical foundations of the DSL — primary sources, with a focus on B-rep topology and Euler operators
 
 > **Status (2026-11-15):** first research pass done. See [`reports/DSL mathematical foundations.md`](../reports/DSL%20mathematical%20foundations.md). Open follow-ups: read Mäntylä (1984) for the exact completeness theorem; calibrate the Euler–Poincaré check on OpenCascade primitives (seam and degenerate edges).
+>
+> **Corrections (2026-11-16, fresh-eyes review):** Laman covers 2D bar-joint (distance-only) frameworks, not CAD sketches with angles, tangency and incidence; see [`dsl.md` §5.5](dsl.md#5-invariants-checked-on-every-compiled-solution). The Euler check as implemented is a parity test; the per-feature ΔH/ΔS contracts do the real work. r-set validity does not imply manifoldness. Cartan–Dieudonné and PGA have no operational role yet. See the errata at the top of the report.
 
-**Why.** The DSL plan has a small, provable *core* layer under a rich *intent* layer. The minimality and completeness results cited in conversation (Mohr–Mascheroni, Poncelet–Steiner, Tarski/Pieri, Laman, Cartan–Dieudonné, Requicha's r-sets, Euler operators) came from background knowledge, not a research pass. They need checking against primary sources before the core is built on them.
+**Why.** The DSL plan has a small, theoretically grounded *core* layer under a rich *intent* layer. The minimality and completeness results cited in conversation (Mohr–Mascheroni, Poncelet–Steiner, Tarski/Pieri, Laman, Cartan–Dieudonné, Requicha's r-sets, Euler operators) came from background knowledge, not a research pass. They need checking against primary sources before the core is built on them.
 
-**Main focus: B-rep topology and Euler operators.** These are the closest thing to a proven minimal, orthogonal, complete operator set in solid modeling.
+**Main focus: B-rep topology and Euler operators.** These are the closest thing to a proven minimal, orthogonal, complete operator set in solid modeling, but for manifold *topology* only, not for designs or geometry.
 
 - What exactly do they guarantee: completeness (every valid topology reachable), independence, closure under inverses? For which class of solids (manifold only? with holes/genus? with inner loops)?
 - The Euler–Poincaré formula and its variables (V, E, F, loops, shells, genus): how the five-operator basis follows from it, and what changes for non-manifold topology (e.g. Weiler's radial-edge structure).
 - What they offer us *in practice*:
   - as a **validity invariant** checked on every compiled solution
-  - as a **canonical topological description** for comparing solutions, deduplicating data, and defining brevity
+  - as a **topological description** for comparing solutions, deduplicating data, and defining brevity (counts and WL hashes are pre-filters, not canonical; exact equality needs graph canonical labelling such as nauty)
   - as the substrate for **persistent naming**, i.e. stable references to faces and edges across rebuilds
   - as a possible **training or tokenization target**, e.g. for the reverse-engineering (mesh → history) direction
 - How commercial kernels (Parasolid, ACIS, OpenCascade) use Euler operators or their equivalents internally today.
@@ -27,7 +29,7 @@ A running list of threads worth pulling on. Each entry says why it matters, what
 **Also verify:**
 - **Requicha (1980):** r-sets, regularized Booleans, and the properties of a representation (validity, completeness, uniqueness).
 - **Tarski, Pieri and Gupta:** minimal primitives and independence for Euclidean geometry.
-- **Laman's theorem:** 2D rigidity, the status of the 3D case, and what modern geometric constraint solvers actually rely on.
+- **Laman's theorem:** 2D rigidity of bar-joint (distance-only) frameworks, the status of the 3D case, and what modern geometric constraint solvers actually rely on (answer so far: decomposition, DOF analysis and numeric rank checks, not Laman; see [`dsl.md` §5.5](dsl.md#5-invariants-checked-on-every-compiled-solution)).
 - **Cartan–Dieudonné:** reflections generating all isometries, and whether that suggests an elegant transform/pattern core.
 - **Mohr–Mascheroni and Poncelet–Steiner:** probably inspiration only.
 - **F-rep / Rvachev R-functions:** as an alternative core, and what we'd lose for B-rep export.
@@ -113,3 +115,19 @@ This connects to the rule/human packs, the solution library (architecture §3.3)
 
 **Start with:** the opencascade.js docs and repo; OCCT's WebAssembly build docs; the WebAssembly spec's determinism notes; the Pyodide package list; the manifold-3d npm package; the wasmtime docs.
 
+
+---
+
+## 5. Prior art to read properly: semantic features, valid ranges, KBE, design rationale
+
+> **Status (2026-11-16):** citations collected and checked; papers not yet read. Added after the fresh-eyes review (NOV-01..03, ISS-05). The list, and what is and isn't new in dipm, is in [`architecture.md` §1.1](architecture.md#11-prior-art-and-whats-actually-new).
+
+**Why.** Much of dipm's architecture re-derives semantic feature modelling, valid-parameter-range computation, knowledge-based engineering, requirement allocation and design-rationale systems. Those fields have known failure modes (rule-base maintenance cost, rationale capture cost, Grudin's asymmetry) that dipm needs answers to, not just citations.
+
+**Questions:**
+- How exactly do Bidarra & Bronsvoort specify and maintain feature validity, and how does that differ from dipm's per-feature ΔH/ΔS/volume contracts?
+- Can the Hoffmann & Kim and Joan-Arinyo valid-range methods replace the stability harness's 9 sample points for some constraint classes?
+- What do the Company / Contero / Camba / Otey rubrics measure, and can they serve as an external yardstick for the idiomatic score?
+- Why did KBE rule bases and IBIS-style rationale tools stall, and what would make dipm's packs and intent trees different in practice?
+
+**Start with:** Bidarra & Bronsvoort (2000); Hoffmann & Kim (2001); La Rocca (2012); Grudin (1988); Bracewell et al. (2009). Full references in architecture §1.1.

@@ -6,20 +6,20 @@
 
 ## 1. Two layers, one meaning
 
-Minimal, provably complete alphabets exist for several parts of geometry (§3). A minimal alphabet is still the wrong language to write intent in. In Tarski's system "midpoint" isn't a word, only a definition built from betweenness and equidistance, so writing in it erases the intent. That is the **Turing tar-pit** (Perlis): everything is possible, nothing of interest is easy.
+Small, theoretically grounded alphabets exist for several parts of geometry (§3): Euler operators for manifold topology, Requicha's r-sets for solids, distance and angle relations for sketches. Their completeness results are narrower than they sound, and some are not yet read in full (§7.1), so the core is *grounded in* them, not proven complete. A minimal alphabet is still the wrong language to write intent in. In Tarski's system "midpoint" isn't a word, only a definition built from betweenness and equidistance, so writing in it erases the intent. That is the **Turing tar-pit** (Perlis): everything is possible, nothing of interest is easy.
 
 So the DSL has two layers, the same way programming languages do: Scheme's small core and derived forms, Rust lowering to MIR, GHC lowering to Core.
 
 | Layer | Character | Who writes it | Examples |
 |---|---|---|---|
 | **Intent layer** | Rich, deliberately *not* orthogonal; every word is a unit of design intent | The model, designers, pack authors | `midpoint`, `symmetric`, `hole`, `pattern`, `fillet`, `shell`, `gusset`, `wall_screw_pattern` |
-| **Core layer** | Small, orthogonal, mathematically grounded | Nobody, directly: intent forms *lower* to it | primitives, planar extrude/revolve, regularized Booleans, reflection, distance/angle/side relations |
+| **Core layer** | Small, orthogonal, grounded in solid-modelling theory (a goal: v0 has no explicit core IR) | Nobody, directly: intent forms *lower* to it | primitives, planar extrude/revolve, regularized Booleans, reflection, distance/angle/side relations |
 
 Rules:
 
 - **Every intent word has a precise lowering** into core operations, plus any trusted primitives (§4.3).
 - **Intent tags survive lowering.** Each core node records which intent word and intent-tree node produced it, as compilers keep source spans. "This is a midpoint" is never lost.
-- **Equivalence is decided on the core.** Two programs mean the same thing when they lower to the same canonical core form. That supports determinism checks, deduplicating training data, and the brevity metric.
+- **Equivalence is decided on the core (goal).** Two programs mean the same thing when they lower to the same canonical core form. That would support determinism checks, deduplicating training data, and the brevity metric. It is not implemented: v0 has no explicit core IR (`src/dipm/NOTES.md` DECISIONS #4) and no canonical form for it.
 - **The model writes intent words; checks run on the core.**
 
 ---
@@ -36,7 +36,7 @@ Inspired by Onshape FeatureScript, where the built-in features are written in th
 - the semantic tags they attach to geometry
 - documentation the model can read in order to use them
 
-The built-in features ship as packages too. If our own `hole` and `pattern` can be written as packages, the extension mechanism is proven expressive enough. Packages are versioned and pinned in a lockfile (§6).
+The built-in features ship as packages too. If our own `hole` and `pattern` can be written as packages, that is good evidence the extension mechanism is expressive enough. Packages are versioned and pinned in a lockfile (§6).
 
 Open questions are tracked in [`explore-further.md` §3](explore-further.md): FeatureScript details, sharing, sandboxing, and whether the model can use a new package from its documentation alone.
 
@@ -55,7 +55,11 @@ From the research report §7.1. All entries are proposals pending implementation
 - Rigid motions.
 - **Regularized union / intersection / difference**, with no complement.
 
-Requicha's r-set theory means a well-formed core tree denotes a valid solid. Validity therefore reduces to parse checks plus a valid-profile check, *for the program*. The kernel's floating-point output still needs checking (§5).
+Requicha's r-set theory means a well-formed core tree denotes a valid *r-set*: a bounded, regular, semi-analytic set. That is weaker than it sounds:
+
+- **r-sets need not be manifold.** Two boxes sharing an edge, or touching at a vertex, are valid r-sets but not manifold solids. The empty set is an r-set too. So r-set validity does not imply an OCCT-valid manifold B-rep, nor one the Euler–Poincaré formula applies to. A separate manifoldness check is needed (every edge used by exactly two faces; not yet implemented).
+- **It holds for the exact program, not the kernel's floating-point output** (§5, §7.2).
+- **It covers little of a real part.** The core (primitives, planar extrude and revolve, Booleans) excludes fillet, chamfer, countersink, shell and draft. Most of the shelf bracket's interesting features are trusted primitives (§4.3), which have no closure theorem and are checked at runtime instead.
 
 ### 3.2 Sketches
 
@@ -73,8 +77,10 @@ Requicha's r-set theory means a well-formed core tree denotes a valid solid. Val
 
 - **`reflect(plane)` is the generator.** By Cartan–Dieudonné, every rigid motion is a composition of reflections.
 - Mirror, rotate, translate, linear and circular pattern, and symmetric are intent forms that lower to reflections, or to the group they generate.
-- Transforms are compared canonically (e.g. as projective geometric algebra versors).
+- Transforms are compared as (rotation matrix, translation) with explicit tolerances.
 - Compilation emits **native** rotate/translate/pattern features, never long mirror chains.
+
+*Note (2026-11-16, review MATH-05).* Cartan–Dieudonné and projective geometric algebra (PGA) are correct background but have no operational role yet: transforms are re-emitted as native features, so nothing a user or check sees depends on the reflection form. Comparing transforms as PGA versors would also need sign canonicalisation (a versor and its negation are the same motion) and a tolerance, so it is not a free canonical form.
 
 ### 3.4 References (the topological naming problem)
 
@@ -133,19 +139,29 @@ The third class is why per-feature ΔS and volume checks are mandatory, not opti
 These are the rung-1 checks (architecture §4.1) that run regardless of intent:
 
 1. **Kernel validity:** `BRepCheck_Analyzer` with geometric checks on; closed shells; positive volume.
-2. **Euler–Poincaré:** for manifold solids, **V − E + F − R = 2(S − H)**, where R = inner loops, S = shells, H = genus, with integer H ≥ 0. This is *necessary, not sufficient*: it checks topology only, not geometry such as self-intersection. **Counting rule for OCCT (validated in spike 01 on 14 solids):**
+2. **Euler–Poincaré parity:** for manifold solids, **V − E + F − R = 2(S − H)**, where R = inner loops, S = shells, H = genus, with integer H ≥ 0. This is *necessary, not sufficient*: it checks topology only, not geometry such as self-intersection. **It is also weaker than it looks in dipm.** H is not measured independently; `euler_counts` *solves* for it, H = S − (V − E + F − R)/2. So the check can only fail when V − E + F − R is odd or H comes out negative. In practice it is a parity and integrality test that catches gross counting or topology errors. The real protection is item 3: per-feature ΔH and ΔS against an expectation computed independently from the feature's interaction with existing geometry. (A genuine genus check would compute H another way, e.g. the first Betti number from a homology computation on the face–edge–vertex complex. Not planned yet.) **Counting rule for OCCT (validated in spike 01 on 14 solids):**
    - count each sub-shape once by identity *plus location, ignoring orientation*, so seam edges count once;
    - **exclude degenerated edges**, which appear at sphere and cone poles *and at fillet corners*;
    - **never** count by underlying shape (`TShape`) alone: an extrude's end cap shares its start cap's `TShape`, which inflates H.
 
    Spike 02 confirmed the rule on revolve, sweep, and torus seams with no refinement.
 3. **Per-feature topological deltas (ΔH *and* ΔS)** derived from intent. ΔS is as important as ΔH: it was the only invariant that caught the compound-tool error above. The per-operation ΔH/ΔS rules are tabulated in [spike 02](../spikes/02-operation-history/RESULTS.md) §2. Each feature *computes its expected deltas from how it interacts with existing geometry*; there is no fixed rule per feature type. A through-hole usually adds 1 to H, but one that crosses an existing hole adds 2 (spike 01). A blind hole adds 0; "split into two parts" adds a shell or solid. This check catches faults that reference checks miss: in spike 01, a shelf hole that turned blind against the gusset still resolved all its references, but its ΔH was wrong.
-4. **Topological signature** stored with each solution: (V, E, F, R, S, H) plus **two** canonical, order-independent face-adjacency hashes, alongside pinned versions (§6):
-   - **geometry-inclusive:** detects any change;
-   - **topology-only:** stays constant across legitimate parameter edits, so a change signals a structural flip.
+4. **Topological signature** stored with each solution: (V, E, F, R, S, H) plus **two** order-independent face-adjacency hashes, alongside pinned versions (§6). None of these hashes is canonical or a true invariant. What each is stable under (corrected 2026-11-16, review INC-09, MATH-06):
 
-   **Canonical serialization is OCCT's BRep text format**, which was byte-identical across 64 builds per model in spike 01 and for 26 of 29 models in spike 02. **Exception:** `BRepOffset` join mode (shells with no openings, outward shells, closed voids) produces different BRep bytes on every build, even single-threaded, while geometry and reference resolution stay identical. For those, compare (V,E,F,R,S,H), the adjacency hashes, and an **order-free role-geometry fingerprint** (each role's rounded centroid and area). A canonicalizing serializer is an open item. The topology-only hash should not include surface type, which equal loft sections can flip without any topology change. STEP is an interchange format only: it embeds a timestamp and a per-process product-name counter, both of which must be stripped before comparing.
-5. **Sketch constraint health:** structural degree-of-freedom counting at compile time (Laman-style; exact in 2D), plus Jacobian rank, redundancy, and conflict detection at evaluation time. 3D point-distance rigidity is an open problem, so we promise nothing for free 3D point constraints.
+   | Signal | What it is | Stable under | Not stable under / can't tell apart |
+   |---|---|---|---|
+   | **Geometry hash** (`adjacency_hash(geometric=True)`) | 4-round Weisfeiler–Lehman (WL) hash of the face-adjacency graph; faces labelled by surface type, area to 6 significant figures, and wire count; edges by curve type | Rebuilding the same locked solution on the same platform; face and sub-shape *order* | Any geometry change (by design). Values that round differently near a 6-figure boundary, which can flip across platforms |
+   | **Topology-only hash** (`adjacency_hash(geometric=False)`) | Same WL hash with no surface or curve types: faces labelled by wire and edge-use counts | Parameter edits that keep the face–edge structure; surface-type flips (e.g. equal loft sections) | Legitimate edits that change topology, such as a new pattern count or a fillet consuming a face. A change is **a signal to review**, not proof of a fault (that is why `allow_topology_change` exists) |
+   | **Role-geometry fingerprint** (`role_geometry_fingerprint`) | For each reference tag, the sorted, rounded (centroid, area or length) of what it resolves to | Sub-shape order and BRep byte changes, so it works for `BRepOffset` join mode | Geometry changes (by design); rounding-boundary flips as above |
+   | **BRep sha** (OCCT BRep text) | Hash of the kernel's own serialization | Rebuilds of the same locked solution on one machine, except `BRepOffset` join mode | Anything at all, including sub-shape order. It is byte equality, not a canonical form |
+
+   **WL hashes are not canonical.** Equal hashes do not prove equal graphs: 4-round WL cannot separate many regular or symmetric graphs, which are common in CAD (a box's faces, symmetric patterns). Use the hash as a fast pre-filter; exact topological equality needs graph canonical labelling (nauty or bliss), and geometric equality needs a tolerance-aware comparison.
+
+   **OCCT's BRep text format is the serialization used for byte comparison.** It was byte-identical across 64 builds per model in spike 01 and for 26 of 29 models in spike 02. **Exception:** `BRepOffset` join mode (shells with no openings, outward shells, closed voids) produces different BRep bytes on every build, even single-threaded, while geometry and reference resolution stay identical. For those, compare (V,E,F,R,S,H), the adjacency hashes, and an **order-free role-geometry fingerprint** (each role's rounded centroid and area). A canonicalizing serializer is an open item. The topology-only hash should not include surface type, which equal loft sections can flip without any topology change. STEP is an interchange format only: it embeds a timestamp and a per-process product-name counter, both of which must be stripped before comparing.
+5. **Sketch constraint health:** structural degree-of-freedom counting at compile time, *as a heuristic*, plus numeric Jacobian rank, redundancy, and conflict detection at an actual configuration, *as the source of truth*. Report "well-constrained at this configuration", not "well-constrained".
+   - **Laman does not cover CAD sketches** (corrected 2026-11-16, review MATH-02). Laman's theorem (1970; earlier Pollaczek-Geiringer, 1927) characterises *generic* rigidity of 2D *bar-joint* frameworks: points joined by distance constraints only. CAD sketches mix distances with angles, incidence, parallelism, perpendicularity and tangency, and are non-generic on purpose (collinear points, parallel lines, symmetric layouts). Normalising every constraint to distance plus angle (Bouma et al. 1995) does not bring Laman's theorem back. Earlier drafts said "Laman-style; exact in 2D"; that was wrong for this use.
+   - **What to use instead.** For mixed direction-and-length constraints there is a separate combinatorial theory (Servatius & Whiteley, "Constraining plane configurations in computer-aided design: combinatorics of directions and lengths", *SIAM J. Discrete Math.* 12(1):136–153, 1999; Jackson & Jordán's later work on direction-length global rigidity, not checked individually). Practical solvers combine graph decomposition and DOF analysis (Owen 1991; Fudos & Hoffmann 1997; Hoffmann, Lomonosov & Sitharam 2001; survey: Jermann, Trombettoni, Neveu & Mathis, "Decomposition of geometric constraint systems: a survey", *Int. J. Comput. Geom. Appl.* 16(5–6):379–414, 2006) with numeric checks. The **witness configuration method** (Michelucci & Foufou, "Geometric constraint solving: the witness configuration method", *Computer-Aided Design*, 2006) analyses the Jacobian at an easy-to-compute configuration that shares the sketch's incidences, and finds dependencies that graph counting misses.
+   - 3D point-distance rigidity is an open problem, so we promise nothing for free 3D point constraints.
 6. **Reference determinism:** cardinality declared and met; no ordinals; tolerances explicit.
 7. **Stability harness:** perturb each design parameter across its declared range, rebuild, and assert that every reference keeps its cardinality and genealogy, and every branch tag holds. This doubles as the *edit stability* component of the idiomatic score (architecture §6).
 
@@ -213,6 +229,8 @@ The core IR compiles to a backend interface:
 | **Onshape FeatureScript** | Parametric export target, with Parasolid quality. Must rely on FeatureScript query semantics (emit `evaluateQueryCount` guards, never `qNthElement`), not on matching OCCT genealogy |
 | **Manifold** (mesh Booleans) | Candidate for fast previews and walkthrough interference checks (tool-access cylinders, clearance envelopes) |
 
+> **Onshape parity strategy (2026-11-16):** a hybrid of standard features + a dipm placement-feature library + a final checks feature. See [`user-experience.md` §4.1](user-experience.md#41-onshape-parity-researched-2026-11-16).
+
 If any backend becomes a bottleneck, it is swapped behind the interface; the project doesn't change.
 
 ---
@@ -220,7 +238,7 @@ If any backend becomes a bottleneck, it is swapped behind the interface; the pro
 ## 7. Open risks
 
 1. Mäntylä's 1984 completeness theorem hasn't been read in full yet. Don't claim "proven complete" until it has.
-2. "Valid by construction" holds for the program, not the kernel's floating-point output.
+2. "Valid by construction" holds only for the exact program, only in the r-set sense (not manifold; §3.1), and only for the small core. It says nothing about the kernel's floating-point output or about trusted primitives, which are most real features. Prefer "checked after every feature" over "valid by construction".
 3. ~~OCCT counting conventions may break a naive Euler check.~~ **Resolved by spike 01:** the counting rule is in §5.2.
 4. Coarse kernel history: contingent entities can't be named stably (accepted restriction).
 5. build123d's history is too coarse; the reference layer uses OCP directly. History is now validated for revolve, chamfer, shell, loft (partial), sweep, draft (partial), pattern, mirror, and `clean()` ([spike 02](../spikes/02-operation-history/RESULTS.md)). **Still untested:** feature-level mirror/pattern, fillet corner faces, sweep and loft options, and FeatureScript parity (see spike 02 §9).
