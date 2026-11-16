@@ -4,6 +4,9 @@ import { answer, answering, build, design, hover, select, selection } from "../s
 import type { BuildJ, FaceJ, FeatureJ, IntentTagJ, Selection, WhyEntryJ } from "../types";
 import { faceLabel, featureMap, fmtNumber } from "../model";
 import { Dot, Mono, Section } from "./common";
+import { staleFeatures } from "../edit";
+import { NodeEditor, StaleTag, editable } from "./IntentEditor";
+import { ProposalsPanel, proposalBadge } from "./Proposals";
 
 export function RightPanel() {
   const b = build.value;
@@ -23,6 +26,11 @@ export function RightPanel() {
                badge={it ? <span class={`count ${nAttn ? "attn" : "ok"}`}>
                  {it.slots.length} slots · {it.questions.length} q · {it.notices.length} notices</span> : null}>
         <Interpretations />
+      </Section>
+      <Section id="proposals" title="PROPOSALS" attention={proposalBadge().open > 0}
+               badge={<span class={`count ${proposalBadge().open ? "attn" : "ok"}`} data-testid="proposals-badge">
+                 {proposalBadge().open} open · {proposalBadge().total}</span>}>
+        <ProposalsPanel />
       </Section>
     </div>
   );
@@ -135,10 +143,13 @@ function NodeInspector({ b, id }: { b: BuildJ; id: string }) {
   const n = b.tree.nodes[id];
   if (!n) return null;
   const nFaces = b.faces.filter((f) => f.nodes.some((x) => x === id || x.startsWith(id + "."))).length;
+  const fileTree = editable(b) && !!n.in_file;
   return (
     <div class="inspector" data-testid="inspector-node">
-      <div class="insp-head"><span class="kind">intent</span> <Mono>{id}</Mono> <Dot status={n.status} /></div>
-      <div class="insp-label">{n.label || <span class="muted">(no label)</span>}</div>
+      <div class="insp-head"><span class="kind">intent</span> <Mono>{id}</Mono> <Dot status={n.status} />
+        {n.stale && <StaleTag compact />}</div>
+      {fileTree ? <NodeEditor b={b} n={n} /> :
+        <div class="insp-label">{n.label || <span class="muted">(no label)</span>}</div>}
       <dl class="kv">
         {n.words.length > 0 && <><dt>words</dt><dd class="mono">{n.words.join(", ")}</dd></>}
         {n.notes.length > 1 && <><dt>notes</dt><dd>{n.notes.join(" · ")}</dd></>}
@@ -165,6 +176,11 @@ function FeatureInspector({ f }: { f: FeatureJ | undefined }) {
   return (
     <div class="inspector" data-testid="inspector-feature">
       <div class="insp-head"><span class="kind">feature {f.index + 1}</span> <Mono>{f.id}</Mono> <Dot status={f.status} /></div>
+      {staleFeatures(build.value).has(f.id) && (
+        <div class="stale-box small" data-testid="feature-stale">
+          <StaleTag /> serves {f.stale!.map((x) => <button key={x} class="link mono" onClick={() => select({ kind: "node", id: x })}>{x}</button>)}
+        </div>
+      )}
       <dl class="kv">
         <dt>op</dt><dd><Mono>{f.op}</Mono>{f.lowered_from && <> ← <Mono>{f.lowered_from}</Mono></>}</dd>
         <dt>intent</dt><dd class="tags">{f.tags.length ? <TagChips tags={f.tags} /> : <span class="warn-text">no intent</span>}</dd>

@@ -47,10 +47,23 @@ export function nodeDepth(b: BuildJ, id: string): number {
   return d;
 }
 
-/** True if `n` is `anc` or lies beneath it in the intent tree.  The conventional root "R"
- *  parents every top-level id (src/dipm/connections.py), so everything lies beneath R. */
-export function isUnder(n: string, anc: string): boolean {
-  return n === anc || n.startsWith(anc + ".") || anc === "R";
+/** True if `n` is `anc` or lies beneath it in the intent tree.  With an intent file the tree
+ *  comes from its nesting (ids stay stable when a node moves), so the parent chain decides;
+ *  otherwise the dotted ids do, and the conventional root "R" parents every top-level id
+ *  (src/dipm/connections.py), so everything lies beneath R. */
+export function isUnder(n: string, anc: string, b?: BuildJ | null): boolean {
+  if (n === anc) return true;
+  if (b?.tree.from_file && b.tree.nodes[n]) {
+    const seen = new Set<string>();
+    let p = b.tree.nodes[n].parent;
+    while (p !== null && p !== undefined && !seen.has(p)) {
+      if (p === anc) return true;
+      seen.add(p);
+      p = b.tree.nodes[p]?.parent ?? null;
+    }
+    return false;
+  }
+  return n.startsWith(anc + ".") || anc === "R";
 }
 
 export function shortOp(f: FeatureJ): string {
@@ -204,10 +217,10 @@ export function connected(sel: Selection | null, b: BuildJ | null): Lit {
     }
     case "node": {
       lit.primaryNode = sel.id;
-      for (const id of Object.keys(b.tree.nodes)) if (isUnder(id, sel.id)) lit.nodes.add(id);
-      for (const face of b.faces) if (face.nodes.some((n) => isUnder(n, sel.id))) lit.faces.add(face.id);
+      for (const id of Object.keys(b.tree.nodes)) if (isUnder(id, sel.id, b)) lit.nodes.add(id);
+      for (const face of b.faces) if (face.nodes.some((n) => isUnder(n, sel.id, b))) lit.faces.add(face.id);
       for (const f of b.features) {
-        if (featureNodes(f).some((n) => isUnder(n, sel.id))) {
+        if (featureNodes(f).some((n) => isUnder(n, sel.id, b))) {
           lit.features.add(f.id);
           for (const p of f.params) lit.params.add(p);
         }

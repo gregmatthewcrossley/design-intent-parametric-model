@@ -4,8 +4,20 @@ import { decodeMesh, bounds, type DecodedMesh } from "../mesh";
 import { faceLabel } from "../model";
 import { build, goodBuild, hover, lit, pinnedLit, select, selection, showGhost, theme } from "../store";
 import { Viewer, type FaceState, type Palette, type ViewName } from "../viewer";
+import { compareStates } from "../edit";
+import { compare, proposals } from "../intent";
 
 const cache = new Map<string, DecodedMesh>();
+
+/** A proposal's before/after mesh, cached by its content id. */
+async function getProposalMesh(pid: string, which: "before" | "after", meshId: string): Promise<DecodedMesh> {
+  const key = `p:${meshId}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const m = decodeMesh(await api.proposalMesh(pid, which));
+  cache.set(key, m);
+  return m;
+}
 
 async function getMesh(id: string): Promise<DecodedMesh> {
   const hit = cache.get(id);
@@ -38,6 +50,7 @@ export function Viewport() {
     const v = new Viewer(host.current!, cssPalette(), {
       onHover: (face, x, y) => {
         setTip(face === null ? null : { face, x, y });
+        if (compare.value) return; // proposal geometry: face ids are not the live build's
         const cur = hover.value;
         if (face === null) {
           if (cur?.kind === "face") hover.value = null;
@@ -45,11 +58,11 @@ export function Viewport() {
           hover.value = { kind: "face", id: face };
         }
       },
-      onClick: (face) => select(face === null ? null : { kind: "face", id: face }),
+      onClick: (face) => { if (!compare.value) select(face === null ? null : { kind: "face", id: face }); },
     }, triad.current!);
     viewer.current = v;
     // test hook (e2e and screenshots): the viewer and the current build
-    (window as unknown as { __dipm: unknown }).__dipm = { viewer: v, build };
+    (window as unknown as { __dipm: unknown }).__dipm = { viewer: v, build, compare, proposals };
     return () => v.dispose();
   }, []);
 
@@ -58,9 +71,38 @@ export function Viewport() {
   const good = goodBuild.value;
   const failing = !!b && !b.ok;
   const ghostId = failing ? (b?.last_good_mesh_id ?? good?.mesh_id ?? null) : null;
+  const cmp = compare.value;
+  const cp = cmp ? proposals.value.find((p) => p.id === cmp.id) ?? null : null;
+  const cev = cp?.evaluation ?? null;
+  const cmpKey = cmp && cev?.meshes ? `${cmp.id}:${cmp.mode}:${cev.meshes.before}:${cev.meshes.after}` : null;
+  const cmpShow = cmpKey ? cmp!.mode : null;   // what is actually loaded into the viewer
+  // proposal comparison: before / after / overlay (after solid, before as a ghost)
   useEffect(() => {
     const v = viewer.current;
-    if (!v || !b) return;
+    if (!v || !cmp || !cev?.meshes) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const ms = cev.meshes!;
+        const after = ms.after ? await getProposalMesh(cmp.id, "after", ms.after) : null;
+        const before = ms.before ? await getProposalMesh(cmp.id, "before", ms.before) : null;
+        if (cancelled) return;
+        const main = cmp.mode === "before" ? before : after;
+        if (main) v.setMesh(main); else v.clearMesh();
+        v.setGhost(cmp.mode === "overlay" ? before : null);
+        const changed = (cmp.mode === "before" ? cev.changed_faces?.before : cev.changed_faces?.after) ?? [];
+        v.setFaceStates(compareStates(main?.nFaces ?? 0, changed));
+        setMeshErr(null);
+      } catch (e) {
+        if (!cancelled) setMeshErr((e as Error).message);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [cmpKey]);
+
+  useEffect(() => {
+    const v = viewer.current;
+    if (!v || !b || cmpKey) return;
     let cancelled = false;
     (async () => {
       try {
@@ -81,13 +123,13 @@ export function Viewport() {
       }
     })();
     return () => { cancelled = true; };
-  }, [b?.mesh_id, ghostId, showGhost.value]);
+  }, [b?.mesh_id, ghostId, showGhost.value, cmpKey]);
 
   // face colours: failure tint, pinned selection, hover, lit/dim
   const L = lit.value, P = pinnedLit.value, h = hover.value, s = selection.value;
   useEffect(() => {
     const v = viewer.current;
-    if (!v || !b) return;
+    if (!v || !b || cmpKey) return;
     const n = b.faces.length;
     const st: FaceState[] = new Array(n).fill("base");
     const panelHover = h && h.kind !== "face";
@@ -104,7 +146,7 @@ export function Viewport() {
       else if (f.failing_touched && (st[i] === "base" || st[i] === "dim")) st[i] = "failTouched";
     }
     v.setFaceStates(st);
-  }, [b, L, P, h, s]);
+  }, [b, L, P, h, s, cmpKey]);
 
   useEffect(() => {
     // theme tokens change after the attribute flips; read them on the next frame
@@ -130,7 +172,15 @@ export function Viewport() {
         )}
       </div>
       <div class="viewport-info mono num">{size}</div>
-      {failing && (
+      {cmpShow && cp && (
+        <div class="viewport-banner compare-banner" data-testid="compare-banner">
+          <span class="b-label">PROPOSAL {cp.id}</span> {cmpShow === "overlay" ? "after, with before as a ghost" : cmpShow}
+          {" · "}{((cmpShow === "before" ? cev?.changed_faces?.before : cev?.changed_faces?.after) ?? []).length} changed
+          face(s) highlighted
+          <button class="btn" onClick={() => (compare.value = null)}>live model</button>
+        </div>
+      )}
+      {failing && !cmpShow && (
         <div class="viewport-banner" data-testid="fail-banner">
           build failed: {b!.failing.join(", ")} · {b!.mesh_id ? "faces it made in red, faces it changed tinted" : "no geometry"}
           {ghostId && " · last good model in grey"}
@@ -139,7 +189,7 @@ export function Viewport() {
       {meshErr && <div class="viewport-banner">{meshErr}</div>}
       {tip && b && (
         <div class="tooltip mono" style={{ left: `${tip.x + 14}px`, top: `${tip.y + 12}px` }} role="tooltip">
-          {faceLabel(b, tip.face)}
+          {cmpShow ? (cev?.face_tags?.[cmpShow === "before" ? "before" : "after"]?.[tip.face] ?? "") : faceLabel(b, tip.face)}
         </div>
       )}
     </div>

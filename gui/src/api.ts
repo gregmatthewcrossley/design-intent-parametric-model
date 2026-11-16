@@ -1,4 +1,19 @@
-import type { BuildJ, DesignInfo, ServerEvent } from "./types";
+import type { BuildJ, DesignInfo, IntentInfo, IntentOp, ProposalJ, RequestJ, ServerEvent } from "./types";
+
+/** A non-2xx response with its JSON body (409 conflicts carry the current state). */
+export class HttpError extends Error {
+  constructor(public status: number, public body: Record<string, unknown>) {
+    super(String(body.error ?? status));
+  }
+}
+
+async function call<T>(url: string, method = "GET", body?: unknown): Promise<T> {
+  const r = await fetch(url, body === undefined ? { method } :
+    { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({ error: `${r.status} ${r.statusText}` }));
+  if (!r.ok) throw new HttpError(r.status, j as Record<string, unknown>);
+  return j as T;
+}
 
 async function json<T>(r: Response): Promise<T> {
   const body = await r.json().catch(() => ({ error: `${r.status} ${r.statusText}` }));
@@ -14,6 +29,22 @@ export const api = {
   answer: (assumption_id: string, reading: string) =>
     fetch("/api/answer", { method: "POST", headers: { "content-type": "application/json" },
                            body: JSON.stringify({ assumption_id, reading }) }).then((r) => json<BuildJ>(r)),
+  intent: () => call<IntentInfo>("/api/intent"),
+  patchIntent: (base_hash: string | null, ops: IntentOp[]) =>
+    call<{ intent: IntentInfo; build: BuildJ | null; results: unknown[] }>("/api/intent", "PATCH", { base_hash, ops }),
+  rename: (base_hash: string | null, design_hash: string | null, old: string, new_: string) =>
+    call<{ intent: IntentInfo; build: BuildJ; renamed_literals: number }>("/api/intent/rename", "POST",
+                                                                          { base_hash, design_hash, old, new: new_ }),
+  proposals: () => call<{ proposals: ProposalJ[]; requests: RequestJ[] }>("/api/proposals"),
+  accept: (id: string, comment = "") =>
+    call<{ proposal: ProposalJ; build: BuildJ }>(`/api/proposals/${id}/accept`, "POST", { comment }),
+  reject: (id: string, comment: string) => call<{ proposal: ProposalJ }>(`/api/proposals/${id}/reject`, "POST", { comment }),
+  ask: (node: string, note: string) => call<RequestJ>("/api/requests", "POST", { node, note }),
+  proposalMesh: (id: string, which: "before" | "after") =>
+    fetch(`/api/proposals/${id}/mesh/${which}`).then((r) => {
+      if (!r.ok) throw new Error(`proposal mesh ${id}/${which}: ${r.status}`);
+      return r.arrayBuffer();
+    }),
   mesh: (id: string) =>
     fetch(`/api/mesh/${id}`).then((r) => {
       if (!r.ok) throw new Error(`mesh ${id}: ${r.status}`);

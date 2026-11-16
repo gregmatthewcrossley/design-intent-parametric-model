@@ -10,7 +10,10 @@ import { Header } from "./components/Header";
 import { IntentPanel, useEscapeToClear } from "./components/IntentPanel";
 import { ParamBar } from "./components/ParamBar";
 import { RightPanel, Inspector, Checks, Interpretations } from "./components/RightPanel";
+import { ProposalsPanel } from "./components/Proposals";
 import { Viewport, useViewKeys } from "./components/Viewport";
+import { IntentBanners } from "./components/IntentEditor";
+import { intentInfo, loadIntent, loadProposals, reloadProposalsSoon } from "./intent";
 import {
   applyBuild, build, design, designError, expanded, lastEvent, params, persist, requestBuild, tab, theme, wsUp,
   type Tab,
@@ -48,7 +51,7 @@ function Resizer({ side }: { side: "left" | "right" }) {
 }
 
 const TABS: [Tab, string][] = [["viewport", "Model"], ["tree", "WHY ⇄ HOW"], ["inspector", "Inspector"],
-                               ["checks", "Checks"], ["interpretations", "Interpretations"]];
+                               ["checks", "Checks"], ["interpretations", "Interpretations"], ["proposals", "Proposals"]];
 
 export function App() {
   useEscapeToClear();
@@ -77,6 +80,8 @@ export function App() {
       } catch (e) {
         designError.value = (e as Error).message;
       }
+      void loadIntent();
+      void loadProposals();
     })();
     return connectEvents((ev) => {
       lastEvent.value = ev.type;
@@ -92,8 +97,14 @@ export function App() {
         applyBuild(ev.build);
       } else if (ev.type === "design-error") {
         designError.value = ev.message;
+      } else if (ev.type === "intent-changed") {
+        intentInfo.value = ev.intent;
+      } else if (ev.type === "proposals-changed") {
+        reloadProposalsSoon();
       } else if (ev.type === "hello" && build.value) {
         requestBuild(true); // reconnected: catch up
+        void loadIntent();
+        void loadProposals();
       }
     }, (up) => (wsUp.value = up));
   }, []);
@@ -113,6 +124,7 @@ export function App() {
         </nav>
       )}
       <main class="main" style={{ gridTemplateColumns: cols }}>
+        <IntentBanners />
         {!n && (
           <aside class={`panel left ${leftOpen.value ? "" : "collapsed"}`} aria-label="intent and features">
             {leftOpen.value ? <IntentPanel /> : null}
@@ -131,6 +143,7 @@ export function App() {
               {tab.value === "inspector" && <Inspector />}
               {tab.value === "checks" && <Checks />}
               {tab.value === "interpretations" && <Interpretations />}
+              {tab.value === "proposals" && <ProposalsPanel />}
             </div>
           )}
         </section>

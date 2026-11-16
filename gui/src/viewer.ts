@@ -293,6 +293,21 @@ export class Viewer {
     return { x: r.left + ((p.x + 1) / 2) * r.width, y: r.top + ((1 - p.y) / 2) * r.height };
   }
 
+  /** Mean vertex position of a face in the displayed mesh (tests: where did a hole move?). */
+  faceCentroid(face: number): number[] | null {
+    const m = this.data;
+    if (!m || face < 0 || face >= m.nFaces) return null;
+    const s = m.faceRanges[face * 2], n = m.faceRanges[face * 2 + 1];
+    const acc = [0, 0, 0];
+    let k = 0;
+    for (let t = s * 3; t < (s + n) * 3; t++) {
+      const v = m.indices[t] * 3;
+      acc[0] += m.positions[v]; acc[1] += m.positions[v + 1]; acc[2] += m.positions[v + 2];
+      k++;
+    }
+    return k ? acc.map((x) => x / k) : null;
+  }
+
   /** Current per-face display states (tests). */
   states(): FaceState[] {
     return [...this.faceStates];

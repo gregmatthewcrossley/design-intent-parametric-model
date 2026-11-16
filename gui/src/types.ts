@@ -75,6 +75,27 @@ export interface FeatureJ {
   volume: number | null;
   refs: { ref: string; count: number; genealogies: string[] }[];
   refs_ok: boolean;
+  stale?: string[]; // stale intent nodes this feature serves (iteration 2)
+}
+
+export interface CheckSpec {
+  id: string;
+  statement: string;
+  kind?: string;
+  source?: string;
+  priority?: string;
+  grounded_as?: string;
+  [k: string]: unknown;
+}
+
+export interface AssumptionSpec {
+  id: string;
+  statement: string;
+  made_by?: string;
+  rationale?: string;
+  supports?: string[];
+  sensitivity?: string;
+  status?: string;
 }
 
 export interface IntentNodeJ {
@@ -89,6 +110,122 @@ export interface IntentNodeJ {
   realized_by: string[];
   status: Status;
   implicit: boolean;
+  // iteration 2: from <design>.intent.yaml (absent / empty for tag-derived trees)
+  statement?: string;
+  checks?: CheckSpec[];
+  assumptions?: AssumptionSpec[];
+  in_file?: boolean;
+  stale?: boolean;
+  hash?: string;
+}
+
+export interface NodeContent {
+  statement: string;
+  checks: CheckSpec[];
+  assumptions: AssumptionSpec[];
+}
+
+export interface StaleInfo {
+  hash: string;
+  reviewed_hash: string | null;
+  reviewed: NodeContent | null;
+  current: NodeContent;
+  changed: string[];
+  new: boolean;
+}
+
+export interface IntentDocJ {
+  design: string;
+  context?: Record<string, string>;
+  intents: IntentDocNode[];
+}
+
+export interface IntentDocNode {
+  id: string;
+  statement: string;
+  checks?: CheckSpec[];
+  assumptions?: AssumptionSpec[];
+  children?: IntentDocNode[];
+}
+
+export interface IntentInfo {
+  file: string;
+  exists: boolean;
+  hash: string | null;
+  design_hash?: string | null;
+  loaded_hash?: string | null;
+  error: string[] | null;
+  doc?: IntentDocJ | null;
+  stale: Record<string, StaleInfo>;
+  review_file: string;
+  review_exists: boolean;
+}
+
+export type IntentOp =
+  | { op: "edit_statement"; id: string; statement: string }
+  | { op: "add_child"; parent: string; statement?: string }
+  | { op: "delete"; id: string }
+  | { op: "move"; id: string; parent: string; index?: number }
+  | { op: "add_check"; id: string; check: Partial<CheckSpec> }
+  | { op: "edit_check"; id: string; check_id: string; fields: Partial<CheckSpec> }
+  | { op: "remove_check"; id: string; check_id: string }
+  | { op: "edit_assumption"; id: string; assumption_id: string; fields: Partial<AssumptionSpec> }
+  | { op: "mark_reviewed"; ids: string[] };
+
+export type ProposalStatus = "pending" | "evaluating" | "ready" | "failed" | "accepted" | "rejected" | "stale";
+
+export interface FeedbackJ { at: string; kind: string; by: string; comment: string }
+
+export interface EvaluationJ {
+  ok: boolean;
+  error?: string;
+  params?: Record<string, unknown>;
+  before?: { status: string; ok: boolean; stale_nodes: string[] };
+  after?: { status: string; ok: boolean; errors: ErrorJ[]; stale_nodes: string[] };
+  sweep?: { points: number; failing: { params: Record<string, unknown>; errors: string[] }[] };
+  semantic_diff?: {
+    intent: { added: { id: string; statement: string; parent: string | null }[]; removed: { id: string; statement: string }[];
+              moved: { id: string; from: string | null; to: string | null }[];
+              changed: ({ id: string; statement?: { before: string; after: string } } & Record<string, unknown>)[] };
+    features: { added: string[]; removed: string[]; changed: ({ id: string } & Record<string, { before: unknown; after: unknown } | string>)[] };
+    checks: { before: { status: string; errors: number }; after: { status: string; errors: number };
+              features: { id: string; before: string | null; after: string; failed_checks: CheckJ[] }[];
+              diagnostics_after: Diagnostics };
+    interpretations: { added: { id: string; chosen: string }[]; removed: { id: string; chosen: string }[];
+                       changed: { id: string; before: string; after: string }[]; questions: number[]; notices: number[] };
+  };
+  text_diff?: Record<string, string>;
+  meshes?: { before?: string; after?: string };
+  changed_faces?: { before: number[]; after: number[] };
+  face_tags?: { before: string[]; after: string[] };
+  ms?: number;
+}
+
+export interface ProposalJ {
+  id: string;
+  created: string;
+  summary: string;
+  rationale: string;
+  addresses_nodes: string[];
+  revises: string | null;
+  source: string;
+  base_hashes: Record<string, string>;
+  patches: Record<string, { kind: string; diff?: string; new_hash?: string }>;
+  status: ProposalStatus;
+  status_detail: string;
+  evaluation: EvaluationJ | null;
+  feedback: FeedbackJ[];
+  accepted?: { at: string; written: string[]; reviewed: string[] };
+}
+
+export interface RequestJ {
+  id: string;
+  created: string;
+  node: string;
+  note: string;
+  change: StaleInfo | null;
+  status: string;
+  proposals: string[];
 }
 
 export interface WhyEntryJ {
@@ -179,6 +316,7 @@ export interface Diagnostics {
   no_feature: string[];
   multi_intent: { feature: string; nodes: string[] }[];
   cross_intent: { from: string; to: string; from_nodes: string[]; to_nodes: string[] }[];
+  missing_in_file?: string[];
 }
 
 export interface BuildJ {
@@ -192,7 +330,10 @@ export interface BuildJ {
   ms: number;
   features: FeatureJ[];
   failing: string[];
-  tree: { roots: string[]; order: string[]; nodes: Record<string, IntentNodeJ> };
+  tree: { roots: string[]; order: string[]; nodes: Record<string, IntentNodeJ>; from_file?: boolean;
+          missing?: Record<string, string[]> };
+  stale?: Record<string, StaleInfo>;
+  intent?: Omit<IntentInfo, "doc">;
   diagnostics: Diagnostics;
   interpretations: {
     source: string;
@@ -224,4 +365,6 @@ export type ServerEvent =
   | { type: "hello"; generation: number }
   | { type: "design-changed"; design: DesignInfo; changed: string[] }
   | { type: "rebuilt"; reason: string; build: BuildJ }
-  | { type: "design-error"; message: string };
+  | { type: "design-error"; message: string }
+  | { type: "intent-changed"; intent: IntentInfo; changed: string[] }
+  | { type: "proposals-changed"; id?: string };

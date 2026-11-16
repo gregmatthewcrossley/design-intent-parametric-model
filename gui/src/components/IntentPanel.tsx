@@ -1,11 +1,15 @@
 // Left panel: WHY ⇄ HOW in one window (docs/gui.md §3), with the shared-element transition,
 // "show links" connector lines, and selection sync with the viewport and other panels.
 
+import { Fragment } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { canDrop, staleFeatures } from "../edit";
+import { confirmDelete, dragging, dropTarget, editing, patchIntent, startEdit } from "../intent";
 import { rowsFor, type Chip, type Row, type View } from "../model";
 import { active, build, expanded, hover, lit, persist, select, selection, showLinks, view } from "../store";
 import type { Selection } from "../types";
 import { Dot } from "./common";
+import { ConfirmDelete, editable, RowActions, rowKeys, StaleTag, StatementInput } from "./IntentEditor";
 
 export const FLIP_MS = 300;
 
@@ -81,7 +85,8 @@ export function IntentPanel() {
   if (!b) return <aside class="panel left"><div class="empty">loading…</div></aside>;
   const rows = rowsFor(b, view.value);
   const d = b.diagnostics;
-  const nDiag = d.no_intent.length + d.no_feature.length + d.multi_intent.length + d.cross_intent.length;
+  const nDiag = d.no_intent.length + d.no_feature.length + d.multi_intent.length + d.cross_intent.length +
+    (d.missing_in_file?.length ?? 0);
   return (
     <div class="intent-panel" data-view={view.value}>
       <div class="panel-toolbar">
@@ -108,8 +113,13 @@ export function IntentPanel() {
         {view.value === "why" ? "intent tree · realized by" : "features in build order · serves"}
       </div>
       <div class="rows-scroll" ref={listRef}>
-        <div class="rows">
-          {rows.map((r) => <RowView key={r.key} r={r} />)}
+        <div class="rows" role="tree" aria-label={view.value === "why" ? "intent tree" : "features in build order"}>
+          {rows.map((r) => (
+            <Fragment key={r.key}>
+              <RowView r={r} />
+              {r.kind === "node" && confirmDelete.value?.id === r.id && <ConfirmDelete b={b} id={r.id} where="row" />}
+            </Fragment>
+          ))}
           {showLinks.value && !animating && <Links rows={rows} root={listRef} v={view.value} />}
         </div>
       </div>
@@ -134,22 +144,64 @@ function RowView({ r }: { r: Row }) {
   const primary = (r.kind === "node" && L.primaryNode === r.id) || (r.kind === "feature" && L.primaryFeature === r.id);
   const sel = selection.value;
   const isSel = !!sel && sel.kind === kind && sel.id === r.id;
+  const b = build.value!;
+  const n = r.kind === "node" ? b.tree.nodes[r.id] : undefined;
+  const canEdit = !!n && editable(b) && !!n.in_file;
+  const fStale = r.kind === "feature" ? staleFeatures(b).get(r.id) : undefined;
+  const isDrop = r.kind === "node" && dropTarget.value === r.id;
   const cls = ["row", `row-${r.kind}`, isLit ? "lit" : "", indirect ? "indirect" : "", primary ? "primary" : "",
-               isSel ? "selected" : "", isAct && !isLit && !indirect ? "dim" : "", r.implicit ? "implicit" : ""].join(" ");
+               isSel ? "selected" : "", isAct && !isLit && !indirect ? "dim" : "", r.implicit ? "implicit" : "",
+               n?.stale ? "stale" : "", fStale ? "stale" : "", isDrop ? "drop-target" : "",
+               dragging.value === r.id ? "dragging" : ""].join(" ");
   const interactive = r.kind !== "group";
+  const isEditing = editing.value?.id === r.id && editing.value.where === "row" && r.kind === "node";
   return (
     <div class={cls} data-row={r.key} style={{ "--depth": r.depth } as never}
+         tabIndex={interactive ? 0 : undefined} role={interactive ? "treeitem" : undefined}
+         aria-selected={interactive ? isSel : undefined}
+         aria-label={interactive ? `${r.label} ${r.sub}${n?.stale || fStale ? " (intent changed, solution not reviewed)" : ""}` : undefined}
          onMouseEnter={interactive ? () => (hover.value = selOf(kind, r.id)) : undefined}
          onMouseLeave={interactive ? () => (hover.value = null) : undefined}
-         onClick={interactive ? () => select(selOf(kind, r.id)) : undefined}>
+         onClick={interactive ? () => select(selOf(kind, r.id)) : undefined}
+         onKeyDown={interactive ? (e) => {
+           if (e.target !== e.currentTarget) return;
+           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(selOf(kind, r.id)); return; }
+           if (n && rowKeys(e, n)) e.preventDefault();
+         } : undefined}
+         draggable={canEdit && n!.parent !== null && !isEditing}
+         onDragStart={canEdit ? (e) => {
+           e.dataTransfer?.setData("text/plain", r.id);
+           if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+           dragging.value = r.id;
+         } : undefined}
+         onDragEnd={() => { dragging.value = null; dropTarget.value = null; }}
+         onDragOver={r.kind === "node" ? (e) => {
+           const d = dragging.value;
+           if (d && canDrop(b, d, r.id)) { e.preventDefault(); dropTarget.value = r.id; }
+         } : undefined}
+         onDragLeave={r.kind === "node" ? () => { if (dropTarget.value === r.id) dropTarget.value = null; } : undefined}
+         onDrop={r.kind === "node" ? (e) => {
+           e.preventDefault();
+           const d = dragging.value ?? e.dataTransfer?.getData("text/plain");
+           dragging.value = null;
+           dropTarget.value = null;
+           if (d && canDrop(b, d, r.id)) void patchIntent([{ op: "move", id: d, parent: r.id }]);
+         } : undefined}>
       <span class="row-main">
         {r.kind === "feature" && <span class="idx mono num">{(r.index ?? 0) + 1}</span>}
         <span class="row-id mono" data-flip={r.kind === "group" ? undefined : r.key} data-status={r.status}>
           {r.kind === "node" && <Dot status={r.status} />}
           {r.label}
         </span>
-        <span class="row-sub">{r.sub}</span>
+        {isEditing ? <StatementInput id={r.id} /> : (
+          <span class="row-sub" onDblClick={canEdit ? (e) => { e.stopPropagation(); startEdit(r.id, n!.statement ?? ""); } : undefined}>
+            {r.sub}
+          </span>
+        )}
+        {n?.stale && <StaleTag id={r.id} compact />}
+        {fStale && <StaleTag id={`feat-${r.id}`} compact />}
         {r.kind === "feature" && <Dot status={r.status} />}
+        {canEdit && !isEditing && <RowActions n={n!} />}
       </span>
       <span class="callouts">
         {r.chips.map((c) => <ChipView key={c.key} c={c} />)}
@@ -173,8 +225,10 @@ function ChipView({ c }: { c: Chip }) {
   const isLit = kind === "node" ? L.nodes.has(c.id) : L.features.has(c.id);
   const isAct = active.value !== null;
   const s = selOf(kind, c.id);
+  const b = build.value;
+  const stale = kind === "feature" ? staleFeatures(b).has(c.id) : !!b?.tree.nodes[c.id]?.stale;
   return (
-    <span class={`chip chip-${c.kind} ${isLit ? "lit" : ""} ${isAct && !isLit ? "dim" : ""}`}
+    <span class={`chip chip-${c.kind} ${isLit ? "lit" : ""} ${isAct && !isLit ? "dim" : ""} ${stale ? "chip-stale" : ""}`}
           data-flip={c.kind === "instance" ? undefined : c.key} data-chip={c.key}
           onMouseEnter={(e) => { e.stopPropagation(); hover.value = s; }}
           onMouseLeave={(e) => { e.stopPropagation(); hover.value = null; }}
@@ -286,6 +340,11 @@ export function DiagnosticsSummary() {
           <span class="mono">{f}</span> no intent
         </div>
       ))}
+      {(d.missing_in_file ?? []).map((n) => (
+        <div class="diag diag-warn" key={`mf-${n}`} onClick={() => select({ kind: "node", id: n })}>
+          <span class="mono">{n}</span> used in the DSL but missing from the intent file
+        </div>
+      ))}
       {d.no_feature.map((n) => (
         <div class="diag diag-warn" key={`nf-${n}`} onClick={() => select({ kind: "node", id: n })}>
           <span class="mono">{n}</span> intent with no feature
@@ -311,7 +370,9 @@ export function useEscapeToClear() {
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (expanded.value) expanded.value = false;
+        if (confirmDelete.value) confirmDelete.value = null;
+        else if (editing.value) editing.value = null;
+        else if (expanded.value) expanded.value = false;
         else selection.value = null;
       }
     };

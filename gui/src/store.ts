@@ -6,7 +6,7 @@ import { connected, type View } from "./model";
 import type { BuildJ, DesignInfo, Selection } from "./types";
 
 export type Theme = "light" | "dark";
-export type Tab = "viewport" | "tree" | "inspector" | "checks" | "interpretations";
+export type Tab = "viewport" | "tree" | "inspector" | "checks" | "interpretations" | "proposals";
 
 function stored<T>(key: string, fallback: T): T {
   try {

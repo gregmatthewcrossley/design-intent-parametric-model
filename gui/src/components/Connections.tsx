@@ -7,6 +7,8 @@ import type { Selection } from "../types";
 import { Dot } from "./common";
 import { DiagnosticsSummary } from "./IntentPanel";
 import { nodeDepth } from "../model";
+import { staleFeatures } from "../edit";
+import { StaleTag } from "./IntentEditor";
 
 interface Line { d: string; cls: string }
 
@@ -111,6 +113,7 @@ export function Connections() {
                    data-c-node={id} style={{ "--depth": nodeDepth(b, id) } as never} {...on(s)}>
                 <Dot status={n.status} /> <span class="mono">{id}</span> <span class="c-label">{n.label}</span>
                 {b.diagnostics.no_feature.includes(id) && <span class="flag-text">no feature</span>}
+                {n.stale && <StaleTag id={`c-${id}`} compact />}
               </div>
             );
           })}
@@ -128,6 +131,7 @@ export function Connections() {
                 <span class="idx mono num">{f.index + 1}</span> <Dot status={f.status} />
                 <span class="mono">{f.id}</span> <span class="c-label">{f.lowered_from ?? f.op}</span>
                 {flags.map((x) => <span class="flag-text" key={x}>{x}</span>)}
+                {staleFeatures(b).has(f.id) && <StaleTag id={`c-feat-${f.id}`} compact />}
               </div>
             );
           })}
