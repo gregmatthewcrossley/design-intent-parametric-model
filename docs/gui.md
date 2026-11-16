@@ -200,7 +200,77 @@ intents:
 - **Where parameters live:** they stay in the DSL for 2a (they're "true design parameters", architecture §8.1). Moving them to the intent file is a later question.
 - **How formal checks are in the file:** free text plus kind/source for now; an expression language later (architecture §10, open question 1).
 
-## 8. Open items for later iterations
+## 8. Iteration 3: honest status and real scale (spec agreed 2026-11-16)
+
+*Drafted and agreed 2026-11-16, from decisions already made: [`review-response.md`](review-response.md) B1–B9, [`tolerance-uncertainty.md`](tolerance-uncertainty.md) §2–§4.2, and the iteration 2 review in `src/dipm/NOTES.md` (#44–57). Open questions resolved in §8.6.*
+
+### 8.1 Goal
+
+Two things a designer can trust at a glance:
+1. **The status never overstates.** Every result says which checks ran, how much margin they have, and what was guessed rather than confirmed.
+2. **Size reads as real.** Small features look small, and the part can be shown at true size on screen.
+
+### 8.2 Engine work this iteration depends on (3E)
+
+| # | Work | From |
+|---|---|---|
+| 3E.1 | **Tiered status** in the build result: kernel invariants, intent checks run / not run / failing, margins thin/ample. No single PASS flag | B1 |
+| 3E.2 | **Margins on checks:** quantities carry ranges (packs, components, assumptions); worst-case propagation by default; every check reports nominal, worst case, limit, and margin | tolerance §2 |
+| 3E.3 | **Real bracket checks:** R.c1 load as a rung-2 hand-calc (expected to fail; see architecture §8.4a), R.c4 tool access as a swept-cylinder interference check | B2 |
+| 3E.4 | **Interpretations** distinguish *feasible* from *meant*; sensitivity reports **forced** vs. **insensitive**, graded by geometric distance | B3, B4 |
+| 3E.5 | **Provenance on everything:** `made_by` and reviewed/unreviewed exposed for readings, assumptions, context, and checks | B5 |
+| 3E.6 | **Default context assumption:** PLA, standard FDM, 0.4 mm nozzle, 0.2 mm layers, as an unreviewed model-made assumption when none is given. Like 3E.10, it lives in the machine-written resolution record until accepted, then moves into the intent file's context | tolerance §4.2 |
+| 3E.7 | **Process pack appearance data:** layer pitch, extrusion width, build direction, and detail flags, from the same pack the checks use | tolerance §4.2 |
+| 3E.8 | **`GET /api/display`:** physical size (mm), pixel size, built-in flag, and name for each connected display, from the OS (macOS CoreGraphics; Windows/Linux EDID equivalents) | tolerance §4 |
+| 3E.9 | Iteration 2 review changes: no duplicate wording in tags (#45); no automatic review baseline (#48); preferences migrated on rename (#49); before/after at the current parameters and outline-changed faces (#53); **Accept anyway** with a recorded override (#54); request status for "Queue for Claude" (#55); the lock key includes lowering code (B6) | B9, B6 |
+| 3E.10 | **Print orientation inference:** choose a best build orientation for the assumed process. Score candidates (e.g. the part's large planar faces down) by overhang area beyond 45°, support volume, and bed contact. The choice is **recorded in the design's documents** as a model-made, unreviewed assumption with its rationale and runner-up, e.g. "Print with the wall face down: 0 mm² overhang vs. 1,240 mm² for arm-down". It is never chosen silently by the renderer. **Until the designer accepts it, it lives in the design's machine-written resolution record** (alongside the interpretations lock), shown as a model-made, unreviewed assumption (hatched). **Accepting it** writes it into the intent file's root assumptions (made_by: model, status: accepted). Nothing writes the intent file without the designer. Inference reruns only on request or when its inputs (geometry, process) change, and never replaces an accepted orientation. Layer lines follow the current orientation | author, 2026-11-16 |
+
+### 8.3 GUI features (3G)
+
+| # | Feature | Behavior |
+|---|---|---|
+| 1 | **Honest header status** | It replaces the PASS badge with tiers, e.g. "Kernel ✓ · Intent checks 3 of 4 run · **1 failing** · 1 thin margin". Green appears only for tiers that ran and passed. Clicking the status opens the checks panel at the relevant row |
+| 2 | **Checks panel with margins** | Rows are grouped by tier (kernel / intent). Each intent check shows plain-language text ("Holds 20 kg at the shelf edge"), a **margin bar** (nominal, worst case, limit), and a state: ample, thin, failing, or not run. Engine terms (ΔH, ledger, genus) sit behind a **Details** toggle (B8, PAIN-06) |
+| 3 | **Guesses vs. confirmed, everywhere** | Model-made or unreviewed items use one consistent style (hatched chip, dashed outline) in the tree, the inspector, interpretations, assumptions, and checks. Designer-made or reviewed items are solid (B5, PAIN-12) |
+| 4 | **Context chip** in the header | "Assumed: PLA · FDM 0.2 mm · change", hatched while unreviewed. *Change* opens a small picker (process, material, layer height, nozzle). Confirming it makes the chip solid |
+| 5 | **First-open review prompt** | A design without a review record opens with "This design hasn't been reviewed: Mark all reviewed / Review one by one" (#48) |
+| 6 | **Proposals panel updates** | Before/after at the current parameters, with the verdict from defaults plus the sweep (#53). Outline-changed faces get a lighter tint. **"Accept anyway…"** asks for a reason when checks fail; overridden nodes show as *reviewed with failing checks* (#54). **"Queue for Claude"** shows a "N requests waiting" status and a copyable prompt (#55). Comparison view says "inspection paused" (#57) |
+| 7 | **Rename dialog** | Preferences migrate; an optional checkbox renames matching feature ids, off by default (#49) |
+| 8 | **View menu** (header strip) | Work / Photo view; 1:1 real size; process texture; reference objects; scale bar; uncertainty mode (None / Margin heatmap) |
+| 9 | **Margin heatmap** (uncertainty mode) | Faces are colored by the smallest margin among the checks they take part in: green ample → amber thin → red failing; grey where no check applies. A legend is shown. Only one uncertainty mode at a time. (The variation ghost and animated samples wait for opt-in sampling) |
+| 10 | **Work view** (default) | Crisp. Scale comes from the scale bar, process texture, and size-on-hover callouts |
+| 11 | **Photo view** | A simulated physical camera: depth of field from a real lens model (focal length, aperture, focus distance), so depth of field narrows as magnification rises. **Blur is capped** so the focused feature and labels stay readable. **Focus follows the cursor** (raycast to the surface under the pointer, eased). Soft image-based lighting from a procedural environment, so no third-party HDRI licensing. The reference object appears |
+| 12 | **1:1 real size** | The browser reports its screen (CSS-px size, `devicePixelRatio`, and Window Management API details where available). The engine matches it to `/api/display`. The camera **snaps to the nearest standard view** (orthographic, head-on) and zooms so 1 mm on the model equals 1 mm on the glass. It recomputes on screen change or browser zoom. **Fallback:** if the reported size is missing or implausible, a one-time calibration where you match an on-screen card to a real ID-1 card (85.60 × 53.98 mm); an optional "check with a coin" step. Shows "1:1 on <display name>" while active |
+| 13 | **Process texture** | Shading only (normal and roughness detail, never color), so it never competes with the heatmap. **FDM in this iteration:** layer lines at the real pitch along the **inferred build direction** (3E.10), and top-surface extrusion lines. Detail **fades in** once its real pitch exceeds about 2 screen pixels and fades out when it would alias. Z-seam, elephant's foot, and support scars are later |
+| 14 | **Reference objects** | Chosen **automatically by context** and **ghosted beside the part** (never overlapping it), toggled in the View menu: the matching **screw** next to a hole (generated from the hole's spec, so an M3 hole gets an M3 screw); a **fingertip** next to small controls (sized from ANSUR II); a **hand** or an **ID-1 credit card** (85.60 × 53.98 mm, the same everywhere) for the overall part. At most one at a time, chosen by what's under or nearest the cursor, or the part as a whole |
+| 15 | **Scale bar and size callouts** | An adaptive scale bar like a map's (1 / 2 / 5 × 10ⁿ mm). Hovering a feature shows its main size ("Ø4.5 hole · 9 mm from edge") |
+
+### 8.4 Acceptance criteria (draft)
+
+1. The bracket's header never shows a bare PASS. With R.c1 implemented, it shows **1 failing** intent check, and the checks panel shows R.c1's margin bar as negative, with plain-language text.
+2. Every model-made item (the A.3 reading, R.a1–a3, and the default context if used) is hatched; marking one reviewed makes it solid everywhere at once.
+3. A design with no stated context shows the "Assumed: PLA · FDM 0.2 mm" chip, hatched. Its render shows 0.2 mm layer lines when zoomed close, and they disappear when zoomed out.
+4. Margin heatmap: faces involved in R.c1 are red; faces in no check are grey.
+5. Photo view: hovering the lower screw hole puts it in focus and blurs the arm end, and the blur visibly increases with magnification.
+6. 1:1 mode on the author's MacBook (301.8 × 196.0 mm display): the 30 mm-wide bracket leg measures 30 mm with a ruler on the screen (±0.5 mm), in the nearest standard view. Moving the window to an external display recomputes it. With a reported size of 0, the calibration fallback appears.
+7. Hovering an A.P hole in photo view shows a ghosted #8 screw beside the part.
+8. A proposal that fails checks offers **Accept anyway…**, requires a reason, and afterwards shows the nodes as *reviewed with failing checks*.
+9. Opening a design with no review record shows the first-open prompt.
+9a. With no stated context, the bracket gets an inferred print orientation, recorded in the machine-written resolution record with its rationale and runner-up (e.g. overhang areas). It shows hatched as an unreviewed assumption; the layer lines follow it. Accepting it writes it into the intent file; later inference never replaces an accepted orientation.
+10. Tests: pytest for 3E; vitest for the margin, heatmap, and scale-bar logic and 1:1 math; Playwright for the criteria above (1:1 verified against a stubbed `/api/display`). Screenshots in light and dark.
+
+### 8.5 Out of scope for iteration 3
+
+Touch and pen devices; the variation ghost and animated samples (waiting on opt-in sampling); Z-seam, elephant's foot, and support scars; process textures other than FDM; SLA, molding, and CNC appearance; as-made geometry for checks (tolerance §5 step 3).
+
+### 8.6 Decisions (author, 2026-11-16)
+
+1. **Familiar-size object:** an ID-1 **credit card** instead of a coin (international, and the same card used for 1:1 calibration).
+2. **Photo view:** a true lens model with **capped blur**.
+3. **Build direction:** **infer a best orientation** (3E.10), recorded with its rationale in the machine-written resolution record until accepted, then written into the intent file. It is never silently chosen by the renderer. The **default material/process context** (3E.6) follows the same rule.
+4. **One iteration:** build all of 3E and 3G together, not split into 3a/3b.
+
+## 9. Open items for later iterations
 
 - Redline layer: marks resolve to structural references and become comments on intent nodes (user-experience §3.1).
 - Previewing a reading's geometry before answering a question.

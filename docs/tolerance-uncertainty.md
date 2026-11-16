@@ -49,6 +49,37 @@ One visual channel per meaning, used consistently, with **one uncertainty mode o
 
 Also planned: an adaptive scale bar (like a map's) and size-on-hover callouts.
 
+### 4.1 Interaction decisions (2026-11-16, second pass)
+
+| Question | Decision |
+|---|---|
+| Blur vs. precise inspection | **Two viewport modes.** *Work view* is crisp, with subtle scale cues (scale bar, process texture, size callouts). *Photo view* has physically based depth of field, soft lighting, and a reference object. Toggle between them quickly |
+| What drives focus in photo view | **The cursor:** focus follows the point under the pointer |
+| 1:1 real-size mode and the camera | **Snaps the camera to the nearest standard view** (orthographic, head-on), where true size is meaningful |
+| Scale cues vs. uncertainty modes | Scale cues are a **separate, always-available layer**. Process texture is **shading only, never color**, so it never competes with the margin heatmap |
+| Reference objects | **Chosen automatically by context** (fingertip near buttons, screw near holes, hand for the whole part), **ghosted and placed beside the part**, and toggleable |
+| Where the controls live | A **View menu in the header strip** |
+| Touch and pen devices | Out of scope for now: design for cursor devices |
+
+### 4.2 Assume material and fabrication early
+
+When the designer hasn't specified them, dipm **makes material and fabrication-method assumptions early**, so the render can show the right textures and details, and so checks have something concrete to work from. The default is **PLA on a standard FDM printer** (0.4 mm nozzle, 0.2 mm layers).
+
+- **It's an ordinary assumption** (architecture §4.8): `made_by: model`, unreviewed, and **visibly distinct** from designer-confirmed context (PAIN-12). It is shown in the header strip, e.g. "Assumed: PLA · FDM 0.2 mm · change", one click from changing it.
+- **The process pack is the single source** for both checks (rule pack) *and* appearance. The pack that knows "layers are 0.2 mm" also renders 0.2 mm layer lines, so the render can't disagree with the checks.
+- **What each process contributes** (shading and normal detail, not color):
+
+| Process | Visual details |
+|---|---|
+| FDM (default) | Layer lines at real pitch; top-surface extrusion lines (perimeters, infill direction); Z-seam; slight first-layer "elephant's foot"; faint overhang droop and support-contact roughness where the walkthrough's fabricate stage predicts supports |
+| SLA / resin | Very fine layers, support nubs on the supported side |
+| Injection molding | Parting line; gate vestige; ejector-pin witness marks; draft-aware gloss; subtle sink over thick sections |
+| CNC milling | Tool-path marks and scallops on 3D surfaces; inside-corner radii from tool diameter |
+| Sheet metal | Bend radii; grain direction; burr side |
+
+- **It also feeds as-made prediction** (§2): the same assumption that draws layer lines also predicts undersized holes and elephant's foot for checks.
+- **Material** sets surface appearance (PLA matte; PETG slightly glossy; ABS; aluminum; steel) and, through rule packs, strength and tolerance data. A **material change is high-sensitivity** when strength checks depend on it, so it's surfaced early in review.
+
 ## 5. Order of work
 
 1. **Margins on checks** (engine): ranges on quantities, worst-case propagation, and margin reporting, together with B1 (no bare PASS) and B2 (real load and tool-access checks for the bracket).

@@ -243,7 +243,7 @@ rules:
 
 Other early packs: `fdm_printing`, `fasteners`, `sheet_metal`, `cnc_milling`. The model's job is to **select and parameterize** packs. It may **propose** new rules, but they are marked `unverified` in provenance and never treated as fact until reviewed.
 
-**World context.** World-derived checks depend on context (process, material, quantity, environment), which lives at the root and flows down with *pass*.
+**World context.** World-derived checks depend on context (process, material, quantity, environment), which lives at the root and flows down with *pass*. When the designer hasn't specified it, the model **assumes a default early** (PLA on a standard FDM printer) as a visible, unreviewed assumption. The same process pack then drives checks, as-made prediction, *and* the render's surface detail (see [`tolerance-uncertainty.md` §4.2](tolerance-uncertainty.md#42-assume-material-and-fabrication-early)).
 
 **Provenance** gains a `source` field: `geometric`, `world:<pack>.<rule>@<version>`, or `world:model-proposed`.
 
