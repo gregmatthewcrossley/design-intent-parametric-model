@@ -4,7 +4,9 @@ Axes: X across the bracket width (symmetric about X=0), Y out from the wall (wal
 at Y=0), Z up.  The L-profile lives in the YZ plane: a vertical leg against the wall and a
 horizontal arm on top that carries the shelf.
 
-Intent tree (architecture §8.2, §8.3 after consolidation, §8.4a option 2):
+Intent tree (architecture §8.2, §8.3 after consolidation, §8.4a option 2).  The statements,
+checks and assumptions live in `shelf_bracket.intent.yaml` (docs/gui.md §7.2); this file
+references the nodes by id in each feature's `tags=`:
 
     R    Support a shelf on a wall                      -> R.body (skeleton), R.fillet (R.c2)
     ├─ A    Wall mounting
@@ -32,9 +34,7 @@ def make_design(shelf_hole_u: float = 0.75) -> Design:
     front", architecture §8.5 `u=0.75`), exposed only so tests can build the spike-01
     negative control (u=0.4 lands the shelf screw on the gusset)."""
     d = Design("shelf_bracket", doc="architecture.md §8 worked example")
-    # intent-tree labels for nodes whose tags carry no note (shown by `dipm serve`)
-    d.label_intent("R", "Support a shelf on a wall").label_intent("A", "Wall mounting")
-    d.label_intent("B", "Shelf support").label_intent("C", "Stiffening: gusset at the inner corner")
+    d.use_intent(__file__)     # intent tree: shelf_bracket.intent.yaml (statements, checks, assumptions)
 
     # --- R parameters: the only literals (architecture §8.1) -----------------------------
     shelf_depth = d.param("shelf_depth", 200.0, range=(180.0, 300.0), doc="shelf depth the arm supports")

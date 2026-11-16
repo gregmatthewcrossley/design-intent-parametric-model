@@ -2,7 +2,7 @@
   "dipm_interpretations": 1,
   "design": "shelf_bracket",
   "key": {
-    "design_source_sha256": "8f9a16baa3d7dc630b90d6b527e343e650838d7dbac7c58618f5775641c98c11",
+    "design_source_sha256": "5d916d755c31dac7217e12b4867c9a0d0d85db61d672002a143f2ef3b92d62b0",
     "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
     "dipm": "0.0.1"

@@ -1,0 +1,49 @@
+# Shelf bracket: the intent tree (docs/architecture.md §8).  The solution is shelf_bracket.py,
+# whose features reference these nodes by id (tags=intent("A.P", ...)).
+#
+# Edited by hand, by `dipm serve` (WHY view and inspector) and through accepted Claude
+# proposals.  Always saved in canonical form: comments and key order are preserved, so diffs
+# stay minimal.  Hierarchy is the nesting; ids are stable labels and never change on a move.
+design: shelf_bracket
+context: {process: fdm_printing, material: PETG, install: drywall with anchors, style: minimal_industrial}
+intents:
+  - id: R
+    statement: Support a shelf on a wall
+    checks:
+      - {id: R.c1, kind: analysis, source: world, priority: must, statement: "Carries `load` at the shelf front edge, safety factor ≥ 2", grounded_as: "point load at arm tip; leg fixed at screw locations; PETG allowable from the fdm_printing pack"}
+      - {id: R.c2, kind: rule, source: "world:fdm_printing.overhang", priority: must, statement: "Printable without supports (overhang ≤ 45°)"}
+      - {id: R.c3, kind: learned score, source: "human:minimal_industrial", priority: nice to have, statement: Proportions look balanced}
+      - {id: R.c4, kind: rule, source: "human:care.tool_access", priority: must, statement: Every wall screw can be driven by a standard screwdriver, grounded_as: "Ø30 mm straight access cylinder, ≥ 150 mm long, coaxial with each screw, clear of the part"}
+    assumptions:
+      - {id: R.a1, statement: "Load is static, a point load at the arm tip (worst case)", made_by: model, rationale: Books may be pushed to the front edge; tip loading maximizes moment, supports: [R.c1], sensitivity: high, status: proposed}
+      - {id: R.a2, statement: PETG strength across layers ≈ 50% of in-layer, made_by: pack default, supports: [R.c1], sensitivity: high, status: proposed}
+      - {id: R.a3, statement: "Installer uses a standard screwdriver or drill, no right-angle adapter", made_by: model, supports: [R.c4], sensitivity: medium, status: proposed}
+    children:
+      - id: A
+        statement: Wall mounting
+        children:
+          - id: A.P
+            statement: Wall screw pattern
+            checks:
+              - {id: A.P.c1, kind: relation, priority: must, statement: Symmetric about the mount face's vertical centerline}
+              - {id: A.P.c2, kind: rule, priority: should, statement: "Spread as far apart as edge distance allows (resists the moment)"}
+              - {id: A.P.c3, kind: rule, source: "pack:fasteners", priority: must, statement: "Ø = clearance(screw); edge distance ≥ 2×Ø"}
+              - {id: A.P.c4, kind: relation, source: R.c4, priority: must, statement: "Below the gusset footprint by the tool-access radius"}
+            children:
+              - id: A.P.1
+                statement: Lower wall screw hole
+              - id: A.P.2
+                statement: Upper wall screw hole
+          - id: A.3
+            statement: Cable pass-through, centered on the plate
+            checks:
+              - {id: A.3.c1, kind: rule, priority: must, statement: "Ø ≥ 8 mm"}
+              - {id: A.3.c2, kind: relation, priority: should, statement: Centered horizontally}
+              - {id: A.3.c3, kind: rule, priority: must, statement: "Clear of the A.P holes by ≥ Ø"}
+      - id: B
+        statement: Shelf support
+        children:
+          - id: B.1
+            statement: Screw up into the shelf, toward the front
+      - id: C
+        statement: "Stiffening: gusset at the inner corner"
