@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dipm"
+version = "0.0.1"
+description = "v0 DSL core for design-intent -> parametric CAD (placeholder package name)"
+requires-python = ">=3.12,<3.13"
+# Pinned to the versions validated in spikes/01-occt-feasibility/requirements.lock.txt.
+dependencies = [
+    "build123d==0.13.0",
+    "cadquery-ocp-novtk==8.0.1.1.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.2.0"]
+
+[project.scripts]
+dipm = "dipm.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+dipm = ["NOTES.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

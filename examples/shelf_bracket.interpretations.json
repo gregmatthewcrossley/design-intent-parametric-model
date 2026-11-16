@@ -1,0 +1,171 @@
+{
+  "dipm_interpretations": 1,
+  "design": "shelf_bracket",
+  "key": {
+    "design_source_sha256": "609cb7babbc017ff1a0fadf2f614d57b1da849a8b90e74a84ae1aaada499957b",
+    "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
+    "dipm": "0.0.1"
+  },
+  "prefs": null,
+  "sample_points": [
+    {},
+    {
+      "shelf_depth": 180.0
+    },
+    {
+      "shelf_depth": 300.0
+    },
+    {
+      "t": 4.0
+    },
+    {
+      "t": 8.0
+    },
+    {
+      "screw": "#6"
+    },
+    {
+      "screw": "#10"
+    },
+    {
+      "shelf_depth": 180.0,
+      "t": 4.0
+    },
+    {
+      "shelf_depth": 300.0,
+      "t": 8.0
+    }
+  ],
+  "choices": {
+    "A.P.holes/hole.extent": "through_plate",
+    "A.3.cable/centered_on.point": "exposed_region_midpoint",
+    "A.3.cable/hole.extent": "through_plate",
+    "B.1.screw/hole.extent": "through_plate"
+  },
+  "assumptions": [
+    {
+      "id": "A.P.holes/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "A.P.holes",
+      "node": "A.P",
+      "statement": "A.P.holes: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
+      "chosen": "through_plate",
+      "made_by": "pack default",
+      "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+      "status": "proposed",
+      "sensitivity": "none",
+      "sensitivity_detail": "survivors identical at every sample point",
+      "readings": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "alternatives": [
+        "through_all",
+        "up_to_next"
+      ],
+      "eliminated": [],
+      "supports": [
+        "A.P.holes"
+      ]
+    },
+    {
+      "id": "A.3.cable/centered_on.point",
+      "word": "centered_on",
+      "slot": "point",
+      "feature": "A.3.cable",
+      "node": "A.3",
+      "statement": "A.3.cable: centered_on point read as 'exposed_region_midpoint' (the middle of the face's exposed region: the longest material chord through its bounding centre, bridging holes but stopped by material attached to the face)",
+      "chosen": "exposed_region_midpoint",
+      "made_by": "model",
+      "rationale": "package default 'face_centroid' eliminated; next by prior/simplicity: the middle of the face's exposed region: the longest material chord through its bounding centre, bridging holes but stopped by material attached to the face",
+      "status": "proposed",
+      "sensitivity": "high",
+      "sensitivity_detail": "package default overridden; only one reading survives",
+      "readings": [
+        "face_centroid",
+        "exposed_region_midpoint"
+      ],
+      "alternatives": [],
+      "eliminated": [
+        {
+          "reading": "face_centroid",
+          "feature": "A.3.cable",
+          "check": "relation: centre inside face",
+          "point": {},
+          "message": "hole instance 0: centre (0, 5, 70.4122) is not inside face R.body.side(mount)",
+          "failed_points": 9,
+          "of_points": 9
+        }
+      ],
+      "supports": [
+        "A.3.cable"
+      ]
+    },
+    {
+      "id": "A.3.cable/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "A.3.cable",
+      "node": "A.3",
+      "statement": "A.3.cable: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
+      "chosen": "through_plate",
+      "made_by": "pack default",
+      "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+      "status": "proposed",
+      "sensitivity": "none",
+      "sensitivity_detail": "survivors identical at every sample point",
+      "readings": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "alternatives": [
+        "through_all",
+        "up_to_next"
+      ],
+      "eliminated": [],
+      "supports": [
+        "A.3.cable"
+      ]
+    },
+    {
+      "id": "B.1.screw/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "B.1.screw",
+      "node": "B.1",
+      "statement": "B.1.screw: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
+      "chosen": "through_plate",
+      "made_by": "pack default",
+      "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+      "status": "proposed",
+      "sensitivity": "none",
+      "sensitivity_detail": "survivors identical at every sample point",
+      "readings": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "alternatives": [
+        "through_all",
+        "up_to_next"
+      ],
+      "eliminated": [],
+      "supports": [
+        "B.1.screw"
+      ]
+    }
+  ],
+  "questions": [],
+  "notices": [
+    {
+      "id": "A.3.cable/centered_on.point",
+      "kind": "default_overridden",
+      "text": "A.3.cable: package default 'face_centroid' for centered_on point was eliminated (face_centroid: fails relation: centre inside face at A.3.cable at (defaults) (9/9 points): hole instance 0: centre (0, 5, 70.4122) is not inside face R.body.side(mount)); using 'exposed_region_midpoint'. No intent-level check (e.g. tool access; NOTES TODO 4) has confirmed 'exposed_region_midpoint' is what the design means.",
+      "sensitivity": "high"
+    }
+  ]
+}
