@@ -1,0 +1,636 @@
+{
+  "report": "reports/Fresh eyes review.md",
+  "reviewed_commit": "e84902b",
+  "date": "2026-11-16",
+  "verdict": "A well-instrumented, honest engineering notebook with a genuinely good small core (history-based references with declared cardinality, interaction-derived ΔH/ΔS/volume contracts, edit-stability harness) wrapped in an architecture that largely re-derives semantic feature modelling, KBE, SE requirement allocation and design rationale without engaging them. No model, intent checks or solver exist yet. Biggest risks: false assurance (PASS on a demo that likely fails its load intent), interpretations letting checks select geometry, and a workflow that presumes designers know and will state intent. Ship the verifier/benchmark first.",
+  "items": [
+    {
+      "id": "NOV-01",
+      "section": "1. Novelty and usefulness",
+      "severity": "medium",
+      "title": "Intent tree + check flow-down is not new",
+      "claim": "Pass/allocate/translate/derive is systems-engineering requirement allocation; intent→checks→solution mirrors Gero's FBS; 'tree is the rationale' is the IBIS/gIBIS/QOC/DRed promise. None cited.",
+      "evidence": "docs/architecture.md §3.4, §4.2",
+      "remedy": "Add a prior-art section stating the delta: executable rationale bound to geometry, and why it beats the known failure modes.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "NOV-02",
+      "section": "1. Novelty and usefulness",
+      "severity": "medium",
+      "title": "Rule packs and idiomatic score have commercial precedent",
+      "claim": "KBE (ICAD, NX Knowledge Fusion, CATIA Knowledgeware, Creo Behavioral Modeling), DFM/DFA checkers and model-quality checkers (Q-Checker, CADIQ, VDA 4955, SASIG PDQ) already do this; KBE's lesson is rule-base maintenance cost.",
+      "evidence": "docs/architecture.md §4.6, §4.7, §6",
+      "remedy": "Position packs against KBE; budget pack maintenance.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "NOV-03",
+      "section": "1. Novelty and usefulness",
+      "severity": "high",
+      "title": "Closest prior art (semantic feature modelling) missing",
+      "claim": "Bidarra & Bronsvoort 2000 attach validity constraints to features checked after each edit; Shah & Mäntylä 1995; valid-parameter-range work (Hoffmann & Kim 2001; Joan-Arinyo); CAD-education design-intent rubrics (Company, Contero, Camba, Otey). 'Nobody measures intent' holds only for the ML literature.",
+      "evidence": "reports/Parametric CAD generation survey.md 'Benchmarks measure shape similarity'; docs/explore-further.md",
+      "remedy": "Read and cite; narrow novelty claims.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "NOV-04",
+      "section": "1. Novelty and usefulness",
+      "severity": "low",
+      "title": "Genuinely new parts are smaller and concrete",
+      "claim": "Interpretations with elimination and sensitivity-gated questions (nearest analogue: PBE disambiguation, Mayer et al. 2015); interaction-derived per-feature ΔH/ΔS/volume contracts; an edit-stability benchmark over an open DSL.",
+      "evidence": "src/dipm/interpret.py; NOTES DECISIONS #7; survey conclusion",
+      "remedy": "Lead with these; publish the benchmark.",
+      "uncertainty": "medium: there may be unpublished industrial equivalents"
+    },
+    {
+      "id": "NOV-05",
+      "section": "1. Novelty and usefulness",
+      "severity": "medium",
+      "title": "First adopters are not early-stage industrial designers",
+      "claim": "Best fits: parametric families/configurators, CadQuery/build123d makers, and AI agents via MCP as a verifier. Early ID (sketches, images) is the weakest fit.",
+      "evidence": "README 'Key ideas'; docs/user-experience.md §3",
+      "remedy": "Say so in the README; design v1 around the agent-verifier use case.",
+      "uncertainty": "medium"
+    },
+    {
+      "id": "INC-01",
+      "section": "2. Logical inconsistencies",
+      "severity": "high",
+      "title": "'All non-determinism on the intent side' is false in the engine",
+      "claim": "Build depends on lock/prefs/reading tables; no-lock builds use unchecked defaults; Gauss–Seidel with warm start is path-dependent; server re-resolves in the background and rebuilds ~2.5 s later; BRepOffset bytes nondeterministic; the DSL is arbitrary Python with cached imports.",
+      "evidence": "docs/architecture.md §1 principle 2, §7; NOTES DECISIONS #26, #30, #38; docs/dsl.md §5.4",
+      "remedy": "Define determinism over a fully locked solution; make the lock mandatory for displayed/exported builds; fail closed.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "INC-02",
+      "section": "2. Logical inconsistencies",
+      "severity": "medium",
+      "title": "'Literals only for true design parameters' contradicted by the example",
+      "claim": "0.75, 0.8, 6, 0.4, shelf_hole_u=0.75, plain(8.0), across=0.5, TOOL_ACCESS_DIAMETER=30 in the example; engine epsilons 1 mm, +2 mm, 0.01 mm, 16 rays. Multiplying by a parameter is not a relation.",
+      "evidence": "docs/architecture.md §2.2, §8.1; examples/shelf_bracket.py ('the only literals'); src/dipm/intent_layer.py",
+      "remedy": "Classify relation / ratio constant / engine epsilon and count separately in the metric.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "INC-03",
+      "section": "2. Logical inconsistencies",
+      "severity": "medium",
+      "title": "The example has the false coupling the architecture warns against",
+      "claim": "width = 6*t (thickness 5→8 widens the bracket 30→48 mm); leg and gusset scale with shelf_depth without stated purpose; §8.6 edit tests pass because of these couplings.",
+      "evidence": "docs/architecture.md §5.1, §8.6; examples/shelf_bracket.py",
+      "remedy": "Make independent parameters or justify each ratio with an intent node and check.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "INC-04",
+      "section": "2. Logical inconsistencies",
+      "severity": "high",
+      "title": "Interpretations turn checks into selection pressure",
+      "claim": "Invariants eliminate readings and then report PASS on the survivor. The spike-01 negative control (shelf_hole_u=0.4) now silently drills through_all into the gusset with only a non-blocking notice; rule #32 was narrowed until the demo showed 0 notices.",
+      "evidence": "src/dipm/interpret.py steps 2 and 6; NOTES DECISIONS #28, #32; docs/architecture.md §10 item 2",
+      "remedy": "Ask (not notify) on extra interaction; keep hold-out checks never used for elimination; show 'selected' distinct from 'verified'.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "INC-05",
+      "section": "2. Logical inconsistencies",
+      "severity": "medium",
+      "title": "A check compiled into a construction can never fail",
+      "claim": "R.c4 tool access is a check in the docs but implemented as a placement (before(gusset, clearance=tool_access_radius)); nothing verifies it independently.",
+      "evidence": "docs/architecture.md §8.1 R.c4; examples/shelf_bracket.py screw_zone",
+      "remedy": "Keep checks as first-class objects that redundantly verify even relation-enforced intents (TODO 4).",
+      "uncertainty": "low"
+    },
+    {
+      "id": "INC-06",
+      "section": "2. Logical inconsistencies",
+      "severity": "high",
+      "title": "Final bracket layout likely fails its own root load check; chosen for brevity",
+      "claim": "Option 2 was chosen 'for brevity' although idiom passes should follow correctness. Screws at z≈9 and 50 mm on a 150 mm leg: M≈196 N×0.16 m≈31 N·m, T=M·z1/Σz²≈600 N on the upper anchor (≈1.2 kN with SF 2), vs ≈220 N with screws near the top.",
+      "evidence": "docs/architecture.md §5, §8.4a, §8.5; NOTES DECISIONS #8; gui/screenshots/bracket-why-light.png",
+      "remedy": "Implement R.c1 as a hand-calc, show option 2 failing upward verification, let option 1 win.",
+      "uncertainty": "medium: rigid-pivot model ignores wall bearing distribution and anchor stiffness; the ~2.7× ratio is robust"
+    },
+    {
+      "id": "INC-07",
+      "section": "2. Logical inconsistencies",
+      "severity": "medium",
+      "title": "'Proven' language outruns the report and code",
+      "claim": "dsl §1 'provably complete alphabets', 'equivalence decided on the core', but there is no core IR (NOTES #4); the report says not to claim proven completeness until Mäntylä 1984 is read; dsl §5.5 'Laman exact in 2D' vs report §5.3 'generic only'.",
+      "evidence": "docs/dsl.md §1, §5.5; NOTES DECISIONS #4; reports/DSL mathematical foundations.md §5.3, §7.5",
+      "remedy": "Replace 'provably' with 'grounded in'; mark goals as goals.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "INC-08",
+      "section": "2. Logical inconsistencies",
+      "severity": "medium",
+      "title": "'Sensitivity none' conflates forced and insensitive",
+      "claim": "A.3 reports 'none' because only one reading survived; arch claims 'same geometry everywhere in range' but only 9 sample points are checked.",
+      "evidence": "NOTES §6 table, DECISIONS #25; docs/architecture.md §10 item 2",
+      "remedy": "Add 'forced: 1 survivor'; say 'identical at N sampled points'.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "INC-09",
+      "section": "2. Logical inconsistencies",
+      "severity": "low",
+      "title": "Topology-only hash described as invariant under legitimate edits",
+      "claim": "Docstring says constant across legitimate edits, yet allow_topology_change exists because legitimate edits change topology.",
+      "evidence": "src/dipm/invariants.py adjacency_hash docstring; NOTES DECISIONS #20",
+      "remedy": "Reword: a change is a review signal.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "INC-10",
+      "section": "2. Logical inconsistencies",
+      "severity": "low",
+      "title": "Stable dotted IDs vs hierarchy derived from dots",
+      "claim": "Iteration 2 keeps IDs stable on move; connections.intent_tree derives hierarchy from the dots, so a reparented A.P.1 under B displays under A.",
+      "evidence": "docs/gui.md §7.4; src/dipm/connections.py docstring",
+      "remedy": "Opaque IDs plus explicit parent, or rewrite IDs on move.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "INC-11",
+      "section": "2. Logical inconsistencies",
+      "severity": "low",
+      "title": "Lock key ignores lowering code",
+      "claim": "readings_digest hashes reading names/priors/complexity, not lowering implementations; changing what through_plate does leaves the lock fresh.",
+      "evidence": "src/dipm/interpret.py readings_digest; NOTES DECISIONS #30",
+      "remedy": "Include per-package version and a lowering-source hash.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "INC-12",
+      "section": "2. Logical inconsistencies",
+      "severity": "medium",
+      "title": "Circular 'ground truth by construction' data claim",
+      "claim": "Procedural trees give ground truth of the generator's ontology; a decomposer trained on them learns the generator's intents, not designers'.",
+      "evidence": "docs/architecture.md §3.4, §9",
+      "remedy": "State the limitation; build a small real-designer evaluation corpus from day one.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "MATH-01",
+      "section": "4. Mathematical fundamentals",
+      "severity": "medium",
+      "title": "Euler–Poincaré check is a parity test",
+      "claim": "H is solved from the formula; the check only fails on odd V−E+F−R or H<0. The diagnostic power is in ΔH vs an independent expectation.",
+      "evidence": "src/dipm/invariants.py euler_counts, EulerCounts.ok",
+      "remedy": "Call it 'Euler parity'; compute H independently (Betti number via homology) if a real check is wanted.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "MATH-02",
+      "section": "4. Mathematical fundamentals",
+      "severity": "high",
+      "title": "Laman misapplied to CAD sketch constraints",
+      "claim": "Laman/Pollaczek-Geiringer cover generic distance-only frameworks; CAD sketches mix angles, incidence, parallelism, tangency and are non-generic by design. Mixed direction-length frameworks need other counts (Servatius & Whiteley; Jackson & Jordán).",
+      "evidence": "docs/dsl.md §5.5 'exact in 2D'; reports/DSL mathematical foundations.md §5.3",
+      "remedy": "Structural counting as heuristic; numeric rank at a witness configuration (Michelucci & Foufou) as truth.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "MATH-03",
+      "section": "4. Mathematical fundamentals",
+      "severity": "medium",
+      "title": "Ruler-and-compass core plus branch tags underspecified",
+      "claim": "Many ordinary sketches are not decomposable/quadratic and fall to the numeric hatch; a deterministic seed gives repeatability, not continuity; a side predicate need not select a unique root.",
+      "evidence": "docs/dsl.md §3.2; report §5.1, §5.3",
+      "remedy": "Branch tags as orientation-determinant sign vectors; continuation along the parameter path; fail at discriminant crossings.",
+      "uncertainty": "medium"
+    },
+    {
+      "id": "MATH-04",
+      "section": "4. Mathematical fundamentals",
+      "severity": "medium",
+      "title": "r-set closure doesn't buy manifold validity or coverage",
+      "claim": "r-sets include non-manifold solids and the empty set; the proven core excludes fillet, countersink, draft and shell, which are most real features.",
+      "evidence": "docs/dsl.md §3.1, §4.3; report §4.5",
+      "remedy": "State r-set (not manifold) validity; add a manifoldness check; be explicit that real parts live in trusted primitives.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "MATH-05",
+      "section": "4. Mathematical fundamentals",
+      "severity": "low",
+      "title": "Cartan–Dieudonné/PGA have no operational role",
+      "claim": "Transforms are lowered to reflections and re-emitted as native features; versor comparison needs sign canonicalisation and tolerance.",
+      "evidence": "docs/dsl.md §3.3",
+      "remedy": "Footnote it; compare (R, t) with explicit tolerances.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "MATH-06",
+      "section": "4. Mathematical fundamentals",
+      "severity": "medium",
+      "title": "Hashes are not canonical",
+      "claim": "4-round WL cannot separate many regular/symmetric graphs (common in CAD); docs call it canonical; 6-significant-figure rounding flips near boundaries across platforms.",
+      "evidence": "src/dipm/invariants.py adjacency_hash, role_geometry_fingerprint; report §3.7",
+      "remedy": "WL as prefilter, nauty/bliss for equality, tolerance-aware geometric comparison.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "MATH-07",
+      "section": "4. Mathematical fundamentals",
+      "severity": "high",
+      "title": "No tolerance or robustness model",
+      "claim": "Scattered, unstated epsilons (1 mm overshoot, +2 mm, 0.01 mm probe, 1e-9 volume) plus OCCT tolerances; no treatment of near-degenerate parameter regions; 9 samples miss thin invalid slivers.",
+      "evidence": "src/dipm/intent_layer.py, invariants.py; NOTES DECISIONS #11, #26",
+      "remedy": "One documented tolerance policy; near-coincidence linter; adaptive/interval sampling or computed validity intervals.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "MATH-08",
+      "section": "4. Mathematical fundamentals",
+      "severity": "medium",
+      "title": "Differential geometry absent where ID aesthetics live",
+      "claim": "Perception proxies ignore G1/G2/G3 continuity, curvature combs, highlight lines; OCCT rolling-ball fillets are G1; 'radius family ≤ 2' approves harsh tangent blends.",
+      "evidence": "docs/architecture.md §4.7.1",
+      "remedy": "Add continuity and highlight-line proxies and curvature-continuous blend primitives.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "MATH-09",
+      "section": "4. Mathematical fundamentals",
+      "severity": "medium",
+      "title": "Uncertainty labelled, not modelled",
+      "claim": "Sensitivity is graded by volume % (blind to moved features at equal volume); no interval/probabilistic treatment of loads, PETG scatter, print tolerance; 'deterministic' rung 2 conflates repeatability with validity.",
+      "evidence": "docs/architecture.md §4.1, §4.8; NOTES DECISIONS #25",
+      "remedy": "Interval/Monte Carlo propagation with margins; grade sensitivity by geometric distance.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "MATH-10",
+      "section": "4. Mathematical fundamentals",
+      "severity": "low",
+      "title": "Pinned learned scorer is not automatically deterministic",
+      "claim": "GPU rendering/inference is not bit-reproducible by default.",
+      "evidence": "docs/architecture.md §4.1 rung 3",
+      "remedy": "Deterministic kernels/CPU, or a noise band on rung-3 scores.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "PAIN-01",
+      "section": "5. Human pain points",
+      "severity": "high",
+      "title": "Designers often don't know their intent yet",
+      "claim": "Problem–solution co-evolution (Dorst & Cross), reflection-in-action (Schön); the root-intent-first flow forces premature commitment (Green's cognitive dimensions).",
+      "evidence": "docs/architecture.md §3, §8.1",
+      "remedy": "Geometry-first loose mode; intent optional per node; unexplained geometry is a legitimate draft state.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "PAIN-02",
+      "section": "5. Human pain points",
+      "severity": "high",
+      "title": "Design fixation and anchoring on defaults",
+      "claim": "Ranked defaults and 'ask only when it matters' present one solution; exposure to one example fixates (Jansson & Smith 1991).",
+      "evidence": "docs/architecture.md §10 item 2",
+      "remedy": "Show divergent alternatives side by side in exploratory phases.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "PAIN-03",
+      "section": "5. Human pain points",
+      "severity": "medium",
+      "title": "Tacit knowledge doesn't encode cleanly",
+      "claim": "'Every gotcha becomes a permanent check' assumes articulable knowledge; mis-encoded rules over-constrain later designs.",
+      "evidence": "docs/architecture.md §5.2",
+      "remedy": "Rules carry owner, scope, review date, and a one-click justified override.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "PAIN-04",
+      "section": "5. Human pain points",
+      "severity": "high",
+      "title": "Design-rationale tools died of maintenance cost",
+      "claim": "IBIS/gIBIS/QOC failed on capture cost borne by non-beneficiaries (Grudin's asymmetry); iteration 2 adds .intent.yaml as a second source of truth.",
+      "evidence": "docs/gui.md §7.2; docs/user-experience.md §1.1",
+      "remedy": "Rationale as a by-product of existing actions (redlines, accepted proposals, answers); measure and display staleness.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "PAIN-05",
+      "section": "5. Human pain points",
+      "severity": "high",
+      "title": "Automation bias: green PASS on what doesn't matter",
+      "claim": "The header and checks panel show PASS for developer invariants while none of R.c1–R.c4 runs.",
+      "evidence": "gui/screenshots/bracket-why-light.png; NOTES TODO 4",
+      "remedy": "Headline intent-check status ('0 of 4 intent checks implemented'); unverified = grey, never green.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "PAIN-06",
+      "section": "5. Human pain points",
+      "severity": "medium",
+      "title": "Explanation overload and engine jargon",
+      "claim": "Euler/ΔH/ΔS columns, 'sensitivity none', 'exposed_region_midpoint', 'A.P.holes.countersink(1)' are for kernel engineers.",
+      "evidence": "gui/screenshots/*; gui/README.md 'Using it'",
+      "remedy": "Designer view: invariants only on failure, translated into physical language.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "PAIN-07",
+      "section": "5. Human pain points",
+      "severity": "medium",
+      "title": "Intent-tree cognitive load at scale",
+      "claim": "9 intent nodes for 6 features; real products add feature tree, assembly tree, BOM; a third hierarchy will be ignored.",
+      "evidence": "src/dipm/connections.py; gui/README.md fixtures table",
+      "remedy": "Intent as annotations on the feature tree; many-to-many links; test on a 150-feature part.",
+      "uncertainty": "medium"
+    },
+    {
+      "id": "PAIN-08",
+      "section": "5. Human pain points",
+      "severity": "high",
+      "title": "No handoff to engineering and manufacturing",
+      "claim": "No datums, tolerances, GD&T, finish, drawings; 'geometry is not committed' collides with release/ECO culture; kernel upgrades could change released parts.",
+      "evidence": "docs/user-experience.md §1, §4",
+      "remedy": "Release step freezing STEP + hash, rebuild diffs as ECOs; datum/tolerance intent before human packs.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "PAIN-09",
+      "section": "5. Human pain points",
+      "severity": "high",
+      "title": "Round-trip editing",
+      "claim": "Hand edits in Onshape don't flow back; engineering will edit native CAD after handoff and the intent tree goes stale.",
+      "evidence": "docs/user-experience.md §4, §5",
+      "remedy": "Bring the Onshape tab/FeatureScript path forward, or scope to cases where dipm stays source of truth.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "PAIN-10",
+      "section": "5. Human pain points",
+      "severity": "medium",
+      "title": "Aesthetics beyond proxies; the Birkhoff lesson",
+      "claim": "Birkhoff's Aesthetic Measure and golden-ratio rules failed because proxies reward order and penalise deliberate tension; named styles reduce culture to checklists; CMF absent.",
+      "evidence": "docs/architecture.md §4.7.1",
+      "remedy": "Perception proxies as optional lint, never optimisation targets; designer (not crowd) preferences.",
+      "uncertainty": "medium"
+    },
+    {
+      "id": "PAIN-11",
+      "section": "5. Human pain points",
+      "severity": "medium",
+      "title": "Learning curve and versioning culture",
+      "claim": "Python/YAML/git workflow vs. industrial designers in Rhino/SolidWorks/KeyShot/paper.",
+      "evidence": "docs/user-experience.md §1, §2",
+      "remedy": "Hide git behind save/compare/merge alternatives; Python as a power-user path.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "PAIN-12",
+      "section": "5. Human pain points",
+      "severity": "medium",
+      "title": "System guesses harden into the designer's intent",
+      "claim": "Model-made readings and assumptions are recorded under the designer's design; made_by is buried, so guessed and meant become indistinguishable.",
+      "evidence": "src/dipm/interpret.py made_by; docs/architecture.md §4.8",
+      "remedy": "Make model-made/unreviewed items visually distinct everywhere and let them expire to 'unknown'.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "PAIN-13",
+      "section": "5. Human pain points",
+      "severity": "low",
+      "title": "Geometry that changes on its own",
+      "claim": "The server displays old-lock geometry then rebuilds ~2.5 s later with new interpretations.",
+      "evidence": "NOTES DECISIONS #38",
+      "remedy": "Show 're-resolving…' and require a click when the result differs.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "ISS-01",
+      "section": "6. Top 10 issues",
+      "severity": "high",
+      "title": "PASS badge with no intent checks; demo likely fails its load intent",
+      "claim": "False assurance and automation bias.",
+      "evidence": "GUI header; NOTES TODO 4; docs/architecture.md §8.1 R.c1; see INC-06, PAIN-05",
+      "remedy": "Status line reports intent checks; implement R.c1 as a hand-calc first.",
+      "uncertainty": "see linked items"
+    },
+    {
+      "id": "ISS-02",
+      "section": "6. Top 10 issues",
+      "severity": "high",
+      "title": "Interpretations use invariants to select geometry",
+      "claim": "Negative controls become silent fixes; checks lose independence.",
+      "evidence": "NOTES DECISIONS #28, #32; src/dipm/interpret.py; see INC-04",
+      "remedy": "Ask on extra interaction; hold-out checks; 'selected' ≠ 'verified'.",
+      "uncertainty": "see linked items"
+    },
+    {
+      "id": "ISS-03",
+      "section": "6. Top 10 issues",
+      "severity": "high",
+      "title": "Determinism claim leaks",
+      "claim": "Central guarantee is weaker than stated (lock, prefs, warm start, background re-resolve, BRepOffset).",
+      "evidence": "docs/architecture.md §1 p2, §7; NOTES #26, #30, #38; see INC-01",
+      "remedy": "Define 'fully locked solution'; fail closed without a lock.",
+      "uncertainty": "see linked items"
+    },
+    {
+      "id": "ISS-04",
+      "section": "6. Top 10 issues",
+      "severity": "high",
+      "title": "No model; learned skills without data; circular data argument",
+      "claim": "Headline overclaims; the hardest part is untested.",
+      "evidence": "README; docs/architecture.md §3.4, §9; see INC-12",
+      "remedy": "Reframe v1 as an agent verifier; real-designer eval set.",
+      "uncertainty": "see linked items"
+    },
+    {
+      "id": "ISS-05",
+      "section": "6. Top 10 issues",
+      "severity": "high",
+      "title": "Core prior art missing",
+      "claim": "Reinvention and missed known failure modes.",
+      "evidence": "survey; docs/explore-further.md; see NOV-01..03",
+      "remedy": "Prior-art section; narrow novelty claims.",
+      "uncertainty": "see linked items"
+    },
+    {
+      "id": "ISS-06",
+      "section": "6. Top 10 issues",
+      "severity": "high",
+      "title": "Handoff and round trip",
+      "claim": "No tolerances/datums, geometry uncommitted, one-way export: blocks team use.",
+      "evidence": "docs/user-experience.md §1, §4; see PAIN-08, PAIN-09",
+      "remedy": "Release/freeze step; datum and tolerance intent; Onshape path sooner.",
+      "uncertainty": "see linked items"
+    },
+    {
+      "id": "ISS-07",
+      "section": "6. Top 10 issues",
+      "severity": "high",
+      "title": "Laman 'exact in 2D'; no tolerance/robustness model",
+      "claim": "Constraint-health and stability verdicts may be wrong.",
+      "evidence": "docs/dsl.md §5.5; scattered epsilons; see MATH-02, MATH-07",
+      "remedy": "Witness-rank checks; one tolerance policy; adaptive sampling.",
+      "uncertainty": "see linked items"
+    },
+    {
+      "id": "ISS-08",
+      "section": "6. Top 10 issues",
+      "severity": "medium",
+      "title": "Assumes known, stateable intent; fixation on defaults",
+      "claim": "Misfit with early-stage industrial design.",
+      "evidence": "docs/architecture.md §3, §10.2; see PAIN-01, PAIN-02, PAIN-12",
+      "remedy": "Geometry-first loose mode; show alternatives.",
+      "uncertainty": "see linked items"
+    },
+    {
+      "id": "ISS-09",
+      "section": "6. Top 10 issues",
+      "severity": "medium",
+      "title": "Literals and convenience couplings in the canonical example",
+      "claim": "Undermines principle 1 in its own showcase.",
+      "evidence": "examples/shelf_bracket.py; docs/architecture.md §2.2, §5.1; see INC-02, INC-03",
+      "remedy": "Separate params; classify ratios; fix the metric.",
+      "uncertainty": "see linked items"
+    },
+    {
+      "id": "ISS-10",
+      "section": "6. Top 10 issues",
+      "severity": "medium",
+      "title": "Hashes called canonical; Euler parity; ambiguous 'sensitivity none'",
+      "claim": "Misleading signals where exactness is promised.",
+      "evidence": "src/dipm/invariants.py; NOTES #25; see MATH-01, MATH-06, INC-08",
+      "remedy": "Rename; nauty for equality; add a 'forced' state.",
+      "uncertainty": "see linked items"
+    },
+    {
+      "id": "GOOD-01",
+      "section": "7. What it gets right",
+      "severity": "n/a",
+      "title": "Reference layer: creator/role/source, declared cardinality, no ordinals, IsDeleted distrust, split/merge policies",
+      "claim": "Reference layer: creator/role/source, declared cardinality, no ordinals, IsDeleted distrust, split/merge policies",
+      "evidence": "src/dipm/refs.py; docs/dsl.md §3.4",
+      "remedy": "Keep.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "GOOD-02",
+      "section": "7. What it gets right",
+      "severity": "n/a",
+      "title": "Interaction-derived per-feature ΔH/ΔS/volume contracts; the 'silently wrong but valid' compound-tool finding",
+      "claim": "Interaction-derived per-feature ΔH/ΔS/volume contracts; the 'silently wrong but valid' compound-tool finding",
+      "evidence": "docs/dsl.md §4.3; spikes/02-operation-history/RESULTS.md",
+      "remedy": "Keep.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "GOOD-03",
+      "section": "7. What it gets right",
+      "severity": "n/a",
+      "title": "Epistemic honesty: confirmed/corrected/unverified labels, negative findings recorded, gaps documented",
+      "claim": "Epistemic honesty: confirmed/corrected/unverified labels, negative findings recorded, gaps documented",
+      "evidence": "reports/DSL mathematical foundations.md; spikes RESULTS; NOTES",
+      "remedy": "Keep.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "GOOD-04",
+      "section": "7. What it gets right",
+      "severity": "n/a",
+      "title": "Verifier before model",
+      "claim": "Verifier before model",
+      "evidence": "reports/Parametric CAD generation survey.md conclusion",
+      "remedy": "Keep.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "GOOD-05",
+      "section": "7. What it gets right",
+      "severity": "n/a",
+      "title": "Direct manipulation edits intent; edited intent marks the solution stale",
+      "claim": "Direct manipulation edits intent; edited intent marks the solution stale",
+      "evidence": "docs/user-experience.md §3; docs/gui.md §7.1",
+      "remedy": "Keep.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "GOOD-06",
+      "section": "7. What it gets right",
+      "severity": "n/a",
+      "title": "'Why is this here?' inspector traces each face to feature, intent word and node",
+      "claim": "'Why is this here?' inspector traces each face to feature, intent word and node",
+      "evidence": "gui/screenshots/bracket-why-light.png; Build.why",
+      "remedy": "Keep.",
+      "uncertainty": "low"
+    },
+    {
+      "id": "GOOD-07",
+      "section": "7. What it gets right",
+      "severity": "n/a",
+      "title": "Walkthrough producing a prototype/coupon plan from high-sensitivity assumptions",
+      "claim": "Walkthrough producing a prototype/coupon plan from high-sensitivity assumptions",
+      "evidence": "docs/architecture.md §5.2",
+      "remedy": "Keep.",
+      "uncertainty": "low"
+    }
+  ],
+  "hn_comments": [
+    {
+      "id": "HN-01",
+      "section": "3. Hacker News",
+      "persona": "ex-Pro/E applications engineer",
+      "comment": "'Capture design intent, not coordinates' was PTC's sales pitch in 1988. ICAD and NX Knowledge Fusion did rule packs in the 90s. Every KBE shop I've seen ended with a 40,000-line rule base one retiree understood. What's different this time besides YAML?",
+      "fairness": "Fair. NOV-01/02, PAIN-04. The honest answer (executable checks tied to kernel history; an LLM to absorb the authoring cost) needs evidence the repo doesn't have yet."
+    },
+    {
+      "id": "HN-02",
+      "section": "3. Hacker News",
+      "persona": "ML researcher",
+      "comment": "I read the whole README looking for the model. There isn't one. It's a build123d/OCP wrapper with asserts and a very long design doc. Nine 'learned skills' in a table, zero training runs.",
+      "fairness": "Mostly fair (ISS-04); unfair in that the survey argues persuasively for building the verifier first."
+    },
+    {
+      "id": "HN-03",
+      "section": "3. Hacker News",
+      "persona": "structural/mechanical engineer (strongest critique)",
+      "comment": "The demo bracket shows PASS. Its wall screws sit at 9 and 50 mm up a 150 mm leg because the gusset ate the top. Take moments: ~31 N·m from 20 kg at 160 mm gives ~600 N pull-out on the top screw into drywall anchors, before the safety factor. The 'PASS' is Euler's formula passing. That badge will get someone's shelf on the floor.",
+      "fairness": "Fair with simplified-model caveat. INC-06, ISS-01, PAIN-05."
+    },
+    {
+      "id": "HN-04",
+      "section": "3. Hacker News",
+      "persona": "CAD researcher (most useful prior-art pointer)",
+      "comment": "Read Bidarra & Bronsvoort 'Semantic feature modelling' (CAD 2000). Read Hoffmann & Kim on valid parameter ranges, and Kripac '97 and Capoyleas/Chen/Hoffmann '96 for naming (you cite those, good). Then the Owen/D-Cubed root-identification papers. Your 'stability harness' samples 9 points of a space people have computed exact validity intervals for.",
+      "fairness": "Fair. NOV-03, MATH-07."
+    },
+    {
+      "id": "HN-05",
+      "section": "3. Hacker News",
+      "persona": "CadQuery user (supportive)",
+      "comment": "Ignore the grand vision. cardinality=exactly(2), never trusting IsDeleted, ΔH asserts per feature, and 'overlapping compound tool silently cuts nothing' are worth the visit. The spike RESULTS files are the most honest OCCT write-up I've read. Please ship the reference layer as a standalone library.",
+      "fairness": "Fair. GOOD-01..03."
+    },
+    {
+      "id": "HN-06",
+      "section": "3. Hacker News",
+      "persona": "industrial designer",
+      "comment": "I don't know my intent until I've drawn forty thumbnails and hated thirty-eight of them. This automates the last 20% of my job, the part I already do fine in SolidWorks, and makes me write a requirements doc for the fun part.",
+      "fairness": "Fair for early ID, less so for configurators. PAIN-01, PAIN-12."
+    },
+    {
+      "id": "HN-07",
+      "section": "3. Hacker News",
+      "persona": "dismissive",
+      "comment": "Tarski, Cartan–Dieudonné, Laman, Euler–Poincaré, r-sets, projective geometric algebra… for an L-bracket with four holes. Mathematical cosplay.",
+      "fairness": "Half fair: the report is careful and self-labelled, but the docs carry more theory than the code uses (MATH-05) and the Euler check is parity (MATH-01)."
+    },
+    {
+      "id": "HN-08",
+      "section": "3. Hacker News",
+      "persona": "Onshape power user",
+      "comment": "FeatureScript already has qCreatedBy, custom features written the same way as built-ins, tracking queries and attributes. The authors know this because they cite it. Why build a new kernel stack and GUI instead of an Onshape tab plus FeatureScript, where the users and Parasolid already are?",
+      "fairness": "Fair strategic question. PAIN-09, docs/user-experience.md §5; standalone is defensible for determinism and running locally, but the round trip decides adoption in organisations."
+    }
+  ]
+}
