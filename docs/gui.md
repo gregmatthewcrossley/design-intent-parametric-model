@@ -272,9 +272,13 @@ Touch and pen devices; the variation ghost and animated samples (waiting on opt-
 3. **Build direction:** **infer a best orientation** (3E.10), recorded with its rationale in the machine-written resolution record until accepted, then written into the intent file. It is never silently chosen by the renderer. The **default material/process context** (3E.6) follows the same rule.
 4. **One iteration:** build all of 3E and 3G together, not split into 3a/3b.
 
-## 9. Open items for later iterations
+## 9. Iteration 4: the purpose loop (built 2026-11-16)
+
+Spec: [`purpose-loop.md`](purpose-loop.md). Four new views: an **impact** chip and tree marks (changed / invalidated / survives); **purpose proposals** as a tree diff with each check binding in plain language; an **alternatives** compare view (2–3 proposals with thumbnails, margins and attempt logs); and **component ghosts** (rod, reel envelopes) in the viewport. Screenshots `gui/screenshots/iter4-*`. Known rough edges: the design name truncates when the impact chip shows; thumbnails look alike at small size.
+
+## 10. Open items for later iterations
 
 - Redline layer: marks resolve to structural references and become comments on intent nodes (user-experience §3.1).
 - Previewing a reading's geometry before answering a question.
-- Model conversation panel; drag-to-edit intent; stability-sweep view; drawings; semantic diffs.
+- Drag-to-edit intent; stability-sweep view; drawings; semantic diffs.
 - Running the engine in the browser via WASM (explore-further §4).

@@ -1,0 +1,158 @@
+{
+  "dipm_resolution": 1,
+  "design": "rod_holder",
+  "context": {
+    "assumed": {}
+  },
+  "orientation": {
+    "up": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "label": "Print with the R.body.cap(START) down",
+    "chosen": {
+      "up": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "overhang_mm2": 0.0,
+      "support_mm3": 0.0,
+      "bed_mm2": 2283.3,
+      "cost": -228.33,
+      "overhang_faces": [],
+      "down_face": "R.body.cap(START)",
+      "down_face_id": 0,
+      "down_face_area_mm2": 2283.4
+    },
+    "runner_up": {
+      "up": [
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "overhang_mm2": 0.0,
+      "support_mm3": 0.0,
+      "bed_mm2": 2283.3,
+      "cost": -228.33,
+      "overhang_faces": [],
+      "down_face": "R.body.cap(END)",
+      "down_face_id": 15,
+      "down_face_area_mm2": 2283.4
+    },
+    "candidates": [
+      {
+        "up": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "overhang_mm2": 0.0,
+        "support_mm3": 0.0,
+        "bed_mm2": 2283.3,
+        "cost": -228.33,
+        "overhang_faces": [],
+        "down_face": "R.body.cap(START)",
+        "down_face_id": 0,
+        "down_face_area_mm2": 2283.4
+      },
+      {
+        "up": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "overhang_mm2": 0.0,
+        "support_mm3": 0.0,
+        "bed_mm2": 2283.3,
+        "cost": -228.33,
+        "overhang_faces": [],
+        "down_face": "R.body.cap(END)",
+        "down_face_id": 15,
+        "down_face_area_mm2": 2283.4
+      },
+      {
+        "up": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "overhang_mm2": 0.0,
+        "support_mm3": 0.0,
+        "bed_mm2": 2272.2,
+        "cost": -227.22,
+        "overhang_faces": [],
+        "down_face": "wall face",
+        "down_face_id": 12,
+        "down_face_area_mm2": 2272.2
+      },
+      {
+        "up": [
+          0.0,
+          -0.33866,
+          -0.940909
+        ],
+        "overhang_mm2": 1524.3,
+        "support_mm3": 22107.2,
+        "bed_mm2": 4.7,
+        "cost": 1965.95,
+        "overhang_faces": [
+          4,
+          5,
+          8,
+          10,
+          16,
+          17,
+          18,
+          19
+        ],
+        "down_face": "R.body.side(back_slope)",
+        "down_face_id": 8,
+        "down_face_area_mm2": 841.8
+      },
+      {
+        "up": [
+          0.0,
+          -1.0,
+          0.0
+        ],
+        "overhang_mm2": 1395.2,
+        "support_mm3": 96202.3,
+        "bed_mm2": 576.0,
+        "cost": 3261.61,
+        "overhang_faces": [
+          13,
+          18,
+          19
+        ],
+        "down_face": "R.body.side(nose)",
+        "down_face_id": 9,
+        "down_face_area_mm2": 576.0
+      },
+      {
+        "up": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "overhang_mm2": 1695.8,
+        "support_mm3": 98358.7,
+        "bed_mm2": 120.0,
+        "cost": 3651.01,
+        "overhang_faces": [
+          11
+        ],
+        "down_face": "R.body.side(bottom)",
+        "down_face_id": 14,
+        "down_face_area_mm2": 120.0
+      }
+    ],
+    "rationale": "Print with the R.body.cap(START) down: 0 mm² overhang beyond 45°, 0 mm³ support, 2,283 mm² on the bed; runner-up R.body.cap(END) down: 0 mm² overhang, 0 mm³ support, 2,283 mm² on the bed. Horizontal holes up to Ø10 mm bridge and are not counted; cost = overhang + 0.02×support − 0.1×bed contact (placeholder weights)",
+    "made_by": "model",
+    "status": "proposed",
+    "reviewed": false,
+    "pack": "fdm_printing@0.1-sourced",
+    "key": "ae0d9ef2f573ad91"
+  }
+}

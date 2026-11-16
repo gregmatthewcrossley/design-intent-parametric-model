@@ -14,7 +14,9 @@ import { ProposalsPanel } from "./components/Proposals";
 import { Viewport, useViewKeys } from "./components/Viewport";
 import { IntentBanners } from "./components/IntentEditor";
 import { FirstOpen } from "./components/FirstOpen";
+import { AlternativesCompare } from "./components/Loop";
 import { intentInfo, loadIntent, loadProposals, reloadProposalsSoon } from "./intent";
+import { applyClaude, loadClaude } from "./claude";
 import {
   applyBuild, build, design, designError, expanded, lastEvent, params, persist, requestBuild, tab, theme, wsUp,
   type Tab,
@@ -83,6 +85,7 @@ export function App() {
       }
       void loadIntent();
       void loadProposals();
+      void loadClaude();
     })();
     return connectEvents((ev) => {
       lastEvent.value = ev.type;
@@ -102,10 +105,13 @@ export function App() {
         intentInfo.value = ev.intent;
       } else if (ev.type === "proposals-changed") {
         reloadProposalsSoon();
+      } else if (ev.type === "claude-run") {
+        applyClaude(ev.status);
       } else if (ev.type === "hello" && build.value) {
         requestBuild(true); // reconnected: catch up
         void loadIntent();
         void loadProposals();
+        void loadClaude();
       }
     }, (up) => (wsUp.value = up));
   }, []);
@@ -138,6 +144,7 @@ export function App() {
         )}
         <section class="center" aria-label="3D viewport">
           <Viewport />
+          <AlternativesCompare />
           {n && tab.value !== "viewport" && (
             <div class="tab-sheet">
               {tab.value === "tree" && <IntentPanel />}

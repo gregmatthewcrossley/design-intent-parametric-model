@@ -1,0 +1,109 @@
+{
+  "dipm_interpretations": 1,
+  "design": "rod_holder",
+  "key": {
+    "design_source_sha256": "0284423b3d680431f9b1b62cfe083a96e0e851e8afe88fa50aff22e7579d58bd",
+    "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
+    "code_sha256": "e43874da57a56b683f4eacc8779476c89cc82900b50ead0335dd27d6ae1d76a3",
+    "packages": {
+      "cadquery-ocp-novtk": "8.0.1.1.0",
+      "build123d": "0.13.0"
+    },
+    "dipm": "0.0.1"
+  },
+  "prefs": null,
+  "sample_points": [
+    {},
+    {
+      "t": 4.0
+    },
+    {
+      "t": 6.0
+    },
+    {
+      "width": 20.0
+    },
+    {
+      "width": 30.0
+    },
+    {
+      "arm_t": 10.0
+    },
+    {
+      "arm_t": 14.0
+    },
+    {
+      "standoff": 50.0
+    },
+    {
+      "standoff": 65.0
+    },
+    {
+      "depth": 12.0
+    },
+    {
+      "depth": 18.0
+    },
+    {
+      "screw": "#6"
+    },
+    {
+      "screw": "#10"
+    },
+    {
+      "t": 4.0,
+      "width": 20.0,
+      "arm_t": 10.0,
+      "standoff": 50.0,
+      "depth": 12.0
+    },
+    {
+      "t": 6.0,
+      "width": 30.0,
+      "arm_t": 14.0,
+      "standoff": 65.0,
+      "depth": 18.0
+    }
+  ],
+  "choices": {
+    "A.P.holes/hole.extent": "through_plate"
+  },
+  "assumptions": [
+    {
+      "id": "A.P.holes/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "A.P.holes",
+      "node": "A.P",
+      "statement": "A.P.holes: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
+      "chosen": "through_plate",
+      "made_by": "pack default",
+      "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+      "status": "proposed",
+      "sensitivity": "insensitive",
+      "sensitivity_detail": "insensitive: the surviving readings give identical geometry at every sample point",
+      "readings": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "alternatives": [
+        "through_all",
+        "up_to_next"
+      ],
+      "eliminated": [],
+      "supports": [
+        "A.P.holes"
+      ],
+      "feasible": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "resolution": "unconfirmed"
+    }
+  ],
+  "questions": [],
+  "notices": []
+}

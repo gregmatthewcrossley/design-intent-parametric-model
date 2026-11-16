@@ -10,6 +10,9 @@ import { marginBar, STATE_TEXT } from "../margins";
 import { staleFeatures } from "../edit";
 import { NodeEditor, StaleTag, editable } from "./IntentEditor";
 import { ProposalsPanel, proposalBadge } from "./Proposals";
+import { ImpactPanel } from "./Loop";
+import { impactOf } from "../loop";
+import { focusImpact } from "../store";
 
 export function RightPanel() {
   const b = build.value;
@@ -18,6 +21,14 @@ export function RightPanel() {
   const nFail = b?.failing.length ?? 0;
   return (
     <div class="right-stack">
+      {impactOf(b) && (
+        <Section id="impact" title="IMPACT" attention forceOpen={focusImpact.value}
+                 badge={<span class="count attn" data-testid="impact-badge">
+                   {impactOf(b)!.summary.nodes.invalidated + impactOf(b)!.summary.checks.invalidated +
+                    impactOf(b)!.summary.assumptions.invalidated} invalidated</span>}>
+          <ImpactPanel />
+        </Section>
+      )}
       <Section id="inspector" title="INSPECTOR" badge={<span class="muted">why is this here?</span>}>
         <Inspector />
       </Section>

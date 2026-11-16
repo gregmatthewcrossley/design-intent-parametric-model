@@ -25,10 +25,15 @@ export function copyDesign(rel: string): string {
   return join(dir, basename(src));
 }
 
+/** The stub `claude` (tests/fixtures/fake_claude): e2e tests never start the real one. */
+export const FAKE_CLAUDE = join(ROOT, "tests/fixtures/fake_claude");
+
 export async function startServer(design: string, env: Record<string, string> = {}): Promise<Server> {
   const port = nextPort++;
+  // iteration 4b: no test may start the real `claude`; specs opt in to the stub via `env`
+  const safe = { DIPM_CLAUDE_BIN: "/nonexistent/claude-is-disabled-in-tests", DIPM_CLAUDE_AUTORUN: "0" };
   const proc = spawn(PY, ["-m", "dipm", "serve", design, "--no-open", "--port", String(port)], {
-    cwd: ROOT, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ...env },
+    cwd: ROOT, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ...safe, ...env },
   });
   let out = "";
   proc.stdout!.on("data", (d) => (out += d));

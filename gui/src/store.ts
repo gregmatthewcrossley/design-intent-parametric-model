@@ -141,3 +141,14 @@ export function setView<T>(sig: { value: T }, key: string, v: T): void {
   sig.value = v;
   persist(key, v);
 }
+
+// ------------------------------------------------------------------ iteration 4: the purpose -> geometry loop
+
+/** Component envelopes ghosted in the viewport (View menu). */
+export const ghostsOn = signal<boolean>(stored("ghostsOn", true));
+/** Impact marks in the WHY tree (changed / invalidated / survives), when a purpose changed. */
+export const impactMarks = signal<boolean>(stored("impactMarks", true));
+/** The alternatives group open in the compare view (null: closed). */
+export const altGroup = signal<string | null>(null);
+/** A request (header impact chip) to open the impact section. */
+export const focusImpact = signal<number | null>(null);

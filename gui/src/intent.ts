@@ -235,3 +235,36 @@ export const setContext = (values: Record<string, string>) => intentAction((h) =
 export const reinferOrientation = () => intentAction((h) => api.orientation(h, "infer"));
 export const reviewAll = () => intentAction((h) => api.review(h, "all"));
 export const reviewOneByOne = () => intentAction((h) => api.review(h, "one_by_one"));
+
+// ------------------------------------------------------------------ iteration 4: purpose proposals
+
+/** "Accept to try": geometry alternatives may be built against the purpose proposal; nothing is
+ *  written until an alternative is accepted. */
+export async function tryPurpose(id: string): Promise<void> {
+  proposalBusy.value = id;
+  try {
+    await api.tryPurpose(id);
+    await loadProposals();
+  } catch (e) {
+    buildError.value = (e as Error).message;
+  } finally {
+    proposalBusy.value = null;
+  }
+}
+
+/** The designer edits a purpose proposal while reviewing it: a revised proposal (designer-made
+ *  for what was edited) replaces it and is selected. */
+export async function editPurpose(id: string, ops: IntentOp[], comment = ""): Promise<string | null> {
+  proposalBusy.value = id;
+  try {
+    const r = await api.editPurpose(id, ops, comment);
+    await loadProposals();
+    selectedProposal.value = r.proposal.id;
+    return r.proposal.id;
+  } catch (e) {
+    buildError.value = (e as Error).message;
+    return null;
+  } finally {
+    proposalBusy.value = null;
+  }
+}

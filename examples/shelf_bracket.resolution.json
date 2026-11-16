@@ -7,13 +7,13 @@
         "value": "0.2 mm",
         "made_by": "model",
         "status": "proposed",
-        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+        "source": "fdm_printing pack default (0.1-sourced), tolerance-uncertainty §4.2"
       },
       "nozzle": {
         "value": "0.4 mm",
         "made_by": "model",
         "status": "proposed",
-        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+        "source": "fdm_printing pack default (0.1-sourced), tolerance-uncertainty §4.2"
       }
     }
   },
@@ -160,7 +160,7 @@
     "made_by": "model",
     "status": "proposed",
     "reviewed": false,
-    "pack": "fdm_printing@0.0-placeholder",
-    "key": "6ebb268ccef97983"
+    "pack": "fdm_printing@0.1-sourced",
+    "key": "0bdab2bff2670bf2"
   }
 }

@@ -1,0 +1,349 @@
+{
+  "version": 1,
+  "reviewed": {
+    "A": {
+      "hash": "541b37d273366f93",
+      "content": {
+        "statement": "Wall mounting",
+        "checks": [],
+        "assumptions": []
+      }
+    },
+    "A.3": {
+      "hash": "cc61f2c19911446f",
+      "content": {
+        "statement": "Cable pass-through, centered on the plate",
+        "checks": [
+          {
+            "id": "A.3.c1",
+            "kind": "rule",
+            "priority": "must",
+            "statement": "Ø ≥ 8 mm"
+          },
+          {
+            "id": "A.3.c2",
+            "kind": "relation",
+            "priority": "should",
+            "statement": "Centered horizontally"
+          },
+          {
+            "id": "A.3.c3",
+            "kind": "rule",
+            "priority": "must",
+            "statement": "Clear of the A.P holes by ≥ Ø"
+          }
+        ],
+        "assumptions": []
+      }
+    },
+    "A.P": {
+      "hash": "ffba63d1b73ed187",
+      "content": {
+        "statement": "Wall screw pattern",
+        "checks": [
+          {
+            "id": "A.P.c1",
+            "kind": "relation",
+            "priority": "must",
+            "statement": "Symmetric about the plate's vertical centerline",
+            "binding": {
+              "form": "symmetric_about",
+              "items": "A.P.holes",
+              "about": "wall_face",
+              "normal": "X",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          },
+          {
+            "id": "A.P.c2",
+            "kind": "rule",
+            "priority": "should",
+            "statement": "Spread as far apart as edge distance allows (resists the moment)",
+            "binding": {
+              "form": "descriptive",
+              "reason": "an optimisation goal, not a pass/fail limit; R.c1 checks the outcome",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          },
+          {
+            "id": "A.P.c3",
+            "kind": "rule",
+            "source": "pack:fasteners",
+            "priority": "must",
+            "statement": "Ø = clearance(screw); edge distance ≥ 2×Ø",
+            "binding": {
+              "form": "hole_edge_distance",
+              "holes": "A.P.holes",
+              "factor": "2",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          }
+        ],
+        "assumptions": []
+      }
+    },
+    "A.P.1": {
+      "hash": "2a034ceec2d7a125",
+      "content": {
+        "statement": "Lower wall screw hole",
+        "checks": [],
+        "assumptions": []
+      }
+    },
+    "A.P.2": {
+      "hash": "cf4a48ddf8ed19d2",
+      "content": {
+        "statement": "Upper wall screw hole",
+        "checks": [],
+        "assumptions": []
+      }
+    },
+    "B": {
+      "hash": "4ccab4274aa383af",
+      "content": {
+        "statement": "Cradle: holds the rod blank",
+        "checks": [
+          {
+            "id": "B.c1",
+            "kind": "relation",
+            "priority": "must",
+            "statement": "Holds any blank from Ø6 to Ø14 mm, resting on the seat",
+            "binding": {
+              "form": "holds_cylinder",
+              "component": "rod",
+              "seat": "cradle_seat",
+              "axis": "X",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          },
+          {
+            "id": "B.c2",
+            "kind": "relation",
+            "priority": "must",
+            "statement": "A knock cannot roll the rod out: it must lift at least 6 mm to leave",
+            "binding": {
+              "form": "retention",
+              "component": "rod",
+              "seat": "cradle_seat",
+              "min_lift": "6",
+              "axis": "X",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          },
+          {
+            "id": "B.c3",
+            "kind": "rule",
+            "priority": "must",
+            "statement": "Only smooth, rounded surfaces touch the blank (protects the finish)",
+            "binding": {
+              "form": "descriptive",
+              "reason": "edge radius and surface finish are not in the check vocabulary yet",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          },
+          {
+            "id": "B.c4",
+            "kind": "relation",
+            "priority": "should",
+            "statement": "Lifts straight out with one hand, no latch",
+            "binding": {
+              "form": "descriptive",
+              "reason": "removal effort and the lift-out path are not in the vocabulary; retention gives only the lower bound",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          },
+          {
+            "id": "B.c5",
+            "kind": "relation",
+            "priority": "must",
+            "statement": "The reel clears the holder and the wall wherever it sits along the rod",
+            "binding": {
+              "form": "clears_box",
+              "component": "reel",
+              "hangs_from": "rod",
+              "seat": "cradle_seat",
+              "along": "100..400",
+              "axis": "X",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          }
+        ],
+        "assumptions": []
+      }
+    },
+    "B.1": {
+      "hash": "1d7d0c7251752024",
+      "content": {
+        "statement": "Screw up into the shelf, toward the front",
+        "checks": [],
+        "assumptions": []
+      }
+    },
+    "C": {
+      "hash": "ba878e41b4852d30",
+      "content": {
+        "statement": "Arm: carries the cradle out from the wall",
+        "checks": [
+          {
+            "id": "C.c1",
+            "kind": "analysis",
+            "priority": "must",
+            "statement": "The arm root carries the design load (SF 4 on short-term PETG strength, sustained)",
+            "binding": {
+              "form": "bending",
+              "load": "0.2..2",
+              "at": "component:rod",
+              "seat": "cradle_seat",
+              "axis": "X",
+              "section_width": "width",
+              "section_depth": "arm_t",
+              "section_at": "t",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          }
+        ],
+        "assumptions": []
+      }
+    },
+    "R": {
+      "hash": "8e9575551474b733",
+      "content": {
+        "statement": "Support a fishing rod on a wall",
+        "checks": [
+          {
+            "id": "R.c1",
+            "kind": "analysis",
+            "source": "world",
+            "priority": "must",
+            "statement": "The two wall fixings hold the rod and reel with margin for handling (SF from the anchor pack)",
+            "grounded_as": "0.2–2 kg at the rod's axis (R.a1); rigid pivot at the bottom of the plate; plastic plug anchors, mean ultimate ÷ 4",
+            "binding": {
+              "form": "anchor_pullout",
+              "anchors": "A.P.holes",
+              "load": "0.2..2",
+              "at": "component:rod",
+              "seat": "cradle_seat",
+              "axis": "X",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          },
+          {
+            "id": "R.c2",
+            "kind": "rule",
+            "source": "world:fdm_printing.overhang",
+            "priority": "must",
+            "statement": "Printable without supports (overhang ≤ 45°)",
+            "binding": {
+              "form": "overhang",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          },
+          {
+            "id": "R.c3",
+            "kind": "learned score",
+            "source": "human:minimal_industrial",
+            "priority": "nice to have",
+            "statement": "Proportions look balanced"
+          },
+          {
+            "id": "R.c4",
+            "kind": "rule",
+            "source": "human:care.tool_access",
+            "priority": "must",
+            "statement": "Every wall screw can be driven by a standard screwdriver",
+            "grounded_as": "Ø30 mm straight access cylinder, ≥ 150 mm long, coaxial with each screw, clear of the part",
+            "binding": {
+              "form": "tool_access",
+              "holes": "A.P.holes",
+              "diameter": "30",
+              "length": "150",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          },
+          {
+            "id": "R.c5",
+            "kind": "rule",
+            "source": "world:fdm_printing",
+            "priority": "should",
+            "statement": "No wall thinner than two perimeters, as printed",
+            "binding": {
+              "form": "min_wall",
+              "made_by": "model",
+              "status": "proposed"
+            }
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "R.a1",
+            "statement": "Rod and reel weigh 0.2–1 kg; lifting the rod out or knocking it can briefly double that, so one holder is checked for 0.2–2 kg at the rod's axis",
+            "made_by": "model",
+            "rationale": "A light spinning outfit is ≈0.2 kg, a heavy surf outfit ≈1 kg; one of a pair may carry the whole rod while the other is being loaded",
+            "supports": [
+              "R.c1",
+              "C.c1"
+            ],
+            "sensitivity": "medium",
+            "status": "proposed"
+          },
+          {
+            "id": "R.a2",
+            "statement": "PETG across layers is 30–80 % of its in-layer strength (pack); the holder prints on its side so the arm bends within the layers",
+            "made_by": "pack default",
+            "supports": [
+              "C.c1"
+            ],
+            "sensitivity": "high",
+            "status": "proposed"
+          },
+          {
+            "id": "R.a3",
+            "statement": "Installer uses a standard screwdriver or drill, no right-angle adapter",
+            "made_by": "model",
+            "supports": [
+              "R.c4"
+            ],
+            "sensitivity": "medium",
+            "status": "proposed"
+          },
+          {
+            "id": "R.a4",
+            "statement": "The rod lies horizontally, parallel to the wall, in two of these holders 300–600 mm apart",
+            "made_by": "model",
+            "rationale": "The usual wall rack for one rod; the cradle axis is X",
+            "supports": [
+              "B.c1",
+              "B.c2",
+              "B.c5"
+            ],
+            "sensitivity": "high",
+            "status": "proposed"
+          },
+          {
+            "id": "R.a5",
+            "statement": "The reel stays on the rod, hangs below it, and sits at least 100 mm along the rod from either holder",
+            "made_by": "model",
+            "rationale": "Holders grip the blank above the foregrip; the reel seat is further down the handle",
+            "supports": [
+              "B.c5"
+            ],
+            "sensitivity": "medium",
+            "status": "proposed"
+          }
+        ]
+      }
+    }
+  }
+}

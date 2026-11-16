@@ -2,7 +2,7 @@
 // Photo view; 1:1 real size; process texture; reference objects; scale bar; uncertainty mode.
 
 import { useState } from "preact/hooks";
-import { oneToOneOn, refsOn, scaleBarOn, setView, textureOn, uncertainty, viewMode, type Uncertainty, type ViewMode } from "../store";
+import { ghostsOn, oneToOneOn, refsOn, scaleBarOn, setView, textureOn, uncertainty, viewMode, type Uncertainty, type ViewMode } from "../store";
 
 export function ViewMenu() {
   const [open, setOpen] = useState(false);
@@ -36,6 +36,9 @@ export function ViewMenu() {
             Reference objects <span class="muted small">({m} view)</span></label>
           <label class="menu-row"><input type="checkbox" checked={scaleBarOn.value} data-testid="toggle-scalebar"
                  onChange={(e) => setView(scaleBarOn, "scaleBarOn", (e.target as HTMLInputElement).checked)} /> Scale bar</label>
+          <label class="menu-row"><input type="checkbox" checked={ghostsOn.value} data-testid="toggle-ghosts"
+                 onChange={(e) => setView(ghostsOn, "ghostsOn", (e.target as HTMLInputElement).checked)} />
+            Component envelopes <span class="muted small">(rod, reel …)</span></label>
           <div class="field-label">uncertainty (one at a time)</div>
           {([["none", "None"], ["heatmap", "Margin heatmap"]] as [Uncertainty, string][]).map(([v, l]) => (
             <label key={v} class="menu-row" role="menuitemradio" aria-checked={uncertainty.value === v}>

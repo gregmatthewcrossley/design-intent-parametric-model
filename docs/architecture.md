@@ -152,6 +152,8 @@ The tree (intents + checks + provenance + solutions) is more valuable than the f
 
 ## 4. Checks
 
+*Implemented (iteration 4, 2026-11-16):* checks are bound to a fixed **check vocabulary** (`src/dipm/vocabulary.py`: relations, pack rules, fit/clearance/retention against component envelopes, hand calcs, tool access; 17 forms) with bindings stored in the intent file; anything unbindable is *descriptive, not run*. Rule-pack entries record their basis (e.g. mean ultimate), the source's own factor and whether they are sourced, provisional or placeholder; safety factors are applied per protected quantity ([`reports/Rule pack engineering data.md`](../reports/Rule%20pack%20engineering%20data.md)). See [`purpose-loop.md`](purpose-loop.md). This partly answers §10 Q1.
+
 ### 4.1 Kinds of check
 
 Every check is labeled with its kind. The kinds form a **determinism ladder**; principle 5 says to push every check as far up this list (toward exact) as it will go, as early as possible:

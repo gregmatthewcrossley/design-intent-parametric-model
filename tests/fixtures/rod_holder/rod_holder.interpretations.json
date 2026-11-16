@@ -1,0 +1,191 @@
+{
+  "dipm_interpretations": 1,
+  "design": "rod_holder",
+  "key": {
+    "design_source_sha256": "1944b88d3a4af89684d00ae20837dfe121f7638e90bf65dfd45aed2a73a88664",
+    "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
+    "code_sha256": "e43874da57a56b683f4eacc8779476c89cc82900b50ead0335dd27d6ae1d76a3",
+    "packages": {
+      "cadquery-ocp-novtk": "8.0.1.1.0",
+      "build123d": "0.13.0"
+    },
+    "dipm": "0.0.1"
+  },
+  "prefs": null,
+  "sample_points": [
+    {},
+    {
+      "shelf_depth": 180.0
+    },
+    {
+      "shelf_depth": 300.0
+    },
+    {
+      "t": 4.0
+    },
+    {
+      "t": 8.0
+    },
+    {
+      "screw": "#6"
+    },
+    {
+      "screw": "#10"
+    },
+    {
+      "shelf_depth": 180.0,
+      "t": 4.0
+    },
+    {
+      "shelf_depth": 300.0,
+      "t": 8.0
+    }
+  ],
+  "choices": {
+    "A.P.holes/hole.extent": "through_plate",
+    "A.3.cable/centered_on.point": "exposed_region_midpoint",
+    "A.3.cable/hole.extent": "through_plate",
+    "B.1.screw/hole.extent": "through_plate"
+  },
+  "assumptions": [
+    {
+      "id": "A.P.holes/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "A.P.holes",
+      "node": "A.P",
+      "statement": "A.P.holes: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
+      "chosen": "through_plate",
+      "made_by": "pack default",
+      "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+      "status": "proposed",
+      "sensitivity": "insensitive",
+      "sensitivity_detail": "insensitive: the surviving readings give identical geometry at every sample point",
+      "readings": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "alternatives": [
+        "through_all",
+        "up_to_next"
+      ],
+      "eliminated": [],
+      "supports": [
+        "A.P.holes"
+      ],
+      "feasible": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "resolution": "unconfirmed"
+    },
+    {
+      "id": "A.3.cable/centered_on.point",
+      "word": "centered_on",
+      "slot": "point",
+      "feature": "A.3.cable",
+      "node": "A.3",
+      "statement": "A.3.cable: centered_on point read as 'exposed_region_midpoint' (the middle of the face's exposed region: the longest material chord through its bounding centre, bridging holes but stopped by material attached to the face)",
+      "chosen": "exposed_region_midpoint",
+      "made_by": "model",
+      "rationale": "package default 'face_centroid' eliminated; next by prior/simplicity: the middle of the face's exposed region: the longest material chord through its bounding centre, bridging holes but stopped by material attached to the face",
+      "status": "proposed",
+      "sensitivity": "forced",
+      "sensitivity_detail": "package default eliminated (no extra interaction); forced: only one reading survives the checks",
+      "readings": [
+        "face_centroid",
+        "exposed_region_midpoint"
+      ],
+      "alternatives": [],
+      "eliminated": [
+        {
+          "reading": "face_centroid",
+          "feature": "A.3.cable",
+          "check": "relation: centre inside face",
+          "point": {},
+          "message": "hole instance 0: centre (0, 5, 70.4122) is not inside face R.body.side(mount)",
+          "failed_points": 9,
+          "of_points": 9
+        }
+      ],
+      "supports": [
+        "A.3.cable"
+      ],
+      "feasible": [
+        "exposed_region_midpoint"
+      ],
+      "resolution": "unconfirmed"
+    },
+    {
+      "id": "A.3.cable/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "A.3.cable",
+      "node": "A.3",
+      "statement": "A.3.cable: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
+      "chosen": "through_plate",
+      "made_by": "pack default",
+      "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+      "status": "proposed",
+      "sensitivity": "insensitive",
+      "sensitivity_detail": "insensitive: the surviving readings give identical geometry at every sample point",
+      "readings": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "alternatives": [
+        "through_all",
+        "up_to_next"
+      ],
+      "eliminated": [],
+      "supports": [
+        "A.3.cable"
+      ],
+      "feasible": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "resolution": "unconfirmed"
+    },
+    {
+      "id": "B.1.screw/hole.extent",
+      "word": "hole",
+      "slot": "extent",
+      "feature": "B.1.screw",
+      "node": "B.1",
+      "statement": "B.1.screw: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
+      "chosen": "through_plate",
+      "made_by": "pack default",
+      "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+      "status": "proposed",
+      "sensitivity": "insensitive",
+      "sensitivity_detail": "insensitive: the surviving readings give identical geometry at every sample point",
+      "readings": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "alternatives": [
+        "through_all",
+        "up_to_next"
+      ],
+      "eliminated": [],
+      "supports": [
+        "B.1.screw"
+      ],
+      "feasible": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "resolution": "unconfirmed"
+    }
+  ],
+  "questions": [],
+  "notices": []
+}

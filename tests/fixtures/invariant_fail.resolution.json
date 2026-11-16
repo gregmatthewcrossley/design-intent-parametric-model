@@ -7,25 +7,25 @@
         "value": "fdm_printing",
         "made_by": "model",
         "status": "proposed",
-        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+        "source": "fdm_printing pack default (0.1-sourced), tolerance-uncertainty §4.2"
       },
       "material": {
         "value": "PLA",
         "made_by": "model",
         "status": "proposed",
-        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+        "source": "fdm_printing pack default (0.1-sourced), tolerance-uncertainty §4.2"
       },
       "layer_height": {
         "value": "0.2 mm",
         "made_by": "model",
         "status": "proposed",
-        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+        "source": "fdm_printing pack default (0.1-sourced), tolerance-uncertainty §4.2"
       },
       "nozzle": {
         "value": "0.4 mm",
         "made_by": "model",
         "status": "proposed",
-        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+        "source": "fdm_printing pack default (0.1-sourced), tolerance-uncertainty §4.2"
       }
     }
   },
@@ -169,7 +169,7 @@
     "made_by": "model",
     "status": "proposed",
     "reviewed": false,
-    "pack": "fdm_printing@0.0-placeholder",
-    "key": "77517719a701ec93"
+    "pack": "fdm_printing@0.1-sourced",
+    "key": "15ecb0e75eb7fe59"
   }
 }

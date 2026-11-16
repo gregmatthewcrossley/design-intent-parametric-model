@@ -37,6 +37,8 @@ The name uses "imperatives" in its everyday and design sense, not the programmin
 | [`docs/tolerance-uncertainty.md`](docs/tolerance-uncertainty.md) | Tolerance, uncertainty, guesses and scale: engine model, visualization, scale cues, order of work |
 | [`reports/Fresh eyes review.md`](reports/Fresh%20eyes%20review.md) | Independent expert review (65 items) and the author's [response](reports/Fresh%20eyes%20review.response.md) |
 | [`docs/review-response.md`](docs/review-response.md) | Action plan from the fresh-eyes review |
+| [`docs/purpose-loop.md`](docs/purpose-loop.md) | The purpose → geometry loop (iteration 4): impact, purpose proposals, computable check vocabulary, alternatives, driven by Claude Code over MCP; the GUI can launch Claude Code itself (§7) |
+| [`reports/Rule pack engineering data.md`](reports/Rule%20pack%20engineering%20data.md) | Cited values for wall fixings, printed strength, print tolerances, anthropometrics and safety factors (basis of `packs.py`) |
 | [`docs/gui.md`](docs/gui.md) | Web GUI specs: iterations 1–3 (built), scope, layout, style, API, acceptance criteria |
 | [`gui/README.md`](gui/README.md) | The GUI as built: build, run, develop, test; `python -m dipm serve examples/shelf_bracket.py` |
 | [`docs/user-experience.md`](docs/user-experience.md) | How a designer uses it: versioning, GUI, interfaces to Onshape, slicers, CAM |

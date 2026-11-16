@@ -60,20 +60,32 @@ SENSITIVITY = ("high", "medium", "low", "insensitive", "forced", "none", "unknow
 ID_RE = re.compile(r"^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)*$")
 
 # field -> (required, type, enum)   type: "str" | "list[str]" | "map" | "list[node]" ...
+COMPONENT_SHAPES = ("cylinder", "box")
+
 SCHEMA = {
     "top": {"design": (True, "str", None), "context": (False, "map[str]", None),
+            # iteration 4: component envelopes the design must fit (components.py)
+            "components": (False, "list[component]", None),
             "intents": (True, "list[node]", None)},
     "node": {"id": (True, "id", None), "statement": (True, "str", None), "receives": (False, "list[str]", None),
              "exports": (False, "list[str]", None), "checks": (False, "list[check]", None),
              "assumptions": (False, "list[assumption]", None), "children": (False, "list[node]", None)},
     "check": {"id": (True, "id", None), "kind": (False, "str", CHECK_KINDS), "source": (False, "str", None),
               "priority": (False, "str", PRIORITIES), "statement": (True, "str", None),
-              "grounded_as": (False, "str", None), "origin": (False, "map[str]", None), "expr": (False, "str", None)},
+              "grounded_as": (False, "str", None), "origin": (False, "map[str]", None), "expr": (False, "str", None),
+              # iteration 4: a computable form from the check vocabulary (vocabulary.py), or
+              # {form: descriptive, reason: ...}; its values are text like everything else
+              "binding": (False, "map[str]", None)},
     "assumption": {"id": (True, "id", None), "statement": (True, "str", None), "made_by": (False, "str", MADE_BY),
                    "rationale": (False, "str", None), "supports": (False, "list[str]", None),
                    "sensitivity": (False, "str", SENSITIVITY), "status": (False, "str", ASSUMPTION_STATUS),
                    # iteration 3: a machine-readable assumption (e.g. about: print_orientation, value: "0,0,-1")
                    "about": (False, "str", None), "value": (False, "str", None)},
+    "component": {"id": (True, "id", None), "statement": (False, "str", None),
+                  "shape": (False, "str", COMPONENT_SHAPES), "pack": (False, "str", None),
+                  "diameter": (False, "str", None), "length": (False, "str", None), "size": (False, "str", None),
+                  "mass": (False, "str", None), "source": (False, "str", None),
+                  "made_by": (False, "str", MADE_BY), "status": (False, "str", ASSUMPTION_STATUS)},
 }
 KEY_ORDER = {k: list(v) for k, v in SCHEMA.items()}
 
@@ -211,6 +223,8 @@ def _canonicalize(data) -> None:
                 m.move_to_end(k)
 
     order(data, "top")
+    for c in (data.get("components") or []) if isinstance(data, dict) else []:
+        order(c, "component")
     for ref in iter_nodes_raw(data):
         n = ref[0]
         order(n, "node")
@@ -238,8 +252,8 @@ class IntentDoc:
                 for n, p, _sib, _i, depth in iter_nodes_raw(self.data)]
 
     def ids(self) -> set:
-        """Every id in the file: nodes, checks and assumptions."""
-        out = set()
+        """Every id in the file: nodes, checks, assumptions and components."""
+        out = {str(c.get("id")) for c in (self.data.get("components") or []) if isinstance(c, dict)}
         for n, *_ in iter_nodes_raw(self.data):
             out.add(str(n["id"]))
             for c in (n.get("checks") or []):
@@ -430,7 +444,8 @@ def apply_op(doc: IntentDoc, op: dict, taken=()) -> dict:
     ops: edit_statement {id, statement} · add_child {parent, statement?, id?} · delete {id} ·
     move {id, parent, index?} · add_check {id, check} · edit_check {id, check_id, fields} ·
     remove_check {id, check_id} · edit_assumption {id, assumption_id, fields} ·
-    add_assumption {id, assumption} · set_context {fields}"""
+    add_assumption {id, assumption} · set_context {fields} · set_binding {id, check_id, binding?, status?} ·
+    add_component {component} · edit_component {component_id, fields} · remove_component {component_id}"""
     kind = op.get("op")
     if kind == "set_context":
         fields = {str(k): str(v) for k, v in (op.get("fields") or {}).items() if v not in (None, "")}
@@ -534,6 +549,52 @@ def apply_op(doc: IntentDoc, op: dict, taken=()) -> dict:
             n["assumptions"] = CommentedSeq()
         _append_like_siblings(n["assumptions"], a)
         return {"id": op["id"], "assumption_id": aid}
+    if kind == "set_binding":
+        # designer accepts / challenges / replaces a check's binding (iteration 4)
+        n, *_ = doc.find(op["id"])
+        lst, i = _find_sub(n, "checks", op["check_id"], "check")
+        c = lst[i]
+        if op.get("binding") is not None:
+            b = op["binding"]
+            if not isinstance(b, dict):
+                raise IntentOpError("binding must be a mapping")
+            m = CommentedMap()
+            for k, v in b.items():
+                m[str(k)] = str(v)
+            m.fa.set_flow_style()
+            c["binding"] = m
+        if op.get("status"):
+            if "binding" not in c:
+                raise IntentOpError(f"check '{op['check_id']}' has no binding")
+            c["binding"]["status"] = _like(c["binding"].get("status"), str(op["status"]))
+        return {"id": op["id"], "check_id": op["check_id"]}
+    if kind in ("add_component", "edit_component", "remove_component"):
+        comps = doc.data.get("components")
+        if kind == "add_component":
+            fields = dict(op.get("component") or {})
+            cid = str(fields.pop("id", "") or "")
+            if not cid or cid in doc.ids() or any(str(x.get("id")) == cid for x in comps or []):
+                raise IntentOpError(f"component id '{cid}' is missing or already used")
+            if comps is None:
+                comps = CommentedSeq()
+                keys = list(doc.data.keys())
+                doc.data.insert(keys.index("intents") if "intents" in keys else len(keys), "components", comps)
+            c = CommentedMap()
+            c["id"] = cid
+            _set_fields(c, fields, "component")
+            _append_like_siblings(comps, c)
+            return {"component_id": cid}
+        cid = str(op.get("component_id") or "")
+        for i, x in enumerate(comps or []):
+            if str(x.get("id")) == cid:
+                if kind == "remove_component":
+                    comps.pop(i)
+                    if not comps:
+                        del doc.data["components"]
+                else:
+                    _set_fields(x, dict(op.get("fields") or {}), "component")
+                return {"component_id": cid}
+        raise IntentOpError(f"no component '{cid}'")
     raise IntentOpError(f"unknown operation {kind!r}")
 
 

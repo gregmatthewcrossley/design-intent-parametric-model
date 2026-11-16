@@ -238,6 +238,13 @@ def provenance(b: Build, interp: dict, intent_plain: dict | None, review, assess
         for c in assessment.checks:
             out[f"check:{c.id}"] = {"made_by": c.spec_made_by, "reviewed": c.reviewed, "label": c.id,
                                     "value": c.statement, "node": c.node}
+            if c.binding is not None:      # iteration 4: model-made until the designer accepts it
+                out[f"binding:{c.id}"] = {"made_by": c.spec_made_by, "reviewed": bool(c.binding_reviewed),
+                                          "label": f"{c.id} binding", "value": c.binding_text, "node": c.node}
+    from ..components import components_of
+    for comp in components_of(intent_plain).values():
+        out[f"component:{comp.id}"] = {"made_by": comp.made_by, "reviewed": comp.reviewed, "label": comp.id,
+                                       "value": comp.statement or comp.shape}
     for v in out.values():
         v["guess"] = _guess(v.get("made_by"), v["reviewed"])
     return out
@@ -326,6 +333,21 @@ def build_payload(design: Design, b: Build, mesh_id: str | None, warnings_: list
             else:
                 n.review_state = "reviewed"
     prov = provenance(b, interp, plain_, review, assessment)
+    # iteration 4: component envelopes (ghosted where checks posed them) and the impact report
+    from ..components import components_of
+    comps = [c.as_dict() for c in components_of(plain_).values()]
+    ghosts, seen_g = [], set()
+    for c in assessment.checks:
+        for g in c.ghosts or []:
+            k = (g.get("component"), g.get("note"), tuple(round(x, 3) for x in g.get("center", [])))
+            if k not in seen_g:
+                seen_g.add(k)
+                ghosts.append({**g, "check": c.id})
+    impact_report = None
+    if plain_ is not None and review is not None and getattr(review, "exists", False):
+        from ..impact import impact
+        impact_report = impact(plain_, review.reviewed, [{"id": f["id"], "serves": f["serves"], "uses": f["uses"]}
+                                                          for f in features])
     guesses = sorted(k for k, v in prov.items() if v["guess"] and not k.startswith("check:"))
     status = dict(assessment.status)
     status["guesses"] = len(guesses)
@@ -338,6 +360,7 @@ def build_payload(design: Design, b: Build, mesh_id: str | None, warnings_: list
         "orientation": jsonable({k: v for k, v in o.items() if k not in ("inference",)}) if o else None,
         "appearance": jsonable(assessment.appearance), "provenance": prov, "guesses": guesses,
         "references": reference_objects(),
+        "components": jsonable(comps), "ghosts": jsonable(ghosts), "impact": jsonable(impact_report),
         "overrides": jsonable(overrides),
         "error_count": len(b.errors), "errors": [_error(e) for e in b.errors], "ms": b.ms,
         "features": features, "failing": sorted(failing),

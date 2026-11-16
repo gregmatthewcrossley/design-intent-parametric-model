@@ -3,7 +3,7 @@ import { api } from "../api";
 import { decodeMesh, bounds, type DecodedMesh } from "../mesh";
 import { faceLabel } from "../model";
 import {
-  build, goodBuild, hover, lit, oneToOneOn, params, pinnedLit, refsOn, scaleBarOn, select, selection, showGhost, textureOn,
+  build, ghostsOn, goodBuild, hover, lit, oneToOneOn, params, pinnedLit, refsOn, scaleBarOn, select, selection, showGhost, textureOn,
   theme, uncertainty, viewMode,
 } from "../store";
 import { Viewer, type FaceState, type Palette, type ViewName } from "../viewer";
@@ -11,6 +11,7 @@ import { compareStates } from "../edit";
 import { compare, proposals, viewProposalAt } from "../intent";
 import { faceMargins, heatColor, STATE_TEXT } from "../margins";
 import { chooseReference } from "../reference";
+import { ghostPose, ghostsToShow } from "../loop";
 import { scaleBarStep } from "../scale";
 import { measure, needCalibration, realSize, watchScreen } from "../realsize";
 import { Calibration } from "./Calibration";
@@ -44,6 +45,7 @@ function cssPalette(): Palette {
     modelSelected: v("--model-selected"), modelDim: v("--model-dim"), fail: v("--model-fail"), edge: v("--model-edge"),
     ghost: v("--model-ghost"), triad: v("--ink-2"), heatOk: v("--heat-ok"), heatThin: v("--heat-thin"),
     heatFail: v("--heat-fail"), heatNone: v("--heat-none"), outline: v("--model-outline"), refGhost: v("--ref-ghost"),
+    compGhost: v("--comp-ghost"),
   };
 }
 
@@ -213,6 +215,21 @@ export function Viewport() {
     v.setReference(chooseReference(b, hoveredFace, v.partBounds()), b.references);
   }, [b?.mesh_id, hoveredFace, refOn, cmpKey, meshKey, mode]);
 
+  // component envelopes (iteration 4): ghosted where their checks posed them; while comparing a
+  // proposal, the proposal's own ghosts (its checks ran on its geometry)
+  const gOn = ghostsOn.value;
+  const ghostSrc = cmpShow === "after" || cmpShow === "overlay"
+    ? (cev?.after?.intent_checks ?? []).flatMap((c) => c.ghosts ?? [])
+    : cmpShow ? [] : ghostsToShow(b);
+  const ghostKey = gOn ? JSON.stringify(ghostSrc.map((g) => [g.component, g.center, g.reviewed])) : "off";
+  useEffect(() => {
+    const v = viewer.current;
+    if (!v) return;
+    const seen = new Set<string>();
+    const gs = gOn ? ghostSrc.filter((g) => !seen.has(g.component) && seen.add(g.component)) : [];
+    v.setComponents(gs.map((g) => ({ ...ghostPose(g), component: g.component })));
+  }, [ghostKey]);
+
   // 1:1 real size: px/mm from the OS display size (or a card calibration), recomputed on screen change
   const on11 = oneToOneOn.value;
   useEffect(() => {
@@ -269,6 +286,17 @@ export function Viewport() {
       {on11 && needCalibration.value && <Calibration />}
       {mode === "photo" && !on11 && <div class="photo-tag" data-testid="photo-tag">photo view · focus follows the cursor</div>}
       {heat && b && <HeatLegend />}
+      {gOn && ghostSrc.length > 0 && (
+        <div class="ghost-legend" data-testid="ghost-legend" aria-label="component envelopes">
+          <span class="field-label">components</span>
+          {[...new Set(ghostSrc.map((g) => g.component))].map((c) => {
+            const g = ghostSrc.find((x) => x.component === c)!;
+            return <span key={c} class={`guess-chip ${g.reviewed ? "confirmed" : "guess"}`} data-ghost={c}
+                         title={g.reviewed ? "accepted" : `${g.made_by}-made, not reviewed`}>
+              {c}{g.shape === "cylinder" ? ` Ø${+(g.diameter ?? 0).toFixed(1)}` : ""}{g.shortened ? " (shortened)" : ""}</span>;
+          })}
+        </div>
+      )}
       {cmpShow && cp && (
         <div class="viewport-banner compare-banner" data-testid="compare-banner">
           <span class="b-label">COMPARING PROPOSAL {cp.id}</span> · inspection paused ·{" "}

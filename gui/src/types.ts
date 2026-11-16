@@ -142,6 +142,7 @@ export interface StaleInfo {
 export interface IntentDocJ {
   design: string;
   context?: Record<string, string>;
+  components?: Record<string, string>[];
   intents: IntentDocNode[];
 }
 
@@ -175,9 +176,11 @@ export type IntentOp =
   | { op: "edit_check"; id: string; check_id: string; fields: Partial<CheckSpec> }
   | { op: "remove_check"; id: string; check_id: string }
   | { op: "edit_assumption"; id: string; assumption_id: string; fields: Partial<AssumptionSpec> }
-  | { op: "mark_reviewed"; ids: string[]; all?: boolean };
+  | { op: "mark_reviewed"; ids: string[]; all?: boolean }
+  | { op: "set_binding"; id: string; check_id: string; status?: string; binding?: Record<string, string> }
+  | { op: "edit_component"; component_id: string; fields: Record<string, string> };
 
-export type ProposalStatus = "pending" | "evaluating" | "ready" | "failed" | "accepted" | "rejected" | "stale";
+export type ProposalStatus = "pending" | "evaluating" | "ready" | "failed" | "accepted" | "rejected" | "stale" | "trying";
 
 export interface FeedbackJ { at: string; kind: string; by: string; comment: string }
 
@@ -190,7 +193,10 @@ export interface EvaluationJ {
   view_params?: Record<string, unknown>;
   before?: { status: TieredStatus; kernel: string; ok: boolean; stale_nodes: string[] };
   after?: { status: TieredStatus; kernel: string; ok: boolean; errors: ErrorJ[]; stale_nodes: string[];
-            intent_checks?: { id: string; node: string; state: string; plain: string }[] };
+            intent_checks?: SummaryCheckJ[]; unreviewed?: AssumedJ[] };
+  // iteration 4 (docs/purpose-loop.md): purpose review and what a geometry alternative assumed
+  purpose?: PurposeReviewJ;
+  assumed?: AssumedJ[];
   sweep?: { points: number; failing: { params: Record<string, unknown>; errors: string[] }[] };
   semantic_diff?: {
     intent: { added: { id: string; statement: string; parent: string | null }[]; removed: { id: string; statement: string }[];
@@ -211,8 +217,65 @@ export interface EvaluationJ {
   ms?: number;
 }
 
+// ------------------------------------------------------------------ iteration 4 (docs/purpose-loop.md)
+
+export type ImpactClass = "changed" | "invalidated" | "survives";
+export interface ImpactItemJ { class: ImpactClass; reasons: string[]; statement?: string; node?: string; parent?: string | null;
+                               features?: string[]; new?: boolean }
+export interface ImpactJ {
+  terms: { removed: string[]; added: string[] };
+  changes: { id: string; new: boolean; fields: string[]; before: NodeContent | null; after: NodeContent }[];
+  removed_nodes: string[];
+  nodes: Record<string, ImpactItemJ>;
+  checks: Record<string, ImpactItemJ>;
+  assumptions: Record<string, ImpactItemJ>;
+  features: Record<string, ImpactItemJ>;
+  summary: Record<string, Record<ImpactClass, number>>;
+  any_change: boolean;
+  method: string;
+}
+
+export interface QuantityJ { nominal: number; lo: number; hi: number; unit: string; source: string; made_by: string;
+                             label: string; placeholder: boolean }
+export interface ComponentJ { id: string; shape: "cylinder" | "box"; statement: string; dims: Record<string, QuantityJ>;
+                              mass: QuantityJ | null; pack: string; source: string; made_by: string; status: string;
+                              reviewed: boolean; placeholder: boolean }
+export interface GhostJ {
+  component: string; shape: "cylinder" | "box"; made_by: string; reviewed: boolean; note?: string; check?: string;
+  center: number[];
+  axis?: number[]; diameter?: number; length?: number; shortened?: boolean;      // cylinder
+  axes?: number[][]; size?: number[];                                           // box
+}
+
+export interface SummaryTermJ { name: string; unit: string; sense: "<=" | ">="; nominal: number; worst: number; limit: number;
+                                limit_worst: number; margin: number; margin_worst: number; state: "ample" | "thin" | "failing" }
+export interface SummaryCheckJ {
+  id: string; node: string; state: string; plain: string; reason?: string;
+  headline?: Omit<SummaryTermJ, "sense" | "state"> | null;
+  form?: string | null; binding_text?: string; made_by?: string | null; binding_reviewed?: boolean;
+  terms?: SummaryTermJ[]; method_assumptions?: string[]; ghosts?: GhostJ[];
+}
+export interface AssumedJ { kind: string; id: string; text: string; made_by: string }
+export interface PurposeCheckJ { id: string; node: string; statement: string; form: string | null;
+                                 binding: Record<string, string> | null; reads_as: string; made_by: string | null;
+                                 reviewed: boolean; state: string; reason: string;
+                                 headline?: Omit<SummaryTermJ, "sense" | "state"> | null }
+export interface PurposeReviewJ { before: IntentDocJ | null; after: IntentDocJ; checks: PurposeCheckJ[];
+                                  components: ComponentJ[]; validation: Record<string, string[]> }
+export interface AttemptJ { n: number; at: string; summary: string; headline: string; kernel: string | null;
+                            failing: string[]; not_run: string[]; error?: string | null }
+
 export interface ProposalJ {
   id: string;
+  kind?: "patch" | "purpose" | "geometry";
+  design?: string;
+  group?: string | null;
+  alternative?: string;
+  purpose?: string | null;
+  attempts?: AttemptJ[];
+  budget?: number;
+  validation?: Record<string, string[]>;
+  designer_edits?: { at: string; ops: unknown[] }[];
   created: string;
   summary: string;
   rationale: string;
@@ -230,12 +293,55 @@ export interface ProposalJ {
 
 export interface RequestJ {
   id: string;
+  kind?: string;
+  design?: string;
   created: string;
   node: string;
   note: string;
   change: StaleInfo | null;
-  status: string;
+  status: string;   // open | running | proposed | failed | answered (iteration 4b)
   proposals: string[];
+  status_detail?: string;
+  runs?: string[];
+}
+
+// ------------------------------------------------------------------ iteration 4b: headless Claude runs
+
+export interface RunStepJ {
+  at: string;
+  kind: "start" | "tool" | "result" | "proposed" | "say" | "warn" | "error" | "done" | string;
+  text: string;
+  tool?: string;
+  proposals?: string[];
+}
+
+export interface RunJ {
+  id: string;
+  design: string;
+  requests: string[];
+  status: "running" | "done" | "failed" | "cancelled" | "timeout" | string;
+  trigger?: string;
+  started: string;
+  ended: string | null;
+  reason: string;
+  proposals: string[];
+  usage_line?: string;
+  model?: string | null;
+  session_id?: string | null;
+  steps: RunStepJ[];
+  auth_error?: boolean;
+  timeout_s?: number;
+}
+
+export interface ClaudeStatusJ {
+  available: { ok: boolean; bin: string; source: string; reason: string; login?: string };
+  settings: { auto_run: boolean; model: string | null; timeout_s: number };
+  running: boolean;
+  run: RunJ | null;
+  runs: Pick<RunJ, "id" | "status" | "requests" | "started" | "ended" | "reason" | "proposals">[];
+  waiting: number;
+  runnable: string[];
+  prompt: string;
 }
 
 export interface WhyEntryJ {
@@ -373,6 +479,11 @@ export interface IntentCheckJ {
   priority: string;
   source: string;
   reviewed: boolean;
+  binding?: Record<string, string> | null;
+  binding_text?: string;
+  binding_reviewed?: boolean;
+  spec_made_by?: string;
+  ghosts?: GhostJ[];
 }
 
 export interface TieredStatus {
@@ -441,6 +552,9 @@ export interface BuildJ {
   provenance?: Record<string, ProvenanceJ>;
   guesses?: string[];
   references?: ReferencesJ;
+  components?: ComponentJ[];
+  ghosts?: GhostJ[];
+  impact?: ImpactJ | null;
   overrides?: Record<string, { failing: string[]; reason: string; at: string; proposal?: string }>;
   error_count: number;
   errors: ErrorJ[];
@@ -484,4 +598,5 @@ export type ServerEvent =
   | { type: "rebuilt"; reason: string; build: BuildJ }
   | { type: "design-error"; message: string }
   | { type: "intent-changed"; intent: IntentInfo; changed: string[] }
-  | { type: "proposals-changed"; id?: string };
+  | { type: "proposals-changed"; id?: string }
+  | { type: "claude-run"; status: ClaudeStatusJ };

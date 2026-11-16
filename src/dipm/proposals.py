@@ -16,6 +16,12 @@ Lifecycle: `pending` → (evaluated in a temp copy) `ready` | `failed` → `acce
 A proposal whose base hashes no longer match the files is `stale` and cannot be applied.
 Accepting writes every patched file atomically (all or nothing), records review hashes for the
 addressed intent nodes (review.py) and closes their open requests.
+
+Requests (iteration 4b, docs/purpose-loop.md §7): `open` → `running` (a headless Claude run took
+it, claude_runner.py) → `proposed` (linked to the proposals that answer it, **at submission**) |
+`failed` (with the reason) → `answered` (a linked solution was accepted).  A `proposed` request
+whose proposals were all rejected or went stale is `open` again; so is one whose only answer was
+a purpose proposal the designer accepted (the geometry is still to do).
 """
 from __future__ import annotations
 
@@ -34,8 +40,13 @@ from . import intent_store
 from .fileio import atomic_write, file_sha256, read_text, sha256_text
 from .review import ReviewRecord, path_for as review_path_for
 
-OPEN_STATUSES = ("pending", "evaluating", "ready", "failed")
+OPEN_STATUSES = ("pending", "evaluating", "ready", "failed", "trying")
 STATUSES = OPEN_STATUSES + ("accepted", "rejected", "stale")
+KINDS = ("patch", "purpose", "geometry")
+REQUEST_STATUSES = ("open", "running", "proposed", "failed", "answered")
+REQUEST_VERSION = 2         # requests written by iteration 4b carry "v": 2 (older ones are migrated once)
+DEFAULT_BUDGET = 6          # build attempts per alternative (docs/purpose-loop.md §3 step 5)
+MIN_ALTERNATIVES, MAX_ALTERNATIVES = 2, 3
 
 
 class ProposalError(ValueError):
@@ -205,7 +216,14 @@ def build_summary(design, b, intent: dict | None = None, stale: dict | None = No
     checks = [{"id": c["id"], "node": c["node"], "state": c["state"], "plain": c["plain"],
                "headline": ({k: c["headline"][k] for k in ("name", "unit", "nominal", "worst", "limit", "limit_worst",
                                                              "margin", "margin_worst")} if c.get("headline") else None),
-               "reason": c.get("reason", "")} for c in p["intent_checks"]]
+               "reason": c.get("reason", ""),
+               # iteration 4: intent-file bindings (vocabulary.py) and component ghosts
+               "form": (c.get("binding") or {}).get("form"), "binding_text": c.get("binding_text", ""),
+               "made_by": c.get("spec_made_by"), "binding_reviewed": bool(c.get("binding_reviewed")),
+               "terms": [{k: t[k] for k in ("name", "unit", "sense", "nominal", "worst", "limit", "limit_worst",
+                                            "margin", "margin_worst", "state")} for t in c.get("terms") or []],
+               "method_assumptions": c.get("method_assumptions") or [],
+               "ghosts": c.get("ghosts") or []} for c in p["intent_checks"]]
     return {"status": p["status"], "kernel": "pass" if p["ok"] else "fail", "ok": p["ok"], "params": p["params"],
             "errors": p["errors"], "intent_checks": checks,
             "context": p["context"], "orientation": ({k: p["orientation"].get(k) for k in ("label", "up", "rationale",
@@ -447,6 +465,12 @@ class ProposalStore:
         path = self._ppath(pid)
         if not os.path.exists(path):
             raise ProposalError(f"no proposal {pid}")
+        p = self._read(path, pid)
+        if not self.mine(p):
+            raise ProposalError(f"no proposal {pid} for {self.files.stem}")
+        return p
+
+    def _read(self, path: str, pid: str) -> dict:
         for _ in range(5):
             try:
                 with open(path, encoding="utf-8") as fh:
@@ -466,10 +490,23 @@ class ProposalStore:
         out = []
         for pid in ids:
             try:
-                out.append(self.refresh(self.get(pid)))
+                p = self.get(pid)
             except ProposalError:
                 continue
+            if not self.mine(p):
+                continue
+            out.append(self.refresh(p))
         return out
+
+    def mine(self, p: dict) -> bool:
+        """`.dipm/` is shared by every design in the directory (iteration 4): a proposal or
+        request belongs to this design by its `design` field, else (older entries) by the
+        files it patches."""
+        d = p.get("design")
+        if d is not None:
+            return d == self.files.stem
+        names = set(p.get("patches") or {})
+        return bool(names) and names <= set(self.files.patchable) or (not names and p.get("node") is not None)
 
     def refresh(self, p: dict) -> dict:
         """Mark an open proposal stale if a file it is based on changed since."""
@@ -486,12 +523,24 @@ class ProposalStore:
         return p
 
     # -------------------------------------------------------------- creating
+    #: set by `dipm mcp` when a headless Claude run started it (DIPM_RUN / DIPM_REQUESTS):
+    #: proposals made through it carry the run id and are linked to the run's requests
+    run_id: str | None = None
+    run_requests: tuple = ()
+
     def create(self, summary: str, rationale: str, files: dict, base_hashes: dict, addresses_nodes=(),
-               revises: str | None = None, source: str = "mcp") -> dict:
+               revises: str | None = None, source: str = "mcp", kind: str = "patch", extra: dict | None = None,
+               requests=None) -> dict:
         """Validate and store a proposal (status `pending`, or `stale` if its base is out of date).
 
         files: {path: new full text | unified diff}; base_hashes: {path: sha256 of the content
-        the change was made against} (every patched file needs one)."""
+        the change was made against} (every patched file needs one).  requests: request ids this
+        proposal answers; it is also linked to every unanswered request for a node it addresses
+        and to the requests of the run that made it (iteration 4b)."""
+        req_ids = self._check_request_ids(requests)
+        if kind not in KINDS:
+            raise ProposalError(f"unknown proposal kind {kind!r}")
+        pkind = kind
         if not isinstance(files, dict) or not files:
             raise ProposalError("files must map at least one path to new text or a unified diff")
         if not str(summary or "").strip():
@@ -535,13 +584,18 @@ class ProposalStore:
             self.files.ensure_dirs()
             pid, _path = self._alloc(self.files.proposals_dir, "p")
             p = {"id": pid, "created": _now(), "summary": str(summary).strip(), "rationale": str(rationale or "").strip(),
+                 "design": self.files.stem, "kind": pkind, **(extra or {}),
                  "addresses_nodes": nodes, "revises": revises, "source": source,
                  "base_hashes": {n: base[n] for n in patches}, "patches": patches,
                  "status": "stale" if stale else "pending",
                  "status_detail": (f"{', '.join(stale)} changed since the base hash was read; re-read with "
                                    f"get_source and propose again") if stale else "",
-                 "evaluation": None, "feedback": []}
+                 "evaluation": None, "feedback": [],
+                 **({"run": self.run_id} if self.run_id else {}), "requests": []}
             self.save(p)
+            p["requests"] = self._link_requests(p, req_ids)
+            if p["requests"]:
+                self.save(p)
         return p
 
     # -------------------------------------------------------------- evaluating
@@ -551,17 +605,30 @@ class ProposalStore:
         before/after geometry the designer looks at is built at `view_params` (the GUI's
         current parameters, NOTES #53 change) when given."""
         p = self.refresh(self.get(pid))
-        if p["status"] not in ("pending", "evaluating", "ready", "failed"):
+        if p["status"] not in ("pending", "evaluating", "ready", "failed", "trying"):
             return p
+        trying = p["status"] == "trying"
         p["status"] = "evaluating"
         self.save(p)
         t0 = time.perf_counter()
         try:
             ev = self._evaluate(p, params, view_params)
+            if p.get("kind") == "purpose":
+                ev["purpose"] = purpose_review(p, ev, self.files)
+                ev["needs_override"] = False
+            if p.get("kind") == "geometry":
+                ev["assumed"] = assumed_items(ev)
             p["evaluation"] = ev
-            p["status"] = "ready"
+            p["status"] = "trying" if trying else "ready"
             p["status_detail"] = ("" if not ev.get("failing_checks") else
                                   "the proposed design fails checks: " + ", ".join(ev["failing_checks"]))
+            if p.get("kind") == "purpose":
+                cs = (ev.get("after") or {}).get("intent_checks") or []
+                nf = [c["id"] for c in cs if c["state"] == "failing"]
+                nr = [c["id"] for c in cs if c["state"] == "not run"]
+                p["status_detail"] = (f"on the current geometry: {len(nf)} failing"
+                                      + (f" ({', '.join(nf)})" if nf else "") + f", {len(nr)} not run; "
+                                      "purposes are reviewed as text, geometry comes next")
         except Exception as e:   # noqa: BLE001 - a broken proposal is reported, not raised
             p["evaluation"] = {"ok": False, "error": f"{type(e).__name__}: {e}",
                                "ms": round((time.perf_counter() - t0) * 1000, 1)}
@@ -569,7 +636,10 @@ class ProposalStore:
             p["status_detail"] = f"evaluation failed: {type(e).__name__}: {e}"
         with self._lock:             # the designer may have acted meanwhile (accept holds this lock)
             cur = self.get(pid)
-            if cur.get("status") in ("accepted", "rejected"):
+            if cur.get("status") in ("accepted", "rejected", "trying"):
+                if cur.get("status") == "trying":
+                    cur["evaluation"] = p["evaluation"]
+                    self.save(cur)
                 return cur
             self.save(p)
         return self.refresh(p)
@@ -632,7 +702,8 @@ class ProposalStore:
                 "before": {"status": sb["status"], "kernel": sb["kernel"], "ok": sb["ok"],
                            "stale_nodes": sb["stale_nodes"], "intent_checks": sb["intent_checks"]},
                 "after": {"status": sa["status"], "kernel": sa["kernel"], "ok": sa["ok"], "errors": sa["errors"],
-                          "stale_nodes": sa["stale_nodes"], "intent_checks": sa["intent_checks"]},
+                          "stale_nodes": sa["stale_nodes"], "intent_checks": sa["intent_checks"],
+                          "unreviewed": _unreviewed(after["intent"])},
                 "sweep": {"points": n_points, "failing": sweep},
                 "semantic_diff": {"intent": idiff, "features": feature_diff(sb, sa),
                                   "checks": check_diff(sb, sa), "interpretations": interpretation_diff(sb, sa)},
@@ -731,11 +802,13 @@ class ProposalStore:
         return out
 
     def claude_prompt(self) -> str:
-        """The copyable prompt for "Queue for Claude" (#55): nothing is pushed to Claude."""
-        n = len(self.requests("open"))
+        """The copyable prompt for "Queue for Claude" (#55): the fallback when dipm cannot start
+        Claude Code itself (iteration 4b)."""
+        n = sum(1 for r in self.requests() if r.get("status") in ("open", "failed"))
         return (f"Use the dipm MCP server for {os.path.basename(self.files.design)}: call get_requests and "
-                f"get_stale_nodes, read the design with get_source, and handle the {n} open request(s) by "
-                "submitting a proposal for each with propose_patch (never edit the design files directly).")
+                f"get_stale_nodes, read the design with get_source, and handle the {n} open request(s). For a "
+                "changed purpose run the purpose -> geometry loop (get_impact, propose_purposes, evaluate, "
+                "propose_alternatives); for a small fix submit propose_patch. Never edit the design files directly.")
 
     # -------------------------------------------------------------- deciding
     def accept(self, pid: str, comment: str = "", override_reason: str | None = None) -> dict:
@@ -748,7 +821,7 @@ class ProposalStore:
             p = self.refresh(self.get(pid))
             if p["status"] == "stale":
                 raise ProposalError(f"{pid} is stale: {p.get('status_detail')}")
-            if p["status"] != "ready":
+            if p["status"] not in ("ready", "trying"):
                 raise ProposalError(f"{pid} cannot be accepted while {p['status']}")
             cur = self.files.current_hashes()
             for n, h in p["base_hashes"].items():
@@ -756,6 +829,8 @@ class ProposalStore:
                     raise ProposalError(f"{n} changed since {pid} was made")
             ev0 = p.get("evaluation") or {}
             failing = list(ev0.get("failing_checks") or ([] if ev0.get("ok", True) else ["kernel"]))
+            if p.get("kind") == "purpose":
+                failing = []      # purposes are reviewed as text; the current geometry is not judged here
             reason = (override_reason or "").strip()
             if failing and not reason:
                 raise ProposalError(f"{pid} fails checks ({', '.join(failing)}); accept anyway needs a reason")
@@ -789,7 +864,9 @@ class ProposalStore:
                     pass
             # review: the addressed nodes' new content is accepted
             reviewed = []
-            if os.path.exists(self.files.intent):
+            if os.path.exists(self.files.intent) and p.get("kind") != "purpose":
+                # a purpose proposal changes only the purposes: their solution is still to be
+                # reviewed, so the addressed nodes stay stale until geometry is accepted
                 doc = intent_store.load(self.files.intent).to_plain()
                 reviewed = rec.mark(doc, p.get("addresses_nodes") or [])
                 if failing:
@@ -804,8 +881,32 @@ class ProposalStore:
             p.setdefault("feedback", []).append({"at": _now(), "kind": "accept anyway" if failing else "accept",
                                                  "by": "designer", "comment": reason if failing else comment})
             self.save(p)
-            self.close_requests(p.get("addresses_nodes") or [], pid)
+            if p.get("kind") != "purpose":
+                self.close_requests(p.get("addresses_nodes") or [], pid)
+            self._after_accept(p)
             return p
+
+    def _after_accept(self, p: dict) -> None:
+        """An accepted alternative: its siblings are not chosen, and the purpose proposal it
+        carried is applied with it (iteration 4)."""
+        if p.get("kind") != "geometry":
+            return
+        for q in self.list():
+            if q["id"] == p["id"]:
+                continue
+            if p.get("group") and q.get("group") == p["group"] and q["status"] in OPEN_STATUSES + ("stale",):
+                q["status"] = "rejected"
+                q["status_detail"] = f"alternative {p['id']} was accepted instead"
+                q.setdefault("feedback", []).append({"at": _now(), "kind": "not chosen", "by": "designer",
+                                                     "comment": q["status_detail"]})
+                self.save(q)
+            if p.get("purpose") and q["id"] == p["purpose"] and q["status"] not in ("accepted", "rejected"):
+                q["status"] = "accepted"
+                q["status_detail"] = f"applied together with alternative {p['id']}"
+                q["accepted"] = {"at": _now(), "with": p["id"]}
+                q.setdefault("feedback", []).append({"at": _now(), "kind": "accept", "by": "designer",
+                                                     "comment": q["status_detail"]})
+                self.save(q)
 
     def reject(self, pid: str, comment: str = "") -> dict:
         with self._lock:
@@ -825,36 +926,560 @@ class ProposalStore:
                  "addresses_nodes": p.get("addresses_nodes", []), "feedback": p.get("feedback", []),
                  "status_detail": p.get("status_detail", "")} for p in ps]
 
+    # -------------------------------------------------------------- the purpose -> geometry loop (iteration 4)
+    def _loop_path(self) -> str:
+        return os.path.join(self.files.dipm_dir, "loop", self.files.stem + ".json")
+
+    def loop_state(self) -> dict:
+        """The loop's state for this design: attempts per alternative label, the budget and the
+        purpose proposal being worked on.  dipm holds it, so any driver can pick the loop up."""
+        path = self._loop_path()
+        if os.path.exists(path):
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    st = json.load(fh)
+                st.setdefault("attempts", {})
+                st.setdefault("budget", DEFAULT_BUDGET)
+                return st
+            except (OSError, json.JSONDecodeError):
+                pass
+        return {"design": self.files.stem, "budget": DEFAULT_BUDGET, "attempts": {}, "purpose": None}
+
+    def save_loop(self, st: dict) -> None:
+        with self._lock:
+            self.files.ensure_dirs()
+            os.makedirs(os.path.dirname(self._loop_path()), exist_ok=True)
+            atomic_write(self._loop_path(), json.dumps(st, indent=2, ensure_ascii=False) + "\n")
+
+    def _purpose(self, pid: str | None) -> dict | None:
+        if not pid:
+            return None
+        q = self.refresh(self.get(pid))
+        if q.get("kind") != "purpose":
+            raise ProposalError(f"{pid} is not a purpose proposal")
+        if q["status"] in ("rejected", "stale"):
+            raise ProposalError(f"purpose proposal {pid} is {q['status']}: {q.get('status_detail', '')}")
+        return q
+
+    def create_purpose(self, summary: str, rationale: str, intent_text: str, base_hash: str, addresses_nodes=(),
+                       revises: str | None = None, source: str = "mcp", designer_edits: list | None = None,
+                       requests=None) -> dict:
+        """A purpose proposal: a change to the intent file only (new full text or a unified diff),
+        reviewed before any geometry exists.  Every check it adds or changes must be bound to a
+        vocabulary form or marked descriptive; bindings and components are validated now.
+        Model-made items cannot arrive accepted: only the designer accepts."""
+        name = os.path.basename(self.files.intent)
+        if not os.path.exists(self.files.intent):
+            raise ProposalError(f"{self.files.stem} has no intent file to revise")
+        cur_text = read_text(self.files.intent)
+        new_text = apply_unified_diff(cur_text, intent_text) if looks_like_diff(intent_text) else intent_text
+        try:
+            new_plain = intent_store.loads(new_text).to_plain()
+        except intent_store.IntentSchemaError as e:
+            raise ProposalError(f"{name}: {e}") from None
+        cur_plain = intent_store.loads(cur_text).to_plain()
+        errs, info = validate_purpose(cur_plain, new_plain, by_designer=(source == "designer"))
+        if errs:
+            raise ProposalError("purpose proposal refused: " + "; ".join(errs))
+        p = self.create(summary, rationale, {name: new_text}, {name: base_hash}, addresses_nodes, revises, source,
+                        kind="purpose", extra={"validation": info, "designer_edits": list(designer_edits or [])},
+                        requests=requests)
+        st = self.loop_state()
+        st["purpose"] = p["id"]
+        self.save_loop(st)
+        return p
+
+    def try_purpose(self, pid: str) -> dict:
+        """"Accept to try" (designer): geometry alternatives may be built against this purpose
+        proposal before it is accepted; nothing is written until an alternative is accepted."""
+        with self._lock:
+            p = self.refresh(self.get(pid))
+            if p.get("kind") != "purpose":
+                raise ProposalError(f"{pid} is not a purpose proposal")
+            if p["status"] not in ("ready", "pending", "failed"):
+                raise ProposalError(f"{pid} cannot be tried while {p['status']}")
+            p["status"] = "trying"
+            p["status_detail"] = "accepted to try: alternatives are built against it; nothing written yet"
+            p.setdefault("feedback", []).append({"at": _now(), "kind": "accept to try", "by": "designer", "comment": ""})
+            self.save(p)
+            return p
+
+    def edit_purpose(self, pid: str, ops: list, comment: str = "") -> dict:
+        """The designer edits a purpose proposal while reviewing it: the ops (intent_store edit
+        operations) are applied to the proposal's text, edited items become designer-made
+        (`made_by: user`), and a revised proposal (source designer) replaces it."""
+        p = self.refresh(self.get(pid))
+        if p.get("kind") != "purpose":
+            raise ProposalError(f"{pid} is not a purpose proposal")
+        name = os.path.basename(self.files.intent)
+        doc = intent_store.loads(p["patches"][name]["new_text"])
+        try:
+            intent_store.apply_ops(doc, _as_designer(ops))
+        except (intent_store.IntentOpError, intent_store.IntentSchemaError) as e:
+            raise ProposalError(str(e)) from None
+        q = self.create_purpose(p["summary"], (p.get("rationale") or "") + (f"\n\nDesigner: {comment}" if comment else ""),
+                                intent_store.dumps(doc), p["base_hashes"][name], p.get("addresses_nodes") or [],
+                                revises=pid, source="designer",
+                                designer_edits=list(p.get("designer_edits") or []) + [{"at": _now(), "ops": ops}],
+                                requests=[r for r in (p.get("requests") or []) if self._request_exists(r)])
+        with self._lock:
+            p = self.get(pid)
+            p["status"] = "rejected"
+            p["status_detail"] = f"revised by the designer as {q['id']}"
+            p.setdefault("feedback", []).append({"at": _now(), "kind": "edited", "by": "designer",
+                                                 "comment": comment or f"edited into {q['id']}"})
+            self.save(p)
+        return q
+
+    def _candidate_patches(self, files: dict, purpose: dict | None) -> dict:
+        """name -> new text, for files given as full text or diffs against the current file (the
+        intent file: against the purpose proposal's text when one is given)."""
+        out = {}
+        intent_name = os.path.basename(self.files.intent)
+        if purpose is not None:
+            out[intent_name] = purpose["patches"][intent_name]["new_text"]
+        for path, content in (files or {}).items():
+            name = self.files.name_of(path)
+            if not isinstance(content, str):
+                raise ProposalError(f"{name}: content must be text")
+            base = out.get(name)
+            if base is None:
+                base = read_text(self.files.patchable[name]) if os.path.exists(self.files.patchable[name]) else ""
+            out[name] = apply_unified_diff(base, content) if looks_like_diff(content) else content
+            if name == intent_name:
+                try:
+                    intent_store.loads(out[name])
+                except intent_store.IntentSchemaError as e:
+                    raise ProposalError(f"{name}: {e}") from None
+        if not out:
+            raise ProposalError("nothing to evaluate: give files and/or a purpose proposal")
+        return out
+
+    def evaluate_candidate(self, files: dict, label: str = "", purpose: str | None = None, summary: str = "") -> dict:
+        """The model's inner loop: build candidate texts without proposing them and return the
+        full tiered report (kernel, every intent check with margins or why it did not run, the
+        sweep over the parameter ranges).  With `label`, the attempt counts against that
+        alternative's budget (default 6) and is kept for its attempt log."""
+        st = self.loop_state()
+        if label:
+            n = len(st["attempts"].get(label, []))
+            if n >= int(st.get("budget", DEFAULT_BUDGET)):
+                raise ProposalError(f"alternative {label!r} has used its {n} build attempts (budget "
+                                    f"{st.get('budget', DEFAULT_BUDGET)}): submit the best attempt, honestly marked "
+                                    "if it still fails")
+        pq = self._purpose(purpose)
+        patches = self._candidate_patches(files, pq)
+        t0 = time.perf_counter()
+        F = self.files
+        tmp = tempfile.mkdtemp(prefix="dipm-candidate-")
+        try:
+            for src in (F.design, F.intent, F.lock, F.review, F.record):
+                if os.path.exists(src):
+                    shutil.copy2(src, os.path.join(tmp, os.path.basename(src)))
+            for name, text in patches.items():
+                atomic_write(os.path.join(tmp, name), text)
+            tdesign = os.path.join(tmp, os.path.basename(F.design))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                try:
+                    after = load_and_build(tdesign, None)
+                except Exception as e:   # noqa: BLE001 - a candidate that does not load is a result
+                    res = {"label": label, "loaded": False, "error": f"{type(e).__name__}: {e}",
+                           "status": {"headline": "does not load"}, "kernel": "fail"}
+                    self._record_attempt(st, label, summary, res, patches)
+                    return res
+            if after["intent_error"]:
+                raise ProposalError("intent file: " + "; ".join(after["intent_error"]))
+            sa = build_summary(after["design"], after["build"], after["intent"], None,
+                               os.path.join(tmp, os.path.basename(F.record)))
+            from .interpret import sample_points
+            sweep = []
+            pts = sample_points(after["design"]) if after["build"].ok else []
+            for pt in pts:
+                try:
+                    bb = after["design"].build(pt, on_fail="record")
+                    if not bb.ok:
+                        sweep.append({"params": pt, "errors": [str(e) for e in bb.errors][:3]})
+                except Exception as e:   # noqa: BLE001
+                    sweep.append({"params": pt, "errors": [f"{type(e).__name__}: {e}"]})
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        checks = sa["intent_checks"]
+        res = {"label": label, "loaded": True, "status": sa["status"], "kernel": sa["kernel"], "errors": sa["errors"],
+               "intent_checks": checks,
+               "failing": [c["id"] for c in checks if c["state"] == "failing"],
+               "not_run": [{"id": c["id"], "reason": c["reason"]} for c in checks if c["state"] == "not run"],
+               "sweep": {"points": len(pts), "failing": sweep}, "features": sa["features"],
+               "interpretations": sa["interpretations"], "diagnostics": sa["diagnostics"],
+               "orientation": sa["orientation"], "context": sa["context"],
+               "ms": round((time.perf_counter() - t0) * 1000, 1)}
+        self._record_attempt(st, label, summary, res, patches)
+        return res
+
+    def _record_attempt(self, st: dict, label: str, summary: str, res: dict, patches: dict) -> None:
+        if not label:
+            return
+        att = st["attempts"].setdefault(label, [])
+        res["attempt"] = len(att) + 1
+        res["budget"] = int(st.get("budget", DEFAULT_BUDGET))
+        att.append({"n": len(att) + 1, "at": _now(), "summary": str(summary or "").strip(),
+                    "headline": (res.get("status") or {}).get("headline", ""), "kernel": res.get("kernel"),
+                    "failing": res.get("failing", []), "not_run": [x["id"] for x in res.get("not_run", [])],
+                    "error": res.get("error"), "sha256": {n: sha256_text(t) for n, t in patches.items()}})
+        self.save_loop(st)
+
+    def create_alternatives(self, summary: str, rationale: str, alternatives: list, base_hashes: dict,
+                            addresses_nodes=(), purpose: str | None = None, source: str = "mcp", requests=None) -> list:
+        """Submit 2 or 3 geometry alternatives as one group of proposals.  Each carries its attempt
+        log from the loop state; when built against a purpose proposal (pending, or accepted to
+        try), that proposal's intent text travels with each alternative and is applied with the
+        one the designer accepts."""
+        if not isinstance(alternatives, list) or not MIN_ALTERNATIVES <= len(alternatives) <= MAX_ALTERNATIVES:
+            raise ProposalError(f"submit {MIN_ALTERNATIVES} or {MAX_ALTERNATIVES} alternatives (got "
+                                f"{len(alternatives) if isinstance(alternatives, list) else 0})")
+        labels = [str((a or {}).get("label") or "").strip() for a in alternatives]
+        if not all(labels) or len(set(labels)) != len(labels):
+            raise ProposalError("every alternative needs a distinct label")
+        pq = self._purpose(purpose)
+        st = self.loop_state()
+        intent_name = os.path.basename(self.files.intent)
+        made = []
+        group = None
+        for a, label in zip(alternatives, labels):
+            files = dict(a.get("files") or {})
+            bh = dict(base_hashes or {})
+            if pq is not None and not any(self.files.name_of(k) == intent_name for k in files):
+                files[intent_name] = pq["patches"][intent_name]["new_text"]
+                bh[intent_name] = pq["base_hashes"][intent_name]
+            extra = {"alternative": label, "purpose": pq["id"] if pq else None, "group": group,
+                     "attempts": list(st["attempts"].get(label, [])), "budget": int(st.get("budget", DEFAULT_BUDGET))}
+            p = self.create(str(a.get("summary") or summary), str(a.get("rationale") or rationale), files, bh,
+                            addresses_nodes, a.get("revises"), source, kind="geometry", extra=extra, requests=requests)
+            if group is None:
+                group = p["id"]
+                p["group"] = group
+                with self._lock:
+                    self.save(p)
+            made.append(p)
+        return made
+
     # -------------------------------------------------------------- requests ("Ask Claude")
-    def create_request(self, node: str, note: str, change: dict | None) -> dict:
+    def _rpath(self, rid: str) -> str:
+        if not re.fullmatch(r"r\d+", rid or ""):
+            raise ProposalError(f"bad request id {rid!r}")
+        return os.path.join(self.files.requests_dir, rid + ".json")
+
+    def _write_request(self, r: dict) -> None:
+        atomic_write(self._rpath(r["id"]), json.dumps(r, indent=2, ensure_ascii=False) + "\n")
+
+    def _read_request(self, rid: str) -> dict | None:
+        try:
+            with open(self._rpath(rid), encoding="utf-8") as fh:
+                r = json.load(fh)
+        except (OSError, json.JSONDecodeError):
+            return None
+        return r if r.get("design") in (None, self.files.stem) else None
+
+    def _request_exists(self, rid: str) -> bool:
+        try:
+            return self._read_request(rid) is not None
+        except ProposalError:
+            return False
+
+    def _check_request_ids(self, ids) -> list:
+        out = []
+        for rid in ids or ():
+            rid = str(rid).strip()
+            if not rid:
+                continue
+            if not self._request_exists(rid):
+                raise ProposalError(f"no request {rid} for {self.files.stem} (get_requests lists them)")
+            out.append(rid)
+        for rid in self.run_requests:      # the run's own requests (dipm mcp started by a run)
+            if rid not in out and self._request_exists(rid):
+                out.append(rid)
+        return out
+
+    def _link_requests(self, p: dict, explicit: list) -> list:
+        """Link a just-submitted proposal to the requests it answers: the explicit ones (and the
+        run's) plus every unanswered request for a node it addresses.  An open or failed request
+        becomes `proposed`, so it is not handled twice; a running one stays running until its run
+        ends.  Called under the store lock."""
+        nodes = set(p.get("addresses_nodes") or [])
+        linked = []
+        for r in self.requests():
+            if r.get("status") == "answered":
+                continue
+            if r["id"] not in explicit and r.get("node") not in nodes:
+                continue
+            r["proposals"] = list(dict.fromkeys((r.get("proposals") or []) + [p["id"]]))
+            if r.get("status") in ("open", "failed"):
+                r["status"] = "proposed"
+                r["status_detail"] = f"answered by pending proposal {p['id']}"
+            self._write_request(r)
+            linked.append(r["id"])
+        return linked
+
+    def create_request(self, node: str, note: str, change: dict | None, kind: str = "queue") -> dict:
         with self._lock:
             self.files.ensure_dirs()
             rid, _ = self._alloc(self.files.requests_dir, "r")
-            r = {"id": rid, "created": _now(), "node": node, "note": (note or "").strip(), "change": change,
-                 "status": "open", "proposals": []}
-            atomic_write(os.path.join(self.files.requests_dir, rid + ".json"),
-                         json.dumps(r, indent=2, ensure_ascii=False) + "\n")
+            r = {"id": rid, "created": _now(), "design": self.files.stem, "kind": kind, "node": node,
+                 "note": (note or "").strip(), "change": change, "status": "open", "proposals": [],
+                 "v": REQUEST_VERSION, "status_detail": "", "runs": []}
+            self._write_request(r)
             return r
 
     def requests(self, status: str | None = None) -> list:
+        """This design's requests (oldest first), reconciled with their proposals' states."""
         d = self.files.requests_dir
         if not os.path.isdir(d):
             return []
         out = []
+        cache: dict = {}
         for f in sorted((f for f in os.listdir(d) if re.fullmatch(r"r\d+\.json", f)), key=lambda x: int(x[1:-5])):
             try:
                 with open(os.path.join(d, f), encoding="utf-8") as fh:
                     r = json.load(fh)
             except (OSError, json.JSONDecodeError):
                 continue
+            if r.get("design") not in (None, self.files.stem):
+                continue
+            r = self._reconcile(r, cache)
             if status is None or r.get("status") == status:
                 out.append(r)
         return out
 
+    def _proposal_or_none(self, pid: str, cache: dict) -> dict | None:
+        if pid not in cache:
+            try:
+                cache[pid] = self.refresh(self.get(pid))
+            except ProposalError:
+                cache[pid] = None
+        return cache[pid]
+
+    def _reconcile(self, r: dict, cache: dict) -> dict:
+        """Bring a request's status in line with its proposals (and migrate older requests once)."""
+        changed = False
+        if r.get("v") != REQUEST_VERSION:
+            changed = self._migrate(r, cache) or True
+        if r.get("status") == "proposed":
+            ps = [q for q in (self._proposal_or_none(x, cache) for x in r.get("proposals") or []) if q]
+            if any(q["status"] == "accepted" and q.get("kind") != "purpose" for q in ps):
+                acc = next(q["id"] for q in ps if q["status"] == "accepted" and q.get("kind") != "purpose")
+                r["status"], r["status_detail"] = "answered", f"answered by {acc} (accepted)"
+                changed = True
+            elif not any(q["status"] in OPEN_STATUSES and not (q.get("kind") == "purpose" and q["status"] == "trying")
+                         for q in ps):
+                purposes = [q["id"] for q in ps if q.get("kind") == "purpose" and q["status"] in ("accepted", "trying")]
+                closed = [q["id"] for q in ps if q["status"] in ("rejected", "stale")]
+                r["status"] = "open"
+                r["status_detail"] = (f"purposes {', '.join(purposes)} accepted; the geometry is still to be proposed"
+                                      if purposes else
+                                      f"open again: {', '.join(closed) or 'its proposals'} rejected or stale")
+                changed = True
+        if changed:
+            try:
+                self._write_request(r)
+            except OSError:
+                pass
+        return r
+
+    def _migrate(self, r: dict, cache: dict) -> bool:
+        """Requests written before iteration 4b were never linked to proposals at submission.  An
+        open one is linked to the newest pending solution (patch or alternative, not a purpose
+        proposal) for its node made after it, and becomes `proposed`; e.g. the rod holder's r1
+        and r2 are answered by p5."""
+        r["v"] = REQUEST_VERSION
+        r.setdefault("status_detail", "")
+        r.setdefault("runs", [])
+        if r.get("status") != "open" or r.get("proposals"):
+            return True
+        best = None
+        for f in os.listdir(self.files.proposals_dir) if os.path.isdir(self.files.proposals_dir) else ():
+            m = re.fullmatch(r"(p\d+)\.json", f)
+            q = self._proposal_or_none(m.group(1), cache) if m else None
+            if (q is None or q.get("kind") == "purpose" or q["status"] not in OPEN_STATUSES
+                    or r.get("node") not in (q.get("addresses_nodes") or []) or q.get("created", "") < r.get("created", "")):
+                continue
+            if best is None or int(q["id"][1:]) > int(best["id"][1:]):
+                best = q
+        if best is not None:
+            r["proposals"] = [best["id"]]
+            r["status"] = "proposed"
+            r["status_detail"] = f"answered by pending proposal {best['id']} (linked when requests began to be linked)"
+            r["migrated"] = f"linked to {best['id']} by the iteration-4b migration"
+        return True
+
+    def request(self, rid: str) -> dict:
+        r = self._read_request(rid)
+        if r is None:
+            raise ProposalError(f"no request {rid} for {self.files.stem}")
+        return self._reconcile(r, {})
+
+    def update_request(self, rid: str, **fields) -> dict:
+        """Read-modify-write one request under the store lock (the runner's state changes)."""
+        with self._lock:
+            r = self._read_request(rid)
+            if r is None:
+                raise ProposalError(f"no request {rid} for {self.files.stem}")
+            r.update(fields)
+            self._write_request(r)
+            return r
+
     def close_requests(self, nodes, pid: str) -> None:
-        for r in self.requests("open"):
-            if r.get("node") in nodes:
-                r["status"] = "answered"
-                r["proposals"] = list(dict.fromkeys((r.get("proposals") or []) + [pid]))
-                atomic_write(os.path.join(self.files.requests_dir, r["id"] + ".json"),
-                             json.dumps(r, indent=2, ensure_ascii=False) + "\n")
+        """A solution was accepted: every unanswered request for its nodes, and every request it
+        was linked to, is answered."""
+        with self._lock:
+            for r in self.requests():
+                if r.get("status") == "answered":
+                    continue
+                if r.get("node") in nodes or pid in (r.get("proposals") or []):
+                    r["status"] = "answered"
+                    r["status_detail"] = f"answered by {pid} (accepted)"
+                    r["proposals"] = list(dict.fromkeys((r.get("proposals") or []) + [pid]))
+                    self._write_request(r)
+
+
+# ---------------------------------------------------------------- purpose proposals (iteration 4)
+
+def _checks_of(plain: dict | None) -> dict:
+    out = {}
+
+    def walk(lst):
+        for n in lst or []:
+            for c in n.get("checks") or []:
+                out[c["id"]] = {**c, "node": n["id"]}
+            walk(n.get("children"))
+    walk((plain or {}).get("intents"))
+    return out
+
+
+def _items_of(plain: dict | None) -> dict:
+    """id -> ("assumption" | "component", item) for status / made_by checks."""
+    out = {}
+
+    def walk(lst):
+        for n in lst or []:
+            for a in n.get("assumptions") or []:
+                out[a["id"]] = ("assumption", a)
+            walk(n.get("children"))
+    walk((plain or {}).get("intents"))
+    for c in (plain or {}).get("components") or []:
+        out[c["id"]] = ("component", c)
+    return out
+
+
+def validate_purpose(cur_plain: dict, new_plain: dict, by_designer: bool = False) -> tuple[list, dict]:
+    """(errors, info) for a purpose proposal.  Every check the proposal adds or changes needs a
+    binding (a vocabulary form, or {form: descriptive, reason}); every binding and component must
+    be valid; model-made items cannot arrive accepted."""
+    from . import components as C
+    from . import vocabulary as V
+    errs = list(C.errors(new_plain))
+    comps = C.components_of(new_plain)
+    cur, new = _checks_of(cur_plain), _checks_of(new_plain)
+    info = {"bound": [], "descriptive": [], "unbound_unchanged": [], "added": [], "changed": [], "removed": []}
+    for cid, c in new.items():
+        old = cur.get(cid)
+        touched = old is None or {k: v for k, v in old.items() if k != "node"} != {k: v for k, v in c.items()
+                                                                                  if k != "node"}
+        if old is None:
+            info["added"].append(cid)
+        elif touched:
+            info["changed"].append(cid)
+        b = c.get("binding")
+        if b is None:
+            if touched:
+                errs.append(f"check {cid}: bind it to a vocabulary form (get_check_vocabulary) or mark it "
+                            "{form: descriptive, reason: ...}")
+            else:
+                info["unbound_unchanged"].append(cid)
+            continue
+        errs += V.validate_binding(dict(b), comps, cid)
+        (info["descriptive"] if b.get("form") == "descriptive" else info["bound"]).append(cid)
+        ob = (old or {}).get("binding")
+        if not by_designer and b != ob and b.get("status") == "accepted":
+            errs.append(f"check {cid}: a proposed binding cannot be 'accepted' (only the designer accepts); "
+                        "use status: proposed")
+    info["removed"] = sorted(set(cur) - set(new))
+    if not by_designer:
+        ci, ni = _items_of(cur_plain), _items_of(new_plain)
+        for iid, (kind, it) in ni.items():
+            old = ci.get(iid, (None, None))[1]
+            if it != old and it.get("status") == "accepted":
+                errs.append(f"{kind} {iid}: cannot arrive 'accepted' in a proposal (only the designer accepts)")
+            if it != old and it.get("made_by") in ("user", "author"):
+                errs.append(f"{kind} {iid}: made_by '{it['made_by']}' is for the designer; a proposal is model-made")
+    return errs, info
+
+
+def _as_designer(ops: list) -> list:
+    """Designer edits during review: items they touch become designer-made."""
+    out = []
+    for o in ops or []:
+        o = dict(o)
+        k = o.get("op")
+        if k == "edit_assumption":
+            o["fields"] = {**(o.get("fields") or {}), "made_by": "user"}
+        elif k == "add_assumption":
+            o["assumption"] = {**(o.get("assumption") or {}), "made_by": "user"}
+        elif k == "set_binding" and o.get("binding") is not None:
+            o["binding"] = {**o["binding"], "made_by": "user"}
+        elif k == "add_component":
+            o["component"] = {**(o.get("component") or {}), "made_by": "user"}
+        elif k == "edit_component":
+            o["fields"] = {**(o.get("fields") or {}), "made_by": "user"}
+        out.append(o)
+    return out
+
+
+def purpose_review(p: dict, ev: dict, files: "DesignFiles") -> dict:
+    """What the GUI needs to review a purpose proposal as a tree diff: before and after trees,
+    each check with its binding in plain language and its state on the current geometry."""
+    from . import components as C
+    from . import vocabulary as V
+    name = os.path.basename(files.intent)
+    after = intent_store.loads(p["patches"][name]["new_text"]).to_plain()
+    before = intent_store.load(files.intent).to_plain() if os.path.exists(files.intent) else None
+    comps = C.components_of(after)
+    states = {c["id"]: c for c in (ev.get("after") or {}).get("intent_checks") or []}
+    checks = []
+    for cid, c in _checks_of(after).items():
+        b = c.get("binding")
+        st = states.get(cid) or {}
+        if b:
+            reads = V.describe(b, comps)
+        elif st.get("state") not in (None, "not run"):
+            reads = "bound in the design program (author)"
+        else:
+            reads = "not bound: descriptive, not run"
+        checks.append({"id": cid, "node": c["node"], "statement": c.get("statement", ""),
+                       "form": (b or {}).get("form"), "binding": b,
+                       "reads_as": reads,
+                       "made_by": (b or {}).get("made_by", "model") if b else None,
+                       "reviewed": bool(b and b.get("status") == "accepted"),
+                       "state": st.get("state", "not run"), "reason": st.get("reason", ""),
+                       "headline": st.get("headline")})
+    return {"before": before, "after": after, "checks": checks,
+            "components": [c.as_dict() for c in comps.values()], "validation": p.get("validation") or {}}
+
+
+def _unreviewed(plain: dict | None) -> list:
+    """Assumptions and components nobody accepted yet (model-made or pack defaults)."""
+    out = []
+    for iid, (kind, it) in _items_of(plain).items():
+        if it.get("status") != "accepted":
+            out.append({"kind": kind, "id": iid, "text": it.get("statement", ""), "made_by": it.get("made_by", "model")})
+    return out
+
+
+def assumed_items(ev: dict) -> list:
+    """What an alternative takes for granted that nobody reviewed: unaccepted assumptions and
+    components, and unreviewed bindings of the checks that ran."""
+    out = list((ev.get("after") or {}).get("unreviewed") or [])
+    for c in (ev.get("after") or {}).get("intent_checks") or []:
+        if c.get("form") and not c.get("binding_reviewed") and c.get("state") != "not run":
+            out.append({"kind": "binding", "id": c["id"], "text": c.get("binding_text", ""),
+                        "made_by": c.get("made_by", "model")})
+    return out

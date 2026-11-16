@@ -1,4 +1,4 @@
-# dipm GUI (iterations 1–3)
+# dipm GUI (iterations 1–4b)
 
 The browser front end for `python -m dipm serve <design.py>`. The spec is [`docs/gui.md`](../docs/gui.md). Iteration 1 shows a design live, makes its intent visible, and rebuilds whenever the design file is saved. Iteration 2 (§7) makes the **intent editable** in the GUI (`<design>.intent.yaml`), tracks which solutions are **stale** after an intent edit, and puts **Claude in the loop** through an MCP server whose proposals the designer reviews and accepts here. The DSL itself is still edited in a text editor, or through accepted proposals.
 
@@ -37,7 +37,7 @@ npm run build && npm run e2e      # Playwright: the gui.md §6 acceptance criter
 npm run screenshots        # writes screenshots/*.png (light and dark; DIPM_SHOTS=1 adds the iter2-*.png flows)
 ```
 
-`e2e/acceptance.spec.ts` covers gui.md §6 (iteration 1); `e2e/iteration3.spec.ts` covers §8.4 (iteration 3, with `/api/display` stubbed through `DIPM_DISPLAY_STUB`); `e2e/iteration2.spec.ts` covers §7.2 criteria 1–6 and §7.3, with Claude simulated by `e2e/simulate_claude.py` (it drives `python -m dipm mcp` over stdio with the official MCP client, exactly as Claude Code does).
+`e2e/acceptance.spec.ts` covers gui.md §6 (iteration 1); `e2e/iteration3.spec.ts` covers §8.4 (iteration 3, with `/api/display` stubbed through `DIPM_DISPLAY_STUB`); `e2e/iteration2.spec.ts` covers §7.2 criteria 1–6 and §7.3, with Claude simulated by `e2e/simulate_claude.py` (it drives `python -m dipm mcp` over stdio with the official MCP client, exactly as Claude Code does). `e2e/iteration4.spec.ts` covers the purpose → geometry loop (docs/purpose-loop.md §4 GUI) on temp copies of the rod holder's seed (`tests/fixtures/rod_holder/`, frozen when the author accepted p5 into `examples/rod_holder.*`), with the model simulated by `e2e/simulate_loop.py` (it drives `dipm.proposals.ProposalStore` with the fixed texts of `tests/fixtures/rod_loop.py`: a purpose proposal, `evaluate` attempts, then 2–3 alternatives).
 
 The e2e tests start their own servers from `../.venv` (`e2e/server.ts`). Tests that write preferences or edit a design work on temp copies of the fixtures in `tests/fixtures/`. WebGL runs headless through SwiftShader (`playwright.config.ts`).
 
@@ -138,6 +138,43 @@ Spec: docs/gui.md §8. Engine decisions: `src/dipm/NOTES.md` #58–72.
 - **Test hooks:** `window.__dipm.viewer` adds `photoState()`, `textureState()`, `referenceState()`, `oneToOneState()`, `measureCssPx()`, `dolly()`, `lookAt()` and `partBounds()`; `window.__dipm.measure(screenOverride)` remeasures 1:1.
 - **New pure modules** (vitest): `scale.ts`, `photo.ts`, `texture.ts`, `margins.ts`, `reference.ts`. `realsize.ts` is the 1:1 controller.
 
+## The purpose → geometry loop (iteration 4)
+
+Spec: docs/purpose-loop.md. Engine decisions: `src/dipm/NOTES.md` #73 onward. Try it on `examples/rod_holder.py` (the author's "Support a fishing rod on a wall" edit, with the shelf bracket's review record as its baseline).
+
+- **Impact.** When a purpose changed since its solution was reviewed, the header shows **purpose changed · N invalidated** and the right panel an **IMPACT** section: every node, check, assumption and feature classified *changed*, *invalidated* or *survives*, with reasons (removed terms such as "shelf", supports, source, nesting, features). The WHY tree marks changed (blue) and invalidated (orange) rows; *mark the tree* turns the marks off.
+- **Change notification.** Editing a purpose in the GUI opens a request for it (as **Queue for Claude** does), so the header's "N requests waiting" updates. Nothing is pushed to Claude.
+- **Purpose proposals** (`propose_purposes` over MCP) appear in PROPOSALS as **PURPOSES** and are reviewed as a **tree diff**: added (+, green), changed (~), removed (−, struck through) nodes and checks; each check shows its binding in plain language (model-made bindings hatched until accepted), its state on the *current* geometry (usually *not run* until the geometry exists; descriptive checks read *descriptive, not run*), and the components it must fit.
+  - **Accept purposes** writes the intent file only; the nodes stay unreviewed until geometry is accepted.
+  - **Accept to try** lets Claude build alternatives against the proposal without writing anything.
+  - **edit** on a node's statement makes a revised proposal (source *designer*; edited items are designer-made); the original is marked rejected.
+  - **Reject with comment** as before.
+- **Alternatives.** A geometry proposal from `propose_alternatives` is labelled **ALTERNATIVE A/B/C**; **Compare N alternatives** opens a side-by-side view over the viewport: a thumbnail of each one's geometry (click it to show it in the viewport), the tiered status, every intent check with its margin bar or why it did not run, what it assumes that nobody reviewed, and its attempt log (builds used of the budget). **Accept X**, or **Accept anyway…** with a reason when it fails checks; accepting one closes its siblings and applies the purpose proposal it was built against.
+- **Component envelopes** (a rod Ø6–14 mm, a reel box) are ghosted in the viewport where their checks posed them: translucent violet, outlined **dashed while unreviewed** and solid once accepted, with a legend. While comparing a proposal, its own ghosts are shown. Toggle: View menu → **Component envelopes**.
+- **New API:** `POST /api/proposals/{id}/try`, `POST /api/proposals/{id}/edit {ops, comment}`; the build payload adds `impact`, `components` and `ghosts`; proposals carry `kind`, `group`, `alternative`, `purpose`, `attempts`.
+- **Test hooks:** `window.__dipm.viewer.componentState()` and `setComponents()`.
+- **New modules:** `loop.ts` (pure: impact rows, tree diff, alternative groups, ghost poses; vitest `tests/loop.test.ts`), `thumb.ts` (offscreen thumbnails), `components/Loop.tsx` (impact panel, purpose review, alternatives compare).
+
+## Automatic pickup: the GUI starts Claude (iteration 4b)
+
+Spec: docs/purpose-loop.md §7. Engine decisions: `src/dipm/NOTES.md` #90–101 (`src/dipm/claude_runner.py`).
+
+- **Queue for Claude starts Claude.** With **auto-run** on (the default, remembered per design in `.dipm/runs/<design>.settings.json`), queuing a request, or editing a purpose (which opens one), launches **headless Claude Code** for every open request. It runs on your own Claude Code login and plan; no API key. Nothing is registered with `claude mcp add`: dipm writes a one-off MCP config for the run.
+- **What runs** (from the repository root):
+  ```
+  claude -p <prompt> --output-format stream-json --verbose
+         --mcp-config .dipm/runs/<run>.mcp.json --strict-mcp-config
+         --tools "" --allowedTools mcp__dipm__<the 16 tools> --disallowedTools Bash,Edit,Write,Read,WebFetch,…
+         --permission-mode dontAsk [--model …]
+  ```
+  The MCP config starts `<this Python> -m dipm mcp <design.py>`. Only dipm's tools exist for Claude; anything else is denied, never prompted. Claude can still only *propose*. The binary is `claude` on PATH, or `DIPM_CLAUDE_BIN`.
+- **Watching a run.** The header shows **Claude is working on r3… · evaluating attempt 2 of 'V-saddle'**; click it for the steps so far, **Cancel**, **open transcript** (the raw stream-json), the proposals it made and, at the end, the cost and token line. When it ends the badge reads e.g. **Claude finished r1 · proposed p1, p2, p3** until you **dismiss** it.
+- **Requests** move *waiting for Claude* → *Claude is working on it* → *proposed: p6, p7* (linked as soon as Claude submits them, so a request already answered by a pending proposal is never run twice) or *failed: reason* (cancelled, timed out, no proposal, Claude Code error). Rejecting every proposal for a request, or accepting only its purposes, makes it *waiting* again. The PROPOSALS panel lists them with **Run Claude now** (also retries failed ones) and the auto-run toggle; the inspector's stale box says what happened to its request.
+- **One run at a time per design**; requests queued meanwhile start the next run when it ends. A timeout (default 20 min, `DIPM_CLAUDE_TIMEOUT` seconds) stops a run. Runs are kept in `.dipm/runs/` (`run<n>.json` state and steps, `.jsonl` transcript, `.stderr.log`, `.mcp.json`).
+- **Fallback.** Without `claude` (or when it is not logged in) the badge stays **N requests waiting** and its popover gives the reason and the copyable prompt for your own Claude Code session, as before.
+- **New API:** `GET /api/claude`, `POST /api/claude/run {requests?}`, `POST /api/claude/cancel {run?}`, `POST /api/claude/settings {auto_run?, model?, timeout_s?}`, `GET /api/claude/runs/{id}/transcript`; websocket `claude-run` events; `POST /api/requests` returns the run it started. Proposals carry `requests` and `run`; MCP `propose_*` tools take an optional `requests` list.
+- **Tests never run the real `claude`:** pytest and the e2e server default to a nonexistent `DIPM_CLAUDE_BIN` and `DIPM_CLAUDE_AUTORUN=0`. `e2e/iteration4b.spec.ts` uses the stub `tests/fixtures/fake_claude`, which checks the restricted flags, starts `dipm mcp` from the generated config and plays the rod holder's loop over MCP. New module: `claude.ts` (state and pure texts; vitest `tests/claude.test.ts`).
+
 ## Architecture
 
 ```
@@ -148,6 +185,8 @@ gui/src/
   intent.ts                  iteration 2 state: intent file + base hash, inline edit, 409 conflict, review,
                              requests, proposals, before/after comparison
   edit.ts                    pure: subtree, drop targets, staleness, diff lines, semantic-diff summaries
+  loop.ts                    pure (iteration 4): impact rows, purpose tree diff, alternative groups, ghost poses
+  thumb.ts                   offscreen thumbnails of proposal geometry (alternatives compare)
   api.ts                     fetch wrappers + WebSocket with reconnect
   types.ts                   JSON shapes served by src/dipm/server/serialize.py
   model.ts                   pure: WHY/HOW rows, transitionMap (shared elements), connected() (what lights up)
@@ -155,7 +194,8 @@ gui/src/
   viewer.ts                  three.js: shaded mesh with per-face vertex colours, edges, picking, views, triad, ghost
   components/                Header, IntentPanel (WHY⇄HOW, FLIP transition, links, diagnostics, editing, drag),
                              IntentEditor (inline edit, confirm, node/check/assumption editors, banners),
-                             Proposals, Connections, Viewport (+ proposal compare), RightPanel, ParamBar
+                             Proposals, Connections, Viewport (+ proposal compare, component ghosts), RightPanel,
+                             ParamBar, Loop (impact panel, purpose tree diff, alternatives compare)
   styles.css, fonts.css      drawing-sheet tokens (light/dark) and the vendored fonts
 public/fonts/                Archivo, IBM Plex Sans, IBM Plex Mono (woff2, SIL OFL 1.1; OFL-*.txt)
 ```
@@ -168,9 +208,10 @@ public/fonts/                Archivo, IBM Plex Sans, IBM Plex Mono (woff2, SIL O
   - `GET /api/mesh/{id}`
   - `POST /api/answer {assumption_id, reading, scope?, note?}`
   - `GET /api/intent`; `PATCH /api/intent {base_hash, ops}` (ops: `edit_statement`, `add_child`, `delete`, `move`, `add_check`, `edit_check`, `remove_check`, `edit_assumption`, `add_assumption`, `mark_reviewed`; 409 with the current state on a stale base); `POST /api/intent/rename {base_hash, design_hash, old, new}`
-  - `GET|POST /api/proposals`, `GET /api/proposals/{id}`, `GET /api/proposals/{id}/mesh/{before|after}`, `POST /api/proposals/{id}/accept|reject|evaluate`
-  - `GET|POST /api/requests` ("Ask Claude")
-  - `WS /api/events`, which sends `hello`, `design-changed`, `rebuilt`, `design-error`, `intent-changed` and `proposals-changed`
+  - `GET|POST /api/proposals`, `GET /api/proposals/{id}`, `GET /api/proposals/{id}/mesh/{before|after}`, `POST /api/proposals/{id}/accept|reject|evaluate|view|try|edit`
+  - `GET|POST /api/requests` ("Ask Claude"; with auto-run on, POST starts a run)
+  - `GET /api/claude`, `POST /api/claude/run|cancel|settings`, `GET /api/claude/runs/{id}/transcript` (iteration 4b)
+  - `WS /api/events`, which sends `hello`, `design-changed`, `rebuilt`, `design-error`, `intent-changed`, `proposals-changed` and `claude-run`
 - Engine-side modules for iteration 2: `intent_store.py` (the only code that knows the YAML format), `review.py` (node hashes, `<design>.review.json`), `proposals.py` (store, diffs, evaluation, accept/reject, requests), `mcp_server.py` (`dipm mcp`), `codemod.py` (rename id).
 - `serialize.py`: a build becomes features (checks, refs, uses, parameter dependencies), the intent tree, diagnostics, interpretations, and the face/edge genealogy tables. Engine logic lives in `src/dipm/connections.py`.
 - `mesh.py`: the binary layout is documented in its docstring. Face and edge ids are positions in `Build.faces()` and `Build.edges()`, the same ids the genealogy table uses.

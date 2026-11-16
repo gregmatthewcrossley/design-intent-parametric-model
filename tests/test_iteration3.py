@@ -71,15 +71,17 @@ def _check(a, cid):
 
 
 def test_rc1_load_fails_with_the_expected_order_of_magnitude(bracket_assessment):
-    """architecture §8.4a: upper-anchor pull-out ≈ 600 N at 20 kg, ≈ 1.2 kN with SF 2."""
+    """architecture §8.4a: upper-anchor pull-out ≈ 608 N at 20 kg.  Iteration 4 (sourced packs,
+    NOTES #74): SF 4 on the plug anchor's mean ultimate (250 N, 130 N lowest published mean) and
+    SF 4 on PETG's short-term strength under sustained load: ≈ 2.4 kN and ≈ 471 MPa."""
     c = _check(bracket_assessment, "R.c1")
     assert c.state == "failing" and c.rung == 2 and c.plain.startswith("Holds 20 kg")
     t = {x.name: x for x in c.terms}
     anc = t["upper anchor pull-out × SF"]
-    assert anc.nominal == pytest.approx(1216, rel=0.02) and anc.limit == 200.0 and anc.limit_worst == 150.0
+    assert anc.nominal == pytest.approx(4 * 608, rel=0.02) and anc.limit == 250.0 and anc.limit_worst == 130.0
     assert anc.margin < 0 and anc.margin_worst < anc.margin and anc.state == "failing"
     bend = t["arm bending stress × SF"]
-    assert bend.nominal == pytest.approx(235, rel=0.02) and bend.limit == pytest.approx(45.0)   # PETG, in-layer
+    assert bend.nominal == pytest.approx(4 * 117.7, rel=0.02) and bend.limit == pytest.approx(45.0)   # PETG, in-layer
     assert bend.margin < 0 and bend.state == "failing"
     assert any("pivots rigidly" in m for m in c.method_assumptions)
     assert c.assumptions[0]["id"] == "R.a1" and c.faces

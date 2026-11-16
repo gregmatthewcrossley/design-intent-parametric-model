@@ -13,7 +13,10 @@ from dipm.proposals import ProposalStore
 from conftest import a3_offset_patch, copy_bracket
 
 TOOLS = {"get_design", "get_intent", "build", "why", "get_stale_nodes", "get_requests", "get_source",
-         "propose_patch", "list_proposals", "get_proposal_feedback"}
+         "propose_patch", "list_proposals", "get_proposal_feedback",
+         # iteration 4: the purpose -> geometry loop
+         "get_impact", "get_check_vocabulary", "get_components", "propose_purposes", "evaluate",
+         "propose_alternatives"}
 
 
 def run(design, script):

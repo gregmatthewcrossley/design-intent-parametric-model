@@ -42,6 +42,19 @@ Iteration 3 (docs/gui.md §8):
     POST  /api/proposals/{id}/view {params}   before/after meshes at the GUI's parameters (#53)
     POST  /api/proposals/{id}/accept {comment?, override_reason?}   "Accept anyway…" (#54)
 
+Iteration 4b (docs/purpose-loop.md §7: the GUI starts headless Claude Code, claude_runner.py):
+
+    GET   /api/claude                     availability, settings, the current or last run (with its
+                                          plain-language steps), recent runs, requests waiting, the
+                                          fallback prompt
+    POST  /api/claude/run {requests?}     "Run Claude now" (open and failed requests)
+    POST  /api/claude/cancel {run?}       stop the running run
+    POST  /api/claude/settings {auto_run?, model?, timeout_s?}
+    GET   /api/claude/runs/{id}/transcript   the run's stream-json transcript (.jsonl)
+    WS    {"type": "claude-run", "status": ...}   on every step
+
+    POST /api/requests (and a purpose edit that opens a request) starts a run when auto-run is on.
+
 Bound to 127.0.0.1 only.  The design file, its lock and its preferences are watched; on a
 change the design module is re-imported fresh (cli.load_design never caches it) and rebuilt
 with the current parameters.  A stale lock does not block the rebuild: the old choices are
@@ -70,7 +83,7 @@ from .. import intent_store
 from ..errors import DipmError, ParameterError
 from ..fileio import file_sha256
 from ..proposals import ProposalError, ProposalStore
-from ..review import ReviewRecord
+from ..review import ReviewRecord, node_content, plain_nodes
 from .mesh import mesh_bytes
 from .serialize import build_payload, design_info, jsonable
 
@@ -123,6 +136,9 @@ class Session:
         self.record = ResolutionRecord.load(self.record_path)
         self.key_build = None                 # the defaults build (orientation key / inference)
         self.force_orientation = False
+        # iteration 4b: headless Claude runs for queued requests (claude_runner.py)
+        from ..claude_runner import Runner
+        self.runner = Runner(self.store, self.publish)
 
     # ------------------------------------------------------------------ files
     @property
@@ -245,6 +261,7 @@ class Session:
                 raise intent_store.IntentConflict(path, base_hash, cur)
             doc = intent_store.load(path)
             before = doc.to_plain()
+            before_nodes = plain_nodes(before)
             file_ops = [o for o in ops if o.get("op") != "mark_reviewed"]
             results = intent_store.apply_ops(doc, file_ops, taken=self.dsl_ids()) if file_ops else []
             review = ReviewRecord.load(self.files.review)
@@ -269,7 +286,29 @@ class Session:
                     self.own_writes[p] = _sha(p)
                 self.writing -= mine
             self.load_intent()
-        return {"results": results}
+            requests = self._purpose_requests(before_nodes, plain) if file_ops else []
+        run = None
+        if requests:
+            run, _why = self.runner.auto("purpose edit")
+        return {"results": results, "requests_created": requests, **({"run": run} if run else {})}
+
+    def _purpose_requests(self, before_nodes: dict, plain: dict) -> list:
+        """Change notification (iteration 4): a purpose edited in the GUI opens a request, as
+        "Queue for Claude" does, unless one is already open for that node.  A driving session
+        picks it up with get_requests; nothing is pushed to Claude."""
+        stale = self.review.stale(plain) if self.review else {}
+        after_nodes = plain_nodes(plain)
+        open_nodes = {r.get("node") for r in self.store.requests("open")}
+        made = []
+        for nid, n in after_nodes.items():
+            if nid in open_nodes or nid not in stale:
+                continue
+            if before_nodes.get(nid) is not None and node_content(before_nodes[nid]) == node_content(n):
+                continue
+            r = self.store.create_request(nid, "purpose edited in the GUI", jsonable(stale.get(nid)),
+                                          kind="purpose edit")
+            made.append(r["id"])
+        return made
 
     def rename_id(self, base_hash: str | None, design_hash: str | None, old: str, new: str,
                   rename_features: bool = False) -> dict:
@@ -704,6 +743,8 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
             return err(str(e), 400, errors=e.errors)
         except intent_store.IntentOpError as e:
             return err(str(e), 400)
+        if res.get("requests_created"):
+            session.publish({"type": "proposals-changed"})
         payload = await asyncio.to_thread(session.refresh_payload)
         info = session.intent_info()
         session.publish({"type": "intent-changed", "intent": info, "changed": [os.path.relpath(session.intent_path)]})
@@ -826,6 +867,16 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
             if action == "evaluate":
                 evaluate_bg(pid)
                 return JSONResponse({"ok": True})
+            if action == "try":            # "Accept to try" a purpose proposal (iteration 4)
+                p = await asyncio.to_thread(session.store.try_purpose, pid)
+                session.publish({"type": "proposals-changed", "id": pid})
+                return JSONResponse({"proposal": strip(p)})
+            if action == "edit":           # designer edits a purpose proposal while reviewing it
+                ops = body.get("ops") or []
+                q = await asyncio.to_thread(session.store.edit_purpose, pid, ops, comment)
+                evaluate_bg(q["id"])
+                session.publish({"type": "proposals-changed", "id": q["id"]})
+                return JSONResponse({"proposal": strip(q)}, status_code=201)
             if action == "view":
                 params = body.get("params") or session.params
                 p = await asyncio.to_thread(session.store.view, pid, params)
@@ -854,8 +905,55 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
         plain = session.intent_doc.to_plain()
         change = (session.review.stale(plain) if session.review else {}).get(node)
         r = await asyncio.to_thread(session.store.create_request, node, str(body.get("note") or ""), jsonable(change))
+        run, why = await asyncio.to_thread(session.runner.auto, "queue")
+        if run is not None:
+            r = await asyncio.to_thread(session.store.request, r["id"])
         session.publish({"type": "proposals-changed"})
-        return JSONResponse(r, status_code=201)
+        return JSONResponse({**r, "run": run, "run_note": why}, status_code=201)
+
+    # ---------------------------------------------------------------- iteration 4b: headless Claude runs
+    from ..claude_runner import RunError
+
+    async def api_claude(request: Request):
+        return JSONResponse(await asyncio.to_thread(session.runner.status))
+
+    async def api_claude_action(request: Request):
+        action = request.path_params["action"]
+        try:
+            body = await body_json(request)
+        except json.JSONDecodeError:
+            return err("body must be a JSON object")
+        try:
+            if action == "run":
+                ids = body.get("requests") or None
+                if ids is not None and (not isinstance(ids, list) or not all(isinstance(x, str) for x in ids)):
+                    return err("requests must be a list of request ids")
+                run = await asyncio.to_thread(session.runner.start, ids, "button")
+                return JSONResponse({"run": session.runner.summary(run), "status": session.runner.status()},
+                                    status_code=201)
+            if action == "cancel":
+                run = await asyncio.to_thread(session.runner.cancel, body.get("run"))
+                return JSONResponse({"run": session.runner.summary(run)})
+            if action == "settings":
+                st = await asyncio.to_thread(session.runner.update_settings, **{
+                    k: body[k] for k in ("auto_run", "model", "timeout_s") if k in body})
+                return JSONResponse({"settings": st, "status": session.runner.status()})
+        except RunError as e:
+            return err(str(e), 409 if e.code in ("busy", "nothing", "unavailable") else 400, code=e.code,
+                       claude=session.runner.status())
+        except (TypeError, ValueError) as e:
+            return err(str(e))
+        return err(f"unknown action {action}", 404)
+
+    async def api_claude_transcript(request: Request):
+        try:
+            path = session.runner.transcript_path(request.path_params["id"])
+        except RunError as e:
+            return err(str(e), 404)
+        if not os.path.exists(path):
+            return Response("", media_type="text/plain; charset=utf-8")
+        with open(path, "rb") as fh:
+            return Response(fh.read(), media_type="text/plain; charset=utf-8", headers={"Cache-Control": "no-cache"})
 
     async def api_display(request: Request):
         from .. import display
@@ -940,6 +1038,9 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
               Route("/api/context", api_context, methods=["POST"]),
               Route("/api/orientation", api_orientation, methods=["POST"]),
               Route("/api/review", api_review, methods=["POST"]),
+              Route("/api/claude", api_claude),
+              Route("/api/claude/runs/{id}/transcript", api_claude_transcript),
+              Route("/api/claude/{action}", api_claude_action, methods=["POST"]),
               WebSocketRoute("/api/events", events), Route("/", index)]
     if os.path.isdir(os.path.join(static_dir, "assets")):
         routes.append(Mount("/assets", StaticFiles(directory=os.path.join(static_dir, "assets")), name="assets"))
@@ -957,6 +1058,7 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
             yield
         finally:
             stop.set()
+            await asyncio.to_thread(session.runner.shutdown)
             if task is not None:
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError, Exception):

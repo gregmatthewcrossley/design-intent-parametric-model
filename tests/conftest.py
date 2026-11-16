@@ -2,7 +2,13 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import pathlib
+
+# Iteration 4b: nothing in the test suite may start the real `claude`.  Auto-run defaults to off
+# and the binary points nowhere; the runner tests opt in with the stub (tests/fixtures/fake_claude).
+os.environ["DIPM_CLAUDE_BIN"] = "/nonexistent/claude-is-disabled-in-tests"
+os.environ["DIPM_CLAUDE_AUTORUN"] = "0"
 
 import pytest
 
@@ -67,3 +73,21 @@ def a3_offset_patch(py_text: str, mm: float = 10.0) -> str:
     out = out.replace('"cable pass-through, centred on the plate"', f'"cable pass-through, {mm:g} mm above the lower screw"')
     assert out != py_text
     return out
+
+
+ROD_SET = ("rod_holder.py", "rod_holder.intent.yaml", "rod_holder.interpretations.json", "rod_holder.review.json",
+           "rod_holder.resolution.json")
+
+
+#: The rod holder as seeded in iteration 4 (fishing-rod root, the rest still the bracket's, the
+#: shelf review record).  Frozen here because examples/rod_holder.* is the author's live design:
+#: accepting a proposal there (p5, 2026-11-16) must not change what the tests start from.
+ROD_SEED = ROOT / "tests" / "fixtures" / "rod_holder"
+
+
+def copy_rod_holder(dst: pathlib.Path) -> pathlib.Path:
+    """Copy the rod holder's seed design set (iteration 4) to `dst`."""
+    import shutil
+    for f in ROD_SET:
+        shutil.copy(ROD_SEED / f, dst / f)
+    return dst / "rod_holder.py"

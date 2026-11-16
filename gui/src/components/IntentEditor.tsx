@@ -10,6 +10,7 @@ import {
 } from "../intent";
 import { build, select } from "../store";
 import type { AssumptionSpec, BuildJ, CheckSpec, IntentNodeJ } from "../types";
+import { claude, requestText } from "../claude";
 import { Mono } from "./common";
 
 export const CHECK_KINDS = ["relation", "rule", "analysis", "learned score", "live judgment"];
@@ -150,7 +151,11 @@ function StaleBox({ b, n }: { b: BuildJ; n: IntentNodeJ }) {
   const st = b.stale![n.id];
   const [note, setNote] = useState("");
   const [asked, setAsked] = useState<string | null>(null);
-  const open = requests.value.filter((r) => r.node === n.id && r.status === "open");
+  const open = requests.value.filter((r) => r.node === n.id && r.status !== "answered");
+  const mine = (asked ? requests.value.find((r) => r.id === asked) : null) ?? open[open.length - 1] ?? null;
+  const cs = claude.value;
+  const canRun = !!cs?.available.ok && cs.available.login !== "failed";
+  const auto = canRun && !!cs?.settings.auto_run;
   const feats = b.features.filter((f) => f.stale?.includes(n.id)).map((f) => f.id);
   return (
     <div class="stale-box" data-testid="stale-box">
@@ -176,11 +181,15 @@ function StaleBox({ b, n }: { b: BuildJ; n: IntentNodeJ }) {
         <button class="btn primary" data-testid="ask-claude" onClick={async () => {
           const r = await askClaude(n.id, note);
           if (r) { setAsked(r.id); setNote(""); }
-        }} title="queue a request; nothing is sent until you ask Claude to handle the queue">Queue for Claude</button>
-        {(asked || open.length > 0) && (
-          <div class="small muted" data-testid="request-pending">
-            request {asked ?? open[open.length - 1].id} waiting: copy the prompt from “requests waiting” in the header into
-            your Claude Code session (MCP tools <Mono>get_requests</Mono>, <Mono>propose_patch</Mono>)
+        }} title={auto ? "queue a request: dipm starts Claude Code for it (auto-run is on)"
+                  : "queue a request; nothing is sent until you ask Claude to handle the queue"}>Queue for Claude</button>
+        {mine && (
+          <div class="small muted" data-testid="request-pending" data-status={mine.status}>
+            {mine.status === "open" && (auto ? <>request {mine.id} queued: Claude starts when the current run ends</> :
+              canRun ? <>request {mine.id} waiting: <b>Run Claude now</b> from “requests waiting” in the header</> :
+              <>request {mine.id} waiting: copy the prompt from “requests waiting” in the header into
+                your Claude Code session (MCP tools <Mono>get_requests</Mono>, <Mono>propose_patch</Mono>)</>)}
+            {mine.status !== "open" && <>request {mine.id}: {requestText(mine)}</>}
           </div>
         )}
       </div>

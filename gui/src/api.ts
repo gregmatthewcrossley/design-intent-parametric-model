@@ -1,4 +1,6 @@
-import type { BuildJ, DesignInfo, IntentInfo, IntentOp, ProposalJ, RequestJ, ServerEvent } from "./types";
+import type {
+  BuildJ, ClaudeStatusJ, DesignInfo, IntentInfo, IntentOp, ProposalJ, RequestJ, RunJ, ServerEvent,
+} from "./types";
 
 /** A non-2xx response with its JSON body (409 conflicts carry the current state). */
 export class HttpError extends Error {
@@ -47,8 +49,20 @@ export const api = {
     call<{ intent: IntentInfo; build: BuildJ | null; note?: string }>("/api/orientation", "POST", { base_hash, action }),
   review: (base_hash: string | null, action: "all" | "one_by_one" | "accept_item", key?: string, value?: unknown) =>
     call<{ intent: IntentInfo; build: BuildJ | null }>("/api/review", "POST", { base_hash, action, key, value }),
+  // iteration 4: "Accept to try" a purpose proposal; designer edits while reviewing one
+  tryPurpose: (id: string) => call<{ proposal: ProposalJ }>(`/api/proposals/${id}/try`, "POST", {}),
+  editPurpose: (id: string, ops: IntentOp[], comment = "") =>
+    call<{ proposal: ProposalJ }>(`/api/proposals/${id}/edit`, "POST", { ops, comment }),
   reject: (id: string, comment: string) => call<{ proposal: ProposalJ }>(`/api/proposals/${id}/reject`, "POST", { comment }),
-  ask: (node: string, note: string) => call<RequestJ>("/api/requests", "POST", { node, note }),
+  ask: (node: string, note: string) =>
+    call<RequestJ & { run: RunJ | null; run_note?: string }>("/api/requests", "POST", { node, note }),
+  // iteration 4b: dipm starts headless Claude Code for queued requests
+  claude: () => call<ClaudeStatusJ>("/api/claude"),
+  claudeRun: (requests?: string[]) =>
+    call<{ run: RunJ; status: ClaudeStatusJ }>("/api/claude/run", "POST", requests ? { requests } : {}),
+  claudeCancel: (run?: string) => call<{ run: RunJ }>("/api/claude/cancel", "POST", run ? { run } : {}),
+  claudeSettings: (s: { auto_run?: boolean; model?: string | null; timeout_s?: number }) =>
+    call<{ status: ClaudeStatusJ }>("/api/claude/settings", "POST", s),
   proposalMesh: (id: string, which: "before" | "after") =>
     fetch(`/api/proposals/${id}/mesh/${which}`).then((r) => {
       if (!r.ok) throw new Error(`proposal mesh ${id}/${which}: ${r.status}`);

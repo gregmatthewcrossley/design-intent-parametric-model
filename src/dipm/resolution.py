@@ -290,7 +290,7 @@ def infer_orientation(build, ctx_values: dict) -> dict | None:
                 if best is None or area > best[0]:
                     best = (area, i)
         return best
-    bridge_max = pk["bridge_max_mm"]["value"]
+    bridge_max = pk["horizontal_hole_max_d"]["value"]
     o = pk["orientation"]
     scored = []
     for i, n, area in cands:

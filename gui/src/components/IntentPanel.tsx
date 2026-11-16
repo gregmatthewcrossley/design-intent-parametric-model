@@ -6,7 +6,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { canDrop, staleFeatures } from "../edit";
 import { confirmDelete, dragging, dropTarget, editing, patchIntent, startEdit } from "../intent";
 import { rowsFor, type Chip, type Row, type View } from "../model";
-import { active, build, expanded, hover, lit, persist, select, selection, showLinks, view } from "../store";
+import { active, build, expanded, hover, impactMarks, lit, persist, select, selection, showLinks, view } from "../store";
+import { IMPACT_TEXT, impactOf } from "../loop";
 import type { BuildJ, Selection } from "../types";
 import { Dot } from "./common";
 import { ConfirmDelete, editable, RowActions, rowKeys, StaleTag, StatementInput } from "./IntentEditor";
@@ -149,10 +150,12 @@ function RowView({ r }: { r: Row }) {
   const canEdit = !!n && editable(b) && !!n.in_file;
   const fStale = r.kind === "feature" ? staleFeatures(b).get(r.id) : undefined;
   const isDrop = r.kind === "node" && dropTarget.value === r.id;
+  const im = impactMarks.value ? impactOf(b) : null;
+  const imp = im ? (r.kind === "node" ? im.nodes[r.id] : r.kind === "feature" ? im.features[r.id] : undefined) : undefined;
   const cls = ["row", `row-${r.kind}`, isLit ? "lit" : "", indirect ? "indirect" : "", primary ? "primary" : "",
                isSel ? "selected" : "", isAct && !isLit && !indirect ? "dim" : "", r.implicit ? "implicit" : "",
                n?.stale ? "stale" : "", fStale ? "stale" : "", isDrop ? "drop-target" : "",
-               dragging.value === r.id ? "dragging" : ""].join(" ");
+               dragging.value === r.id ? "dragging" : "", imp ? `impact-${imp.class}` : ""].join(" ");
   const interactive = r.kind !== "group";
   const isEditing = editing.value?.id === r.id && editing.value.where === "row" && r.kind === "node";
   return (
@@ -197,6 +200,10 @@ function RowView({ r }: { r: Row }) {
           <span class="row-sub" onDblClick={canEdit ? (e) => { e.stopPropagation(); startEdit(r.id, n!.statement ?? ""); } : undefined}>
             {r.sub}
           </span>
+        )}
+        {imp && imp.class !== "survives" && (
+          <span class={`imp-chip imp-${imp.class} tiny`} data-testid="impact-mark" data-impact-class={imp.class}
+                title={imp.reasons.join("; ")}>{IMPACT_TEXT[imp.class]}</span>
         )}
         {n?.stale && <StaleTag id={r.id} compact />}
         {fStale && <StaleTag id={`feat-${r.id}`} compact />}

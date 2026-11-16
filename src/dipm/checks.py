@@ -79,6 +79,11 @@ class CheckResult:
     spec_made_by: str = "author"
     reviewed: bool = False    # the check's statement (its node) is reviewed
     confirms: list = field(default_factory=list)     # interpretation slots this check can confirm (B3)
+    # iteration 4: intent-file bindings (vocabulary.py) and component ghosts
+    binding: dict | None = None      # the intent file's binding, when the check is bound there
+    binding_text: str = ""           # the binding in plain language
+    binding_reviewed: bool = False   # the designer accepted the binding (status: accepted)
+    ghosts: list = field(default_factory=list)       # component envelopes posed by this check (GUI)
 
     @property
     def ran(self) -> bool:
@@ -132,6 +137,32 @@ class Env:
 
     def __post_init__(self):
         self._faces = None
+        self._tess = None
+        self._mesh = None
+        self.cache: dict = {}
+
+    def tessellation(self) -> dict:
+        """{P (points), I (triangles), face (face id per triangle)} of the deterministic display
+        tessellation (server/mesh.py), computed once per build."""
+        if self._tess is None:
+            import numpy as np
+
+            from .server.mesh import tessellate
+            t = tessellate(self.build.shape)
+            P, I, FR = t["positions"].reshape(-1, 3).astype(float), t["indices"].reshape(-1, 3), \
+                t["face_ranges"].reshape(-1, 2)
+            face = np.zeros(len(I), dtype=int)
+            for fid, (s0, n) in enumerate(FR):
+                face[s0:s0 + n] = fid
+            self._tess = {"P": P, "I": I, "face": face}
+        return self._tess
+
+    def mesh(self):
+        """resolution.facet_table of the build (areas, normals, centroids, face ids, points)."""
+        if self._mesh is None:
+            from .resolution import facet_table
+            self._mesh = facet_table(self.build.shape)
+        return self._mesh
 
     # parameter expressions are evaluated like feature arguments
     def ev(self, x):
@@ -167,13 +198,24 @@ class Env:
     def fdm(self) -> dict | None:
         return packs.process(self.context.get("process"))
 
-    def tol(self, which: str) -> Quantity:
+    def tol(self, which: str, distance: float = 0.0) -> Quantity:
+        """The process's as-made variation as a Quantity around 0 (add it to a nominal size).
+
+        * `position_tolerance`: ±(value + scale × distance), symmetric (packs: inference).
+        * `dimension_tolerance` / `z_tolerance`: bias ± band, so the range is [bias − band,
+          bias + band] (XY: [−0.2, 0.0] mm, the part prints undersize) and the nominal stays the
+          as-designed size (report: "bias plus band")."""
         p = self.fdm()
         if p is None:
             return Quantity.exact(0.0, "mm", "no process tolerance")
         e = p[which]
-        return Quantity(0.0, -e["value"], e["value"], "mm", f"{p['pack']}.{which}", "pack default", which,
-                        bool(e.get("placeholder")))
+        src = f"{p['pack']}.{which}"
+        if "bias" in e:
+            b, w = float(e["bias"]), float(e["value"])
+            return Quantity(0.0, min(0.0, b - w), max(0.0, b + w), "mm", src, "pack default", which,
+                            bool(e.get("placeholder")))
+        t = float(e["value"]) + float(e.get("scale", 0.0)) * abs(float(distance))
+        return Quantity(0.0, -t, t, "mm", src, "pack default", which, bool(e.get("placeholder")))
 
     def assumption(self, aid: str) -> dict:
         a = self.assumptions.get(aid) or {}
@@ -201,7 +243,87 @@ class IntentCheck:
                            source=spec.get("source", ""), **kw)
 
 
-# ---------------------------------------------------------------- R.c1: load (rung 2)
+# ---------------------------------------------------------------- load hand calcs (rung 2)
+
+def anchor_sf(env: "Env", floor: float = 0.0) -> tuple[dict, float, str]:
+    """(anchor pack entry, safety factor, its name): SF 4 on drywall-anchor mean ultimate, ≈5 on
+    wood-screw mean ultimate (packs.SAFETY_FACTORS); `floor` is a minimum the check statement
+    sets (e.g. "safety factor ≥ 2"), never a replacement for the pack's factor."""
+    a = packs.anchor(env.context.get("install"))
+    sf = max(float(floor or 0.0), packs.safety_factor(a["safety"]))
+    return a, sf, a["safety"]
+
+
+def material_sf(duration: str = "sustained", floor: float = 0.0) -> tuple[float, str]:
+    """SF on short-term printed strength: 4 under sustained load (creep covered, no extra derate),
+    2 under short-term load (packs.SAFETY_FACTORS)."""
+    name = "printed sustained" if duration != "short" else "printed short-term"
+    return max(float(floor or 0.0), packs.safety_factor(name)), name
+
+
+def anchor_term(env: "Env", heights: list, lever: float, W: Quantity, sf: float, anchor_entry: dict,
+                name: str = "upper anchor pull-out × SF") -> CheckTerm:
+    """T = m·g·L·z_max / Σz² for screws at `heights` above the pivot, lever L from the wall;
+    SF × T ≤ mean ultimate tension of the anchor class."""
+    g = packs.G_STANDARD
+    inputs, zs = {"m": W}, []
+    for k, z in enumerate(heights):
+        pos = env.tol("position_tolerance", z)
+        inputs[f"z{k}"] = Quantity(z, z + pos.lo, z + pos.hi, "mm", pos.source, "pack default",
+                                   f"height of screw {k} above the pivot", pos.placeholder)
+        zs.append(f"z{k}")
+    pos = env.tol("position_tolerance", lever)
+    inputs["L"] = Quantity(lever, lever + pos.lo, lever + pos.hi, "mm", pos.source, "pack default",
+                           "lever arm: wall to load", pos.placeholder)
+    inputs["cap"] = Quantity.from_pack(anchor_entry["tension_n"], "anchors.tension_n",
+                                       f"{anchor_entry['label']} tension, {anchor_entry['tension_n']['basis']}")
+
+    def tension(m, L, **z):
+        zz = [z[k] for k in zs]
+        den = sum(v * v for v in zz)
+        return m * g * L * max(zz) / den if den > 0 else float("inf")
+
+    return term(name, f"Top wall screw pulls out of its anchor (×{sf:g} on mean ultimate)", "N", "<=",
+                lambda cap, **x: sf * tension(**x), lambda cap, **x: cap, inputs,
+                formula=f"{sf:g} · m·g·L·z_max / Σz² ≤ anchor tension, mean ultimate")
+
+
+def bending_term(env: "Env", W: Quantity, lever: float, width: float, depth: float, section_at: float,
+                 stress_axis, sf: float, name: str = "arm bending stress × SF", what: str = "Arm plate") -> tuple:
+    """σ = 6·m·g·(L − y_s)/(b·h²) × SF ≤ short-term tensile strength (× across-layer ratio when
+    the stress runs along the build direction).  Returns (term, across)."""
+    g = packs.G_STANDARD
+    pos_L, pos_s = env.tol("position_tolerance", lever), env.tol("position_tolerance", section_at)
+    dim = env.tol("dimension_tolerance")
+    mat = packs.material(env.context.get("material")) or packs.MATERIALS["PLA"]
+    fdm = env.fdm()
+    across = False
+    if env.orientation is not None:
+        up = env.orientation["up"]
+        across = abs(sum(a * u for a, u in zip(stress_axis, up))) > 0.7
+    sec = {"m": W,
+           "L": Quantity(lever, lever + pos_L.lo, lever + pos_L.hi, "mm", pos_L.source, "pack default",
+                         "lever arm: wall to load", pos_L.placeholder),
+           "b": Quantity(width, width + dim.lo, width + dim.hi, "mm", dim.source, "pack default", "section width",
+                         dim.placeholder),
+           "h": Quantity(depth, depth + dim.lo, depth + dim.hi, "mm", dim.source, "pack default", "section depth",
+                         dim.placeholder),
+           "ys": Quantity(section_at, section_at + pos_s.lo, section_at + pos_s.hi, "mm", pos_s.source,
+                          "pack default", "checked section: distance from the wall", pos_s.placeholder),
+           "s": Quantity.from_pack(mat["tensile_mpa"], f"materials.{mat['label']}.tensile_mpa",
+                                   f"{mat['label']} tensile strength ({mat['tensile_mpa']['basis']})")}
+    if across and fdm is not None:
+        sec["r"] = Quantity.from_pack(fdm["across_layer_strength_ratio"], f"{fdm['pack']}.across_layer_strength_ratio",
+                                      "strength across layers / in-layer")
+
+    def sigma(m, L, b, h, ys, **_):
+        return 6.0 * m * g * max(L - ys, 0.0) / (b * h * h)
+
+    t = term(name, f"{what} bends (×{sf:g} on short-term strength{', stress across layers' if across else ''})",
+             "MPa", "<=", lambda **x: sf * sigma(**x), lambda s, r=1.0, **_: s * r, sec,
+             formula=f"{sf:g} · 6·m·g·(L − y_s) / (b·h²) ≤ tensile strength" + (" × across-layer ratio" if across else ""))
+    return t, across
+
 
 @dataclass
 class CantileverLoad(IntentCheck):
@@ -211,8 +333,12 @@ class CantileverLoad(IntentCheck):
     bottom of its leg; the moment M = W·L is carried by the screws in proportion to their
     height above the pivot, so the top screw pulls out with T = M·z_max / Σz²; the arm plate
     beyond the gusset carries M_s = W·(L − y_s) in bending (σ = 6·M_s / (b·h²)).  Shear, the
-    leg's bearing on the wall, the gusset and the leg sections, anchor stiffness and creep are
-    not modelled."""
+    leg's bearing on the wall, the gusset and the leg sections, anchor stiffness and head
+    pull-through are not modelled.
+
+    Safety factors per quantity (iteration 4, packs.SAFETY_FACTORS): 4 on drywall-anchor mean
+    ultimate (≈5 on wood screws) and 4 on short-term printed strength under sustained load
+    (creep covered, not derated again).  `safety_factor` is a floor from the check statement."""
     load_kg: Quantity
     safety_factor: float
     anchors: str                      # hole feature whose centres are the wall screws
@@ -223,6 +349,7 @@ class CantileverLoad(IntentCheck):
     involves: tuple = ()
     load_assumption: str = "R.a1"
     layer_assumption: str = "R.a2"
+    duration: str = "sustained"
     kind = "analysis"
     rung = 2
 
@@ -235,63 +362,13 @@ class CantileverLoad(IntentCheck):
             return CheckResult(spec["id"], spec.get("node", ""), spec.get("statement", ""), "", self.kind, self.rung,
                                "not run", reason=f"{self.anchors} has no hole centres in this build")
         lo, hi = K.bbox(b.shape)
-        pos = env.tol("position_tolerance")
-        dim = env.tol("dimension_tolerance")
-        g = packs.G_STANDARD
-        sf = self.safety_factor
         W = self.load_kg
-        inputs = {"m": W}
-        zs = []
-        for k, c in enumerate(centres):
-            z = c.z - lo.z
-            q = Quantity(z, z + pos.lo, z + pos.hi, "mm", pos.source, "pack default", f"height of screw {k} above the pivot",
-                         pos.placeholder)
-            inputs[f"z{k}"] = q
-            zs.append(f"z{k}")
-        L = hi.y - lo.y
-        inputs["L"] = Quantity(L, L + pos.lo, L + pos.hi, "mm", pos.source, "pack default", "lever arm: wall to arm tip",
-                               pos.placeholder)
-        anchor = packs.ANCHORS.get(env.context.get("install", packs.DEFAULT_INSTALL)) or packs.ANCHORS[packs.DEFAULT_INSTALL]
-        cap = Quantity.from_pack(anchor["pullout_n"], "anchors.pullout_n", f"{anchor['label']} pull-out capacity")
-
-        def tension(m, L, **z):
-            zz = [z[k] for k in zs]
-            return m * g * L * max(zz) / sum(v * v for v in zz)
-
-        anc_inputs = {**inputs, "cap": cap}
-        t_anchor = term("upper anchor pull-out × SF", f"Top wall screw pulls out of its anchor (×{sf:g} safety)", "N",
-                        "<=", lambda cap, **x: sf * tension(**x), lambda cap, **x: cap, anc_inputs,
-                        formula=f"{sf:g} · m·g·L·z_max / Σz² ≤ anchor pull-out")
-        # arm bending beyond the gusset
+        a, sfa, _ = anchor_sf(env, self.safety_factor)
+        sfm, sfm_name = material_sf(self.duration, self.safety_factor)
+        t_anchor = anchor_term(env, [c.z - lo.z for c in centres], hi.y - lo.y, W, sfa, a)
         bw, bh, ys = float(env.ev(self.section_width)), float(env.ev(self.section_depth)), float(env.ev(self.section_at))
-        mat = packs.material(env.context.get("material")) or packs.MATERIALS["PLA"]
-        fdm = env.fdm()
-        across = False
-        if env.orientation is not None:
-            up = env.orientation["up"]
-            across = abs(sum(a * u for a, u in zip(self.stress_axis, up))) > 0.7
-        sec = {"m": W, "L": inputs["L"],
-               "b": Quantity(bw, bw + dim.lo, bw + dim.hi, "mm", dim.source, "pack default", "arm plate width",
-                             dim.placeholder),
-               "h": Quantity(bh, bh + dim.lo, bh + dim.hi, "mm", dim.source, "pack default", "arm plate thickness",
-                             dim.placeholder),
-               "ys": Quantity(ys, ys + pos.lo, ys + pos.hi, "mm", pos.source, "pack default",
-                              "checked section: end of the gusset", pos.placeholder),
-               "s": Quantity.from_pack(mat["tensile_mpa"], f"materials.{mat['label']}.tensile_mpa",
-                                       f"{mat['label']} tensile strength")}
-        if across and fdm is not None:
-            sec["r"] = Quantity.from_pack(fdm["across_layer_strength_ratio"], f"{fdm['pack']}.across_layer_strength_ratio",
-                                          "strength across layers / in-layer")
-
-        def sigma(m, L, b, h, ys, **_):
-            return 6.0 * m * g * max(L - ys, 0.0) / (b * h * h)
-
-        t_bend = term("arm bending stress × SF",
-                      f"Arm plate beyond the gusset bends (×{sf:g} safety{', stress across layers' if across else ''})",
-                      "MPa", "<=", lambda **x: sf * sigma(**x),
-                      lambda s, r=1.0, **_: s * r, sec,
-                      formula=f"{sf:g} · 6·m·g·(L − y_s) / (b·h²) ≤ tensile strength"
-                              + (" × across-layer ratio" if across else ""))
+        t_bend, across = bending_term(env, W, hi.y - lo.y, bw, bh, ys, self.stress_axis, sfm,
+                                      what="Arm plate beyond the gusset")
         asm = [env.assumption(self.load_assumption)]
         if across:
             asm.append(env.assumption(self.layer_assumption))
@@ -302,30 +379,35 @@ class CantileverLoad(IntentCheck):
         faces = env.face_ids(self.involves) if self.involves else []
         faces = sorted(set(faces) | set(env.feature_faces(self.anchors)))
         kg = W.nominal
-        return self._result(spec, env, f"Holds {kg:g} kg at the arm tip with a safety factor of {sf:g}",
+        return self._result(spec, env, f"Holds {kg:g} kg at the arm tip (×{sfa:g} on the anchors, ×{sfm:g} on the "
+                                       "printed arm)",
                             [t_anchor, t_bend], assumptions=asm, faces=faces,
                             features=[self.anchors] + sorted({e.tag.feature for i in faces
                                                               for e in b.ledger.who(env.faces[i])} - {self.anchors}),
                             method_assumptions=[
                                 f"Static point load of {kg:g} kg (range {W.lo:g}–{W.hi:g} kg) at the arm tip "
-                                f"({self.load_assumption})",
+                                f"({self.load_assumption}), {self.duration}",
                                 "The bracket pivots rigidly about the bottom of its leg; the screws carry the "
                                 "moment in proportion to their height (T = M·z_max/Σz²)",
-                                "The arm plate beyond the gusset is the critical section; gusset, leg, shear and "
-                                "the leg bearing on the wall are not checked",
-                                "Anchor capacity and material strength are placeholder pack data (packs.py)",
+                                "The arm plate beyond the gusset is the critical section; gusset, leg, shear, screw-head "
+                                "pull-through and the leg bearing on the wall are not checked",
+                                f"Anchor: {a['label']}, mean ultimate tension from packs.ANCHORS ({a['tension_n']['status']}); "
+                                f"SF {sfa:g} ({a['safety']}) on mean ultimate",
+                                f"Printed strength: short-term in-layer mean; SF {sfm:g} ({sfm_name}) covers creep, no "
+                                "separate derate (packs.SAFETY_FACTORS)",
                                 ("Bending stress runs along the build direction, so the across-layer strength "
                                  f"applies ({self.layer_assumption})") if across else
                                 "Bending stress runs within the layers (in-layer strength)"])
 
 
 def cantilever_load(load_kg: float, load_range: tuple, safety_factor: float, anchors, section_width, section_depth,
-                    section_at, involves=(), stress_axis=(0.0, 1.0, 0.0), load_assumption: str = "R.a1") -> CantileverLoad:
+                    section_at, involves=(), stress_axis=(0.0, 1.0, 0.0), load_assumption: str = "R.a1",
+                    duration: str = "sustained") -> CantileverLoad:
     fid = anchors if isinstance(anchors, str) else anchors.id
     q = Quantity(float(load_kg), float(load_range[0]), float(load_range[1]), "kg", load_assumption, "model",
-                 "shelf load")
+                 "load")
     return CantileverLoad(q, float(safety_factor), fid, section_width, section_depth, section_at,
-                          tuple(stress_axis), tuple(involves), load_assumption)
+                          tuple(stress_axis), tuple(involves), load_assumption, "R.a2", duration)
 
 
 # ---------------------------------------------------------------- R.c4: tool access (rung 1)
@@ -370,7 +452,7 @@ class ToolAccess(IntentCheck):
                                 f"Straight access: a Ø{self.diameter:g} mm cylinder, {self.length:g} mm long, coaxial "
                                 "with each screw, starting at the face (architecture §8.1 R.c4)",
                                 "Only material in front of the face counts; worst case adds the process's positional "
-                                "tolerance (placeholder)"])
+                                "tolerance (provisional: ±0.1 mm + 0.15 % of distance)"])
 
 
 def access_clearance(shape, centre, normal, radius: float, length: float, faces: list) -> tuple[float, list]:
@@ -459,7 +541,7 @@ class Overhang(IntentCheck):
         h = cen @ up - float((P @ up).min())
         d = -(nv @ up)
         bed = (d > 0.999) & (h < 1e-3)
-        bridge = _bridgeable(env.build, list(up), p["bridge_max_mm"]["value"])
+        bridge = _bridgeable(env.build, list(up), p["horizontal_hole_max_d"]["value"])
         keep = np.array([f not in bridge for f in face]) & ~bed & (d > 1e-6)
         ang = np.degrees(np.arcsin(np.clip(d, 0.0, 1.0)))
         worst = float(ang[keep].max()) if keep.any() else 0.0
@@ -475,7 +557,8 @@ class Overhang(IntentCheck):
                                           "in_file": False}],
                             faces=down, features=[], method_assumptions=[
                                 "Measured on the display tessellation (curved faces within its angular deflection)",
-                                f"Horizontal holes up to Ø{p['bridge_max_mm']['value']:g} mm bridge (placeholder)"])
+                                f"Horizontal holes up to Ø{p['horizontal_hole_max_d']['value']:g} mm print without support "
+                                f"({p['horizontal_hole_max_d']['status']}: geometric inference)"])
 
 
 def overhang() -> Overhang:
@@ -525,9 +608,31 @@ def evaluate_checks(design, build, intent_plain: dict | None, context: dict, ori
     env = Env(build, design, context, orientation, asm, build.params)
     bound = getattr(design, "checks", {}) or {}
     out = []
+    comps = None
     for spec in intent_specs(design, intent_plain):
         impl = bound.get(spec["id"])
         reviewed = spec["node"] in (reviewed_nodes or set())
+        binding = spec.get("binding") if isinstance(spec.get("binding"), dict) else None
+        if impl is None and binding is not None:
+            # an intent-file binding (iteration 4, vocabulary.py): evaluated by dipm, model-made
+            # (hatched) until the designer accepts it; unresolved bindings are not run
+            from . import vocabulary
+            if comps is None:
+                from .components import components_of
+                comps = components_of(intent_plain)
+            if build.shape is None or not build.ok:
+                r = vocabulary.evaluate(env, spec, {"form": "descriptive",
+                                                    "reason": "the build failed: intent checks run only on a valid solid"},
+                                        comps)
+                r.reason = "the build failed: intent checks run only on a valid solid"
+                r.binding, r.binding_text = dict(binding), vocabulary.describe(binding, comps)
+                r.spec_made_by = str(binding.get("made_by") or "model")
+                r.binding_reviewed = binding.get("status") == "accepted"
+            else:
+                r = vocabulary.evaluate(env, spec, binding, comps)
+            r.reviewed = reviewed
+            out.append(r)
+            continue
         if impl is None or build.shape is None or not build.ok:
             reason = ("the build failed: intent checks run only on a valid solid" if impl is not None
                       else _not_run_reason(spec))

@@ -20,6 +20,7 @@ import { STD_DIRS, nearestStdView, orthoHeightMm, perspectivePxPerMm, type StdVi
 import { FADE_FULL_PX, FADE_START_PX, textureFade } from "./texture";
 import { besidePart, type RefChoice } from "./reference";
 import type { ReferencesJ } from "./types";
+import type { GhostPose } from "./loop";
 
 export type ViewName = "iso" | "front" | "side" | "top";
 
@@ -40,6 +41,7 @@ export interface Palette {
   heatNone: string;
   outline: string;
   refGhost: string;
+  compGhost: string;
 }
 
 export type FaceState = "base" | "hover" | "lit" | "selected" | "dim" | "fail" | "failLit" | "failTouched"
@@ -131,6 +133,8 @@ export class Viewer {
   private edges: THREE.LineSegments | null = null;
   private ghost = new THREE.Group();
   private refGroup = new THREE.Group();
+  private compGroup = new THREE.Group();      // iteration 4: component envelopes (ghosts)
+  private comps: (GhostPose & { component: string })[] = [];
   private data: DecodedMesh | null = null;
   private faceStates: FaceState[] = [];
   private palette: Palette;
@@ -184,7 +188,7 @@ export class Viewer {
     this.camera = this.persp;
     this.persp.add(this.light);
     this.light.position.set(0.4, 1, 0.6);
-    this.scene.add(this.persp, this.ortho, this.hemi, this.model, this.ghost, this.refGroup);
+    this.scene.add(this.persp, this.ortho, this.hemi, this.model, this.ghost, this.refGroup, this.compGroup);
     this.controls = new OrbitControls(this.persp, this.renderer.domElement);
     this.controls.enableDamping = false;
     this.controls.screenSpacePanning = true;
@@ -344,6 +348,10 @@ if (uTexOn > 0.5) {
       const m = (c as THREE.Mesh).material as THREE.MeshStandardMaterial;
       m.color.set(p.ghost);
     }
+    if (this.comps.length) {
+      this.disposeGroup(this.compGroup);
+      for (const g of this.comps) this.compGroup.add(buildComponentGhost(g, p));
+    }
     this.paint();
     this.render();
   }
@@ -465,6 +473,25 @@ if (uTexOn > 0.5) {
       if (obj) this.refGroup.add(obj);
     }
     this.render();
+  }
+
+  // ------------------------------------------------------------------ component envelopes (iteration 4)
+  /** Ghost the components a design must fit (a rod, a reel) where their checks posed them:
+   *  translucent, outlined dashed while unreviewed (model-made) and solid once accepted. */
+  setComponents(poses: (GhostPose & { component: string })[]): void {
+    this.disposeGroup(this.compGroup);
+    this.comps = poses;
+    for (const g of poses) this.compGroup.add(buildComponentGhost(g, this.palette));
+    this.render();
+  }
+
+  /** What is ghosted (tests): component, shape, dashed, world bounding box. */
+  componentState(): { component: string; shape: string; dashed: boolean; box: number[] }[] {
+    return this.compGroup.children.map((o, i) => {
+      const bb = new THREE.Box3().setFromObject(o);
+      return { component: this.comps[i]?.component ?? o.name, shape: this.comps[i]?.shape ?? "?",
+               dashed: !!this.comps[i]?.dashed, box: [bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z] };
+    });
   }
 
   referenceState(): { kind: string; label: string; box: number[] | null } | null {
@@ -966,4 +993,56 @@ export function buildReference(choice: RefChoice, refs: ReferencesJ, p: Palette,
   hand.position.set(at[0], at[1], at[2]);
   g.add(hand);
   return g;
+}
+
+// ------------------------------------------------------------------ component envelope ghosts (iteration 4)
+
+/** A component ghost: a translucent solid plus an outline, dashed while the component is
+ *  unreviewed (the hatched/dashed "guess" style of the panels, B5), solid once accepted. */
+export function buildComponentGhost(g: GhostPose & { component: string }, p: Palette): THREE.Object3D {
+  const grp = new THREE.Group();
+  grp.name = `component:${g.component}`;
+  const fill = new THREE.MeshStandardMaterial({ color: p.compGhost, transparent: true, opacity: g.dashed ? 0.16 : 0.26,
+                                                depthWrite: false, roughness: 0.7, side: THREE.DoubleSide });
+  const line = g.dashed
+    ? new THREE.LineDashedMaterial({ color: p.compGhost, dashSize: 3, gapSize: 2.5, transparent: true, opacity: 0.95 })
+    : new THREE.LineBasicMaterial({ color: p.compGhost, transparent: true, opacity: 0.95 });
+  let solid: THREE.BufferGeometry;
+  const pts: THREE.Vector3[] = [];
+  if (g.shape === "cylinder") {
+    const [r, L] = g.size;
+    solid = new THREE.CylinderGeometry(r, r, L, 40, 1, true);
+    const n = 48;
+    for (const y of [-L / 2, L / 2]) {
+      for (let i = 0; i < n; i++) {
+        const a0 = (i / n) * Math.PI * 2, a1 = ((i + 1) / n) * Math.PI * 2;
+        pts.push(new THREE.Vector3(r * Math.cos(a0), y, r * Math.sin(a0)), new THREE.Vector3(r * Math.cos(a1), y, r * Math.sin(a1)));
+      }
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      pts.push(new THREE.Vector3(r * Math.cos(a), -L / 2, r * Math.sin(a)), new THREE.Vector3(r * Math.cos(a), L / 2, r * Math.sin(a)));
+    }
+  } else {
+    const [x, y, z] = g.size;
+    solid = new THREE.BoxGeometry(x, y, z);
+    const c = [-0.5, 0.5];
+    const corner = (i: number, j: number, k: number) => new THREE.Vector3(c[i] * x, c[j] * y, c[k] * z);
+    for (const [a, b] of [[[0, 0, 0], [1, 0, 0]], [[0, 1, 0], [1, 1, 0]], [[0, 0, 1], [1, 0, 1]], [[0, 1, 1], [1, 1, 1]],
+                          [[0, 0, 0], [0, 1, 0]], [[1, 0, 0], [1, 1, 0]], [[0, 0, 1], [0, 1, 1]], [[1, 0, 1], [1, 1, 1]],
+                          [[0, 0, 0], [0, 0, 1]], [[1, 0, 0], [1, 0, 1]], [[0, 1, 0], [0, 1, 1]], [[1, 1, 0], [1, 1, 1]]]) {
+      pts.push(corner(a[0], a[1], a[2]), corner(b[0], b[1], b[2]));
+    }
+  }
+  const mesh = new THREE.Mesh(solid, fill);
+  mesh.renderOrder = 2;
+  const seg = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), line);
+  if (g.dashed) seg.computeLineDistances();
+  grp.add(mesh, seg);
+  const [bx, by, bz] = g.basis;
+  grp.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(
+    new THREE.Vector3(bx[0], bx[1], bx[2]), new THREE.Vector3(by[0], by[1], by[2]), new THREE.Vector3(bz[0], bz[1], bz[2])));
+  grp.position.set(g.position[0], g.position[1], g.position[2]);
+  grp.traverse((o) => { o.raycast = () => {}; });   // ghosts never take picks from the part
+  return grp;
 }

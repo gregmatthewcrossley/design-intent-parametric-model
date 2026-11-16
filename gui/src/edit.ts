@@ -55,14 +55,14 @@ export function diffLines(diff: string): DiffLine[] {
   }));
 }
 
-export const OPEN: ProposalStatus[] = ["pending", "evaluating", "ready", "failed"];
+export const OPEN: ProposalStatus[] = ["pending", "evaluating", "ready", "failed", "trying"];
 
 export function isOpen(p: ProposalJ): boolean {
   return OPEN.includes(p.status);
 }
 
 export function canAccept(p: ProposalJ): boolean {
-  return p.status === "ready";
+  return p.status === "ready" || p.status === "trying";
 }
 
 /** Per-face display states for a proposal mesh: changed faces highlighted, faces whose surface
@@ -75,6 +75,7 @@ export function compareStates(nFaces: number, changed: number[], outline: number
 /** Accept needs a reason when the proposal fails checks (#54). */
 export function needsOverride(p: ProposalJ): boolean {
   const ev = p.evaluation;
+  if (p.kind === "purpose") return false;   // purposes are reviewed as text (iteration 4)
   return !!ev && (!!ev.needs_override || (ev.failing_checks?.length ?? 0) > 0 || ev.ok === false);
 }
 

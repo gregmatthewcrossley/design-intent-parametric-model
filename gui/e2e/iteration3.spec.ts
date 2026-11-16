@@ -68,9 +68,10 @@ test.describe("iteration 3: the bracket", () => {
     await expect(page.getByTestId("tier-failing")).toHaveText("2 failing");
     const rc1 = page.getByTestId("check-R.c1");
     await expect(rc1.getByTestId("check-state")).toHaveText("failing");
-    await expect(rc1).toContainText("Holds 20 kg at the arm tip with a safety factor of 2");
+    // iteration 4 (sourced packs): SF 4 on the anchor's mean ultimate and on the printed arm
+    await expect(rc1).toContainText("Holds 20 kg at the arm tip (×4 on the anchors, ×4 on the printed arm)");
     await expect(rc1.getByTestId("margin-bar").first()).toHaveAttribute("data-sign", "negative");
-    await expect(rc1).toContainText("margin -1,016 N");
+    await expect(rc1).toContainText("margin -2,182 N");
     // engine terms behind Details
     await expect(page.locator(".checks-table")).toHaveCount(0);
     await page.getByTestId("details-toggle").check();

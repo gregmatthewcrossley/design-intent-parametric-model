@@ -1,0 +1,5 @@
+#!/bin/sh
+# A stand-in for the `claude` binary (iteration 4b tests): DIPM_CLAUDE_BIN=<this file>.
+# Runs fake_claude.py with the repo's virtualenv Python (it needs the MCP client library).
+here="$(cd "$(dirname "$0")" && pwd)"
+exec "$here/../../.venv/bin/python" "$here/fake_claude.py" "$@"
