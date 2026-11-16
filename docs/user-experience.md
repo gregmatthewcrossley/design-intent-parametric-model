@@ -8,7 +8,7 @@ How a designer actually uses this: workspace, versioning, GUI, and connections t
 
 ## 1. Source of truth is text; geometry is a build artifact
 
-The solution side is deterministic (architecture principle 2). The source of truth is therefore **text**:
+The solution side is deterministic once fully locked: source + interpretations lock + prefs + pinned kernel and packages (architecture principle 2 and §7, which list where non-determinism still leaks). The source of truth is therefore **text**:
 - the intent tree, checks, and assumptions
 - the DSL
 - a **lockfile** pinning the kernel, solver, and package versions
@@ -24,6 +24,8 @@ Geometry is rebuilt from these exactly, like a compiled binary. It is not commit
 | Intent tree: statements, checks, assumptions, context (`<design>.intent.yaml`) | **Schema-validated YAML**, always rewritten in canonical form | Versioned in git, reviewable line diffs, readable and writable by designers and by Claude, small per design |
 | Solution (`<design>.py`) | The DSL (embedded Python today; possibly a dedicated textual DSL later) | Code |
 | Machine-written locks (`<design>.interpretations.json`, …) | JSON | Unambiguous; not hand-edited |
+| Review record (`<design>.review.json`: accepted intent-node hashes) | JSON, committed | Staleness is part of the design's state |
+| Proposals from Claude (`.dipm/proposals/`) | JSON, gitignored | Transient until accepted; an accepted proposal becomes an ordinary file change |
 | Caches, build history, telemetry | **SQLite** (gitignored, deletable, regenerated from text) | Fast queries, transactions |
 | Large datasets (procedural training corpus, later) | SQLite or Parquet | Volume; machine-only |
 
@@ -66,7 +68,7 @@ A designer thinks spatially, so a text-only tool would fail them. The GUI doesn'
 
 **Direct manipulation edits intent, not coordinates.** Dragging a centered hole 10 mm left shouldn't silently write `x = 47.5`. It asks: *"This hole was centered. Make it offset from center by 10 mm, or relative to something else?"*
 
-**Parameter edits don't need the model.** They rebuild instantly and deterministically. The model is involved only when *intent* changes.
+**Parameter edits don't need the model.** They rebuild instantly, from the locked solution. The model is involved only when *intent* changes.
 
 **Platform: the browser is the primary GUI** (direction agreed 2026-11-15).
 - Precedent: Onshape shows professionals will do serious CAD in a browser.
@@ -105,6 +107,26 @@ Designers already review drawings by **redlining** them. The GUI makes this a fi
 | **CNC / CAM** | STEP into Fusion CAM or FreeCAD CAM; DXF for laser, waterjet, sheet metal | Geometry |
 | **Drawings** | Generate 2D drawings dimensioned **from the intent tree** | The dimensions that matter to intent |
 | **Electronics (KiCad)** | Import board outline / STEP as context for enclosure intents | Board geometry as `receives` references |
+
+### 4.1 Onshape parity (researched 2026-11-16)
+
+Full notes: [`research_notes/Onshape parity/onshape-api-parity.md`](../research_notes/Onshape%20parity/onshape-api-parity.md).
+
+- **Verdict:** dipm trees can be recreated natively with clean *geometry and parameters*, but not with their *intent* if only standard features are used.
+  - **Every op maps cleanly** to a native feature the REST API can create.
+  - **Parameters map cleanly** to Variable Studio variables and configuration inputs.
+  - **Placements are lossy:** `centered_on`, `face_point`, `distribute` and `centerline.before` are computed from 3D at build time and partly export as literals.
+  - **No native equivalent:** interpretations, branch tags, ΔH/ΔS/volume contracts, reference cardinality, and policies.
+- **Recommended strategy: hybrid, standard features first.**
+  - All geometry is standard features driven by `#variables`, so engineers edit what they know.
+  - A small, versioned **dipm FeatureScript library of placement features** (`centered_on`, `distribute`, …) outputs locating points that native Hole features consume, so drawings and callouts stay standard.
+  - A final **dipm checks feature** re-runs intent checks inside Onshape, so hand edits that break intent show as warnings in the native tree. This is the answer to PAIN-09.
+  - The way back starts with reading the tree after edits (parameter edits, added standard features); full intent recovery comes later.
+- **Main gaps:**
+  1. Onshape has no persistent entity ids, so references are resolved once at export to deterministic ids, and their survival under engineer edits needs a live test.
+  2. Literals survive until dipm keeps expressions symbolic through lowering (engine TODO 2).
+  3. Verification needs a topology-normalization rule, because Onshape's kernel differs from OCCT on seams and auto-merging.
+  4. API caps: 2,500 calls/yr on Free/Standard, 5,000 Professional, 10,000 Enterprise; about 25–30 calls per bracket export. Apps listed publicly in the Onshape App Store don't count against the cap.
 
 **The round trip is the hard part.** Hand edits made in an exported Onshape model don't flow back into the intent tree. Early versions treat this project as the **source of truth** and Onshape as an **output**. Pulling edits back means inferring intent from a feature tree, the reverse-engineering problem from the survey. That is a later goal.
 
