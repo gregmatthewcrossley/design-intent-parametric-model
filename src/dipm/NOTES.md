@@ -195,6 +195,22 @@ Items marked **[REVIEW]** are the ones most worth your attention in the morning.
 56. **`load_design` compiles the source directly** instead of going through the import system. Python's bytecode cache is keyed on (mtime in whole seconds, size), so a same-size rewrite within one second (an id rename `A.3` → `A.C`, a proposal changing `12.0` to `10.0`) silently re-ran the old code. This bug also affected iteration 1's live reload.
 57. **Frontend.** Row actions (✎ + ×) appear only on the pinned or keyboard-focused row, so clicking a row never lands on a button it just revealed (iteration-1 e2e test 4 clicked a row's centre and added `A.P.3` to the real example before this rule). An inline edit opens where it was started (tree row or inspector), never both. Drag uses HTML5 drag-and-drop with "move under …" as the keyboard alternative. The viewport's proposal comparison swaps in the proposal meshes (before / after / overlay with before as a ghost) and paints the changed faces; hover and click are inert there because face ids belong to the proposal, not the live build. `window.__dipm` gains `compare`, `proposals` and `viewer.faceCentroid()` for tests.
 
+> **User review of #44–57 (2026-11-16, one by one):**
+> - #44 approved. To-do: add a header note to intent files saying that a comment belongs to the item above it.
+> - #45 approved, with a change: remove the duplicate wording. Drop notes from code tags when an intent file exists; the report and `why()` read statements from the file; tag notes stay only as a fallback for designs without a file.
+> - #46 approved.
+> - #47 approved. To-do (later): add a cross-process lock file once a second dipm process writes design files.
+> - #48 approved, with a change: **no automatic baseline.** A design without a review record starts unreviewed, with a one-time GUI prompt (mark all reviewed / review one by one), per PAIN-12. The bracket keeps its committed review record.
+> - #49 approved, with changes: **migrate saved preferences** to the new id as part of the rename, and add an **optional checkbox** to rename matching feature ids (e.g. `A.3.cable` → `A.C.cable`), off by default.
+> - #50 approved.
+> - #51 approved. To-do (later): an audit log of every MCP tool call (what Claude read and proposed).
+> - #52 approved. To-do (later): proposal housekeeping (archive old accepted/rejected/stale proposals, or a 'clear old proposals' action).
+> - #53 approved, with changes: (1) build the before/after view at the **designer's current GUI parameters**, while the pass/fail verdict still uses defaults plus the full sweep; (2) highlight **faces whose outline changed** in a lighter tint than new or altered surfaces (PAIN-13).
+> - #54 approved, with a change: when a proposal fails checks, Accept becomes **"Accept anyway…"**, asks for a reason in the page, and records an **override** in the review record (failing checks, reason, time). Those nodes show as **reviewed with failing checks**, distinct from cleanly reviewed, until the checks pass (ISS-01, PAIN-05).
+> - #55 approved, with changes: rename the button **"Queue for Claude"**, and show a "N requests waiting" status with a copyable prompt. To-do (later): let a running Claude session pick up requests automatically (watching `.dipm/requests/` or MCP notifications), after deciding how much Claude does unprompted.
+> - #56 approved.
+> - #57 approved, with a change: in proposal comparison view, say plainly that inspection is paused (e.g. "Comparing proposal p2 · inspection paused").
+
 **Tests changed in iteration 2 because behaviour legitimately changed:** `test_server.py::test_build_bracket_tree_and_status` reads the A.P label from the intent file ("Wall screw pattern", previously the tag note "wall screw pattern"). The iteration-1 Playwright tests and screenshots now serve a temp copy of the bracket instead of `examples/` (the GUI can write files now). `tests/fixtures/question_channel.interpretations.json` was regenerated: the committed lock recorded an answered preference, so `test_answer_round_trip` and `test_session_reload_keeps_params_and_resolves_stale_lock` already failed on a clean checkout of `e84902b`.
 
 ## 4. Implemented vs. TODO

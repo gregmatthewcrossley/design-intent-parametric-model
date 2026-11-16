@@ -39,6 +39,7 @@ Status: ☐ open · ◐ in progress · ☑ done
 | B6 | INC-11 | The lock key includes the lowering code / package versions, not just the design file | ☐ |
 | B7 | INC-10 | Reconcile stable ids with hierarchy-from-dots (affects iteration 2's move/reparent) | ☐ |
 | B8 | PAIN-06, PAIN-07 | Plain-language UI and progressive disclosure: engine terms (ΔH, ledger, genus) behind a details toggle; scale the tree (focus, folding, search) | ☐ |
+| B9 | Iteration 2 review (NOTES #44–57) | Changes the author requested: intent-file header note on comment attachment (#44); remove duplicate wording from code tags (#45); no automatic review baseline, with a one-time prompt instead (#48); migrate preferences on rename, plus an optional feature-id rename checkbox (#49); show before/after at the current GUI parameters and highlight outline-changed faces (#53); **"Accept anyway…" with a recorded override** for failing proposals (#54); rename "Ask Claude" to "Queue for Claude" with a waiting-requests status (#55); an "inspection paused" note in comparison view (#57). Later: cross-process lock (#47), MCP audit log (#51), proposal housekeeping (#52), automatic request pickup (#55) | ☐ |
 
 ### C. New first-class concerns (to discuss, then design)
 
