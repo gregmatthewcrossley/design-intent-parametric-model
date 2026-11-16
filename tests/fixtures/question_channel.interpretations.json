@@ -3,11 +3,11 @@
   "design": "channel_question",
   "key": {
     "design_source_sha256": "eb0f32c857de26a7cf6e852edcd42406fddbf7f9d7caa15eb2f7ad2c68b3bc75",
-    "prefs_sha256": "dfced4c3af549bcdb4825df7e3965bfc305ac691ef88166e1edd886a59d740e8",
+    "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
     "dipm": "0.0.1"
   },
-  "prefs": "question_channel.prefs.json",
+  "prefs": null,
   "sample_points": [
     {},
     {
@@ -43,9 +43,9 @@
       "node": "D",
       "statement": "D.drain: hole extent read as 'through_plate' (through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate)",
       "chosen": "through_plate",
-      "made_by": "user preference",
-      "rationale": "remembered answer (hole.extent@channel_question:D)",
-      "status": "accepted",
+      "made_by": "pack default",
+      "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+      "status": "proposed",
       "sensitivity": "high",
       "sensitivity_detail": "survivors differ at 7/7 points, max |ΔV|/V = 0.00489, topology differs",
       "readings": [
@@ -63,6 +63,30 @@
       ]
     }
   ],
-  "questions": [],
+  "questions": [
+    {
+      "id": "D.drain/hole.extent",
+      "text": "D.drain (D): which meaning of hole extent? 3 readings pass every check but give different geometry (survivors differ at 7/7 points, max |ΔV|/V = 0.00489, topology differs).",
+      "options": [
+        {
+          "reading": "through_plate",
+          "rationale": "through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
+          "effect": "default"
+        },
+        {
+          "reading": "through_all",
+          "rationale": "through all material along the axis, however many layers",
+          "effect": "differs from the default at 7/7 points"
+        },
+        {
+          "reading": "up_to_next",
+          "rationale": "through the first run of material along the axis, stopping where it exits",
+          "effect": "differs from the default at 0/7 points"
+        }
+      ],
+      "default": "through_plate",
+      "answer_with": "python -m dipm answer <design.py> D.drain/hole.extent <reading> --prefs <prefs.json>"
+    }
+  ],
   "notices": []
 }

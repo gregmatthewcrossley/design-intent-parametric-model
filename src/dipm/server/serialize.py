@@ -139,7 +139,10 @@ def interpretations(b: Build) -> dict:
             "used": used}
 
 
-def build_payload(design: Design, b: Build, mesh_id: str | None, warnings_: list = ()) -> dict:
+def build_payload(design: Design, b: Build, mesh_id: str | None, warnings_: list = (),
+                  intent: dict | None = None) -> dict:
+    """`intent`: {"plain": the intent document as plain data, "stale": {node id: info}} when the
+    design has an intent file (docs/gui.md §7.2); the tree then comes from the file."""
     interp = interpretations(b)
     attention_slots = {q["id"] for q in interp["questions"]} | {n["id"] for n in interp["notices"]}
     attention = {s["feature"] for s in interp["slots"] if s["id"] in attention_slots}
@@ -151,7 +154,10 @@ def build_payload(design: Design, b: Build, mesh_id: str | None, warnings_: list
     for e in b.errors:
         if getattr(e, "feature", None):
             failing.add(e.feature)
-    tree = intent_tree(design, b, attention)
+    plain = intent.get("plain") if intent else None
+    stale = (intent or {}).get("stale") or {}
+    tree = intent_tree(design, b, attention, intent=plain, stale=stale.keys())
+    parents = tree["parents"] if plain is not None else None
     features = []
     for i, f in enumerate(design.features):
         r = recs.get(f.id)
@@ -159,7 +165,7 @@ def build_payload(design: Design, b: Build, mesh_id: str | None, warnings_: list
         row = {"id": f.id, "index": i, "op": (r.op if r else f.op_name),
                "lowered_from": (r.lowered_from if r else getattr(f, "lowered_from", None)),
                "tags": [tag_dict(t) for t in f.tags], "nodes": feature_nodes(f),
-               "serves": minimal_nodes(feature_nodes(f)),
+               "serves": minimal_nodes([n for n in feature_nodes(f) if n in tree["nodes"]], parents),
                "instances": {k: [tag_dict(t) for t in v] for k, v in (r.instance_tags if r else {}).items()},
                "status": status, "ms": r.ms if r else None,
                "uses": uses.get(f.id, []), "references": b.references(f.id) if r else [],
@@ -168,6 +174,8 @@ def build_payload(design: Design, b: Build, mesh_id: str | None, warnings_: list
                "slots": [s["id"] for s in interp["slots"] if s["feature"] == f.id],
                "error": _error(r.error) if r and r.error else None, "detail": jsonable(r.detail) if r else {}}
         row.update(_checks(r) if r else {"checks": [], "counts": None, "volume": None, "refs": [], "refs_ok": True})
+        inst_nodes = [t["node"] for ts in row["instances"].values() for t in ts]
+        row["stale"] = [n for n in dict.fromkeys(row["nodes"] + inst_nodes) if n in stale]
         features.append(row)
     diag = diagnostics(design, tree, uses)
     frows, erows = genealogy_tables(b, failing)
@@ -176,8 +184,10 @@ def build_payload(design: Design, b: Build, mesh_id: str | None, warnings_: list
         "design": design.name, "params": jsonable(b.params), "ok": b.ok, "status": "PASS" if b.ok else "FAIL",
         "error_count": len(b.errors), "errors": [_error(e) for e in b.errors], "ms": b.ms,
         "features": features, "failing": sorted(failing),
-        "tree": {"roots": tree["roots"], "order": tree["order"],
+        "tree": {"roots": tree["roots"], "order": tree["order"], "from_file": tree["from_file"],
+                 "missing": tree["missing"],
                  "nodes": {k: v.as_dict() for k, v in tree["nodes"].items()}},
+        "stale": {k: jsonable(v) for k, v in stale.items()},
         "diagnostics": diag, "interpretations": interp, "signature": sig,
         "faces": frows, "edges": erows, "mesh_id": mesh_id,
         "coverage": {"faces": len(frows), "with_genealogy": sum(1 for f in frows if f["entries"])},

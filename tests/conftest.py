@@ -41,3 +41,29 @@ def block(name="block", Lx=40.0, Wy=30.0, Hz=20.0):
     d = Design(name)
     E = d.extrude("E", Profile(XY, rect_points(0.0, 0.0, Lx, Wy)), Hz, tags=intent("R", "skeleton"))
     return d, E
+
+
+BRACKET_SET = ("shelf_bracket.py", "shelf_bracket.intent.yaml", "shelf_bracket.interpretations.json",
+               "shelf_bracket.review.json")
+
+
+def copy_bracket(dst: pathlib.Path) -> pathlib.Path:
+    """Copy the bracket's design set (DSL, intent file, lock) to `dst`; tests that write files use this."""
+    import shutil
+    for f in BRACKET_SET:
+        shutil.copy(EXAMPLE.parent / f, dst / f)
+    return dst / "shelf_bracket.py"
+
+
+A3_OLD = "at=centered_on(mount_face)"
+A3_NEW = "at=offset(wall_pts[0], Z, 10.0)"
+
+
+def a3_offset_patch(py_text: str, mm: float = 10.0) -> str:
+    """The scripted 'Claude' change of gui.md §7.3: A.3 from 'centered on the plate' to
+    'offset <mm> mm above the lower screw'."""
+    out = py_text.replace(A3_OLD, f"at=offset(wall_pts[0], Z, {mm})")
+    out = out.replace("centered_on, centerline,", "centered_on, centerline, offset,")
+    out = out.replace('"cable pass-through, centred on the plate"', f'"cable pass-through, {mm:g} mm above the lower screw"')
+    assert out != py_text
+    return out

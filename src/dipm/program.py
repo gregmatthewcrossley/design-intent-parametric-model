@@ -356,11 +356,22 @@ class Design:
         self.prefs = None                           # interpret.Preferences used for resolution
         self._interp_source = ""
         self.intent_labels: dict = {}               # intent node id -> label (optional; see label_intent)
+        self.intent_file: str | None = None         # <design>.intent.yaml (see use_intent)
 
     def label_intent(self, node: str, label: str) -> "Design":
         """Name an intent-tree node for display (docs/gui.md §2 item 4).  Optional: without it
-        the label comes from the node's tag notes, then its intent words."""
+        the label comes from the node's tag notes, then its intent words.  Superseded by an
+        intent file (`use_intent`), whose statements win; kept for designs without one."""
         self.intent_labels[node] = label
+        return self
+
+    def use_intent(self, design_file: str, path: str | None = None) -> "Design":
+        """Take the intent tree (statements, checks, assumptions, hierarchy) from
+        `<design>.intent.yaml` (docs/gui.md §7.2).  Features keep naming intent nodes by id in
+        their tags.  `dipm serve` / `dipm mcp` also pick the file up when it sits next to the
+        design, so calling this is optional."""
+        from .intent_store import path_for
+        self.intent_file = os.path.abspath(path) if path else path_for(design_file)
         return self
 
     # interpretations -------------------------------------------------------------

@@ -6,6 +6,7 @@
   python -m dipm interpret FILE [--prefs P] [--lock L] [--no-write]
   python -m dipm answer FILE ASSUMPTION_ID READING --prefs P [--scope node|design|house] [--note TEXT]
   python -m dipm serve FILE [--port N] [--no-open] [--prefs P]     (web GUI on 127.0.0.1; docs/gui.md)
+  python -m dipm mcp FILE                                          (stdio MCP server: proposals; gui.md §7.3)
 
 The design file must define a module-level `design` (a `dipm.Design`) or a `make_design()`.
 Interpretations (architecture §10 item 2): `build` reads `<FILE stem>.interpretations.json`
@@ -27,11 +28,19 @@ from .report import build_report
 
 
 def load_design(path: str) -> Design:
-    spec = importlib.util.spec_from_file_location("_dipm_design_" + os.path.basename(path).replace(".", "_"), path)
-    if spec is None or spec.loader is None:
+    """Import a design file fresh, every time.  The source is compiled directly rather than
+    through the import system, whose bytecode cache is keyed on (mtime in seconds, size): a
+    same-size edit within the same second (an id rename, a proposal changing 12.0 -> 10.0)
+    would otherwise reload the old code."""
+    if not os.path.exists(path):
         raise SystemExit(f"cannot load {path}")
+    name = "_dipm_design_" + os.path.basename(path).replace(".", "_")
+    spec = importlib.util.spec_from_loader(name, loader=None, origin=os.path.abspath(path))
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    mod.__file__ = os.path.abspath(path)
+    with open(path, "rb") as fh:
+        code = compile(fh.read(), mod.__file__, "exec")
+    exec(code, mod.__dict__)
     if hasattr(mod, "design"):
         return mod.design
     if hasattr(mod, "make_design"):
@@ -140,8 +149,13 @@ def main(argv=None) -> int:
     sv.add_argument("--port", type=int, default=8765, help="first port to try (default 8765)")
     sv.add_argument("--no-open", action="store_true", help="do not open a browser")
     sv.add_argument("--prefs", help="preferences JSON for answers (default: the lock's, else <file stem>.prefs.json)")
+    mc = sub.add_parser("mcp", help="run a stdio MCP server for a design (Claude proposes, the GUI decides)")
+    mc.add_argument("file")
     a = ap.parse_args(argv)
 
+    if a.cmd == "mcp":
+        from .mcp_server import main as mcp_main
+        return mcp_main(a.file)
     if a.cmd == "serve":
         from .server.app import serve
         return serve(a.file, a.port, not a.no_open, a.prefs)

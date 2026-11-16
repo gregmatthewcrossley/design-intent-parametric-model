@@ -59,7 +59,7 @@ def test_build_bracket_tree_and_status(bracket_payload):
     assert j["tree"]["order"] == ["R", "A", "A.P", "A.P.1", "A.P.2", "A.3", "B", "B.1", "C"]
     nodes = j["tree"]["nodes"]
     assert all(n["status"] == "ok" for n in nodes.values())
-    assert nodes["R"]["label"] == "Support a shelf on a wall" and nodes["A.P"]["label"] == "wall screw pattern"
+    assert nodes["R"]["label"] == "Support a shelf on a wall" and nodes["A.P"]["label"] == "Wall screw pattern"   # from shelf_bracket.intent.yaml (iteration 2)
     assert nodes["A.P"]["realized_by"] == ["A.P.holes"] and nodes["A"]["realized_by"] == []
     assert nodes["A.P.2"]["instances"] == [["A.P.holes", "1"]]
     assert j["coverage"] == {"faces": 19, "with_genealogy": 19}

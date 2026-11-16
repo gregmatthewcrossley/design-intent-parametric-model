@@ -7,7 +7,24 @@
     POST /api/answer {assumption_id, reading, scope?, note?}
                               record a preference exactly like `dipm answer`, re-resolve,
                               rewrite the lock, rebuild
-    WS   /api/events          {"type": "design-changed" | "rebuilt" | "design-error" | "resolving", ...}
+    WS   /api/events          {"type": "design-changed" | "rebuilt" | "design-error" | "intent-changed"
+                               | "proposals-changed", ...}
+
+Iteration 2 (docs/gui.md §7):
+
+    GET   /api/intent                     the intent file as data, its hash, stale nodes, errors
+    PATCH /api/intent {base_hash, ops}    edit it (intent_store.apply_op ops, plus
+                                          {"op": "mark_reviewed", "ids": [...]}); 409 + the current
+                                          state if the file changed since `base_hash`
+    GET   /api/proposals                  proposals (shared with `dipm mcp`), newest last
+    POST  /api/proposals {summary, rationale, files, base_hashes, addresses_nodes, revises?}
+    GET   /api/proposals/{id}             one proposal with its evaluation
+    GET   /api/proposals/{id}/mesh/{before|after}
+    POST  /api/proposals/{id}/accept {comment?}    apply atomically, record reviews, rebuild
+    POST  /api/proposals/{id}/reject {comment}     feedback for get_proposal_feedback
+    GET   /api/requests, POST /api/requests {node, note}   "Ask Claude" requests
+    POST  /api/intent/rename {base_hash, design_hash, old, new}
+                                          rename an intent id in the file and the DSL (LibCST codemod)
 
 Bound to 127.0.0.1 only.  The design file, its lock and its preferences are watched; on a
 change the design module is re-imported fresh (cli.load_design never caches it) and rebuilt
@@ -33,9 +50,13 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from .. import intent_store
 from ..errors import DipmError, ParameterError
+from ..fileio import file_sha256
+from ..proposals import ProposalError, ProposalStore
+from ..review import ReviewRecord
 from .mesh import mesh_bytes
-from .serialize import build_payload, design_info
+from .serialize import build_payload, design_info, jsonable
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 MESH_CACHE = 16
@@ -71,6 +92,15 @@ class Session:
         self.loop: asyncio.AbstractEventLoop | None = None
         self.resolve_thread: threading.Thread | None = None
         self.needs_resolve = False
+        # iteration 2: intent file, review record, proposals (docs/gui.md §7)
+        self.store = ProposalStore(self.path)
+        self.files = self.store.files
+        self.intent_doc: intent_store.IntentDoc | None = None
+        self.intent_error: list | None = None
+        self.review: ReviewRecord | None = None
+        self.last_build = None                # (design, Build, mesh_id, notes) for re-serializing
+        self.intent_lock = threading.Lock()
+        self.evaluating: set = set()
 
     # ------------------------------------------------------------------ files
     @property
@@ -89,12 +119,175 @@ class Session:
     def default_prefs_path(self) -> str:
         return os.path.splitext(self.path)[0] + ".prefs.json"
 
-    def watched(self) -> set:
+    @property
+    def intent_path(self) -> str:
+        d = self.design
+        return (d.intent_file if d is not None and d.intent_file else None) or intent_store.path_for(self.path)
+
+    def design_paths(self) -> set:
         from ..interpret import lock_path_for
         out = {self.path, self.lock_arg or lock_path_for(self.path)}
         p = self.prefs_path()
         out.add(p or self.default_prefs_path())
         return {os.path.realpath(x) for x in out if x}     # realpath: watchfiles reports resolved paths
+
+    def intent_paths(self) -> set:
+        return {os.path.realpath(self.intent_path), os.path.realpath(self.files.review)}
+
+    def proposal_dirs(self) -> set:
+        return {os.path.realpath(self.files.proposals_dir), os.path.realpath(self.files.requests_dir)}
+
+    def watched(self) -> set:
+        return self.design_paths() | self.intent_paths()
+
+    # ------------------------------------------------------------------ intent file and review
+    def load_intent(self) -> None:
+        """(Re)read the intent file and the review record.  An invalid file keeps the last good
+        document and reports the errors; no file means the iteration-1 tag-derived tree."""
+        path = self.intent_path
+        if not os.path.exists(path):
+            self.intent_doc, self.intent_error = None, None
+        else:
+            try:
+                self.intent_doc, self.intent_error = intent_store.load(path), None
+            except intent_store.IntentSchemaError as e:
+                self.intent_error = e.errors
+        self.review = ReviewRecord.load(self.files.review)
+        if self.intent_doc is not None and not self.review.exists:
+            # first time this design's intent is served: its current content is the reviewed
+            # baseline, persisted so later edits (GUI, editor, Claude) show as stale everywhere
+            self.review.baseline(self.intent_doc.to_plain())
+            rp = os.path.realpath(self.files.review)
+            self.writing.add(rp)
+            try:
+                self.review.save()
+            except OSError:
+                pass
+            finally:
+                self.own_writes[rp] = _sha(rp)
+                self.writing.discard(rp)
+
+    def intent_arg(self) -> dict | None:
+        if self.intent_doc is None:
+            return None
+        plain = self.intent_doc.to_plain()
+        return {"plain": plain, "stale": self.review.stale(plain) if self.review else {}}
+
+    def intent_info(self) -> dict:
+        path = self.intent_path
+        info = {"file": path, "exists": os.path.exists(path), "hash": file_sha256(path),
+                "design_hash": file_sha256(self.path),
+                "loaded_hash": self.intent_doc.hash if self.intent_doc else None,
+                "error": self.intent_error, "doc": None, "stale": {}, "review_file": self.files.review,
+                "review_exists": bool(self.review and self.review.exists)}
+        if self.intent_doc is not None:
+            plain = self.intent_doc.to_plain()
+            info["doc"] = plain
+            info["stale"] = jsonable(self.review.stale(plain)) if self.review else {}
+        return info
+
+    def dsl_ids(self) -> set:
+        out = set()
+        for f in self.design.features if self.design else ():
+            out |= {t.node for t in f.tags}
+            for ts in getattr(f, "instance_tags", None) or ():
+                out |= {t if isinstance(t, str) else t.node for t in (ts if isinstance(ts, (list, tuple)) else [ts])}
+        return out
+
+    def patch_intent(self, base_hash: str | None, ops: list) -> dict:
+        """Apply edit ops to the intent file (all or nothing) against `base_hash`."""
+        path = self.intent_path
+        with self.intent_lock:
+            if not os.path.exists(path):
+                raise intent_store.IntentOpError("this design has no intent file "
+                                                 f"({os.path.basename(path)}); create one to edit intent")
+            cur = file_sha256(path)
+            if base_hash != cur:
+                raise intent_store.IntentConflict(path, base_hash, cur)
+            doc = intent_store.load(path)
+            before = doc.to_plain()
+            file_ops = [o for o in ops if o.get("op") != "mark_reviewed"]
+            results = intent_store.apply_ops(doc, file_ops, taken=self.dsl_ids()) if file_ops else []
+            review = ReviewRecord.load(self.files.review)
+            write_review = False
+            if not review.exists:                 # persist the baseline before the first change
+                review.baseline(before)
+                write_review = True
+            mine = {os.path.realpath(path), os.path.realpath(self.files.review)}
+            self.writing |= mine
+            try:
+                if file_ops:
+                    intent_store.save(doc, path, base_hash=base_hash)
+                plain = doc.to_plain()
+                for o in ops:
+                    if o.get("op") == "mark_reviewed":
+                        ids = o.get("ids") or ([o["id"]] if o.get("id") else [])
+                        results.append({"reviewed": review.mark(plain, ids)})
+                        write_review = True
+                if write_review:
+                    review.save()
+            finally:
+                for p in mine:
+                    self.own_writes[p] = _sha(p)
+                self.writing -= mine
+            self.load_intent()
+        return {"results": results}
+
+    def rename_id(self, base_hash: str | None, design_hash: str | None, old: str, new: str) -> dict:
+        """The explicit 'rename id' action (gui.md §7.4): the intent file, the DSL's intent-id
+        literals (codemod.rename_intent_id, LibCST) and the review record, written together."""
+        from ..codemod import rename_intent_id
+        from ..fileio import atomic_write, read_text
+        path = self.intent_path
+        with self.intent_lock, self.build_lock:
+            cur, dcur = file_sha256(path), file_sha256(self.path)
+            if base_hash != cur or design_hash != dcur:
+                raise intent_store.IntentConflict(path if base_hash != cur else self.path,
+                                                  base_hash if base_hash != cur else design_hash,
+                                                  cur if base_hash != cur else dcur)
+            doc = intent_store.load(path)
+            review = ReviewRecord.load(self.files.review)
+            if not review.exists:
+                review.baseline(doc.to_plain())
+            was_stale = set(review.stale(doc.to_plain()))
+            intent_store.rename_id_in_doc(doc, old, new)
+            intent_text = intent_store.dumps(doc)
+            py_text, n = rename_intent_id(read_text(self.path), old, new)
+            # a rename is not an intent change: nodes that were reviewed stay reviewed under the new id
+            ren = lambda k: new + k[len(old):] if k == old or k.startswith(old + ".") else k   # noqa: E731
+            for k in [k for k in review.reviewed if ren(k) != k]:
+                review.reviewed.pop(k)
+            renamed = [k for k in doc.node_ids() if k == new or k.startswith(new + ".")]
+            review.mark(doc.to_plain(), [k for k in renamed if old + k[len(new):] not in was_stale])
+            mine = {os.path.realpath(p) for p in (path, self.path, self.files.review)}
+            self.writing |= mine
+            try:
+                atomic_write(path, intent_text)
+                atomic_write(self.path, py_text)
+                review.save()
+            finally:
+                for p in mine:
+                    self.own_writes[p] = _sha(p)
+                self.writing -= mine
+        self.load()
+        return {"renamed_literals": n, "old": old, "new": new}
+
+    def refresh_payload(self) -> dict | None:
+        """Re-serialize the last build with the current intent state (no rebuild)."""
+        if self.last_build is None:
+            return None
+        design, b, mesh_id, notes = self.last_build
+        payload = build_payload(design, b, mesh_id, notes, intent=self.intent_arg())
+        return self._decorate(payload)
+
+    def _decorate(self, payload: dict) -> dict:
+        payload["file"] = self.path
+        payload["generation"] = self.generation
+        payload["resolving"] = bool(self.needs_resolve or self.resolving)
+        payload["last_good_mesh_id"] = self.last_good_mesh
+        payload["intent"] = {k: v for k, v in self.intent_info().items() if k != "doc"}
+        self.last_payload = payload
+        return payload
 
     # ------------------------------------------------------------------ design loading
     def load(self) -> None:
@@ -126,6 +319,7 @@ class Session:
             self.needs_resolve = True
         self.design, self.design_error = design, None
         self.params = self._carry_params(self.params)
+        self.load_intent()
 
     def _carry_params(self, old: dict) -> dict:
         """Keep the current parameter values that are still declared and valid."""
@@ -173,15 +367,11 @@ class Session:
             notes = [str(w.message) for w in caught]
             if self.needs_resolve or self.resolving:
                 notes.append("interpretations are being re-resolved; a second update will follow")
-            payload = build_payload(design, b, mesh_id, notes)
-            payload["file"] = self.path
-            payload["generation"] = self.generation
-            payload["resolving"] = bool(self.needs_resolve or self.resolving)
             if b.ok and mesh_id:
                 self.last_good_mesh = mesh_id
-            payload["last_good_mesh_id"] = self.last_good_mesh
-            self.last_payload = payload
-            return payload
+            self.last_build = (design, b, mesh_id, notes)
+            payload = build_payload(design, b, mesh_id, notes, intent=self.intent_arg())
+            return self._decorate(payload)
 
     def resolve_now(self) -> None:
         """Resolve interpretations (blocking) for the current design generation."""
@@ -263,10 +453,23 @@ class Session:
         return exp is not None and exp == _sha(path)
 
     async def on_files_changed(self, paths: set) -> None:
-        """Watcher callback: reload (design file) and rebuild, keeping the current parameters."""
-        paths = {os.path.realpath(p) for p in paths} & self.watched()
+        """Watcher callback: reload (design file) and rebuild, keeping the current parameters;
+        re-read the intent file / review record; announce proposal changes."""
+        real = {os.path.realpath(p) for p in paths}
+        if {os.path.dirname(p) for p in real} & self.proposal_dirs():
+            self.publish({"type": "proposals-changed"})
+        paths = real & self.watched()
         paths = {p for p in paths if p not in self.writing and not self.is_own_write(p)}
         if not paths:
+            return
+        if not (paths & self.design_paths()):
+            # only the intent file and/or the review record changed: no rebuild needed
+            await asyncio.to_thread(self.load_intent)
+            payload = await asyncio.to_thread(self.refresh_payload)
+            self.publish({"type": "intent-changed", "intent": self.intent_info(),
+                          "changed": sorted(os.path.relpath(p) for p in paths)})
+            if payload is not None:
+                self.publish({"type": "rebuilt", "reason": "intent-changed", "build": payload})
             return
         try:
             await asyncio.to_thread(self.load)
@@ -286,7 +489,8 @@ class Session:
 
 async def watch(session: Session, stop: asyncio.Event) -> None:
     from watchfiles import awatch
-    dirs = sorted({os.path.dirname(p) for p in session.watched()})
+    session.files.ensure_dirs()
+    dirs = sorted({os.path.dirname(p) for p in session.watched()} | session.proposal_dirs())
     async for changes in awatch(*dirs, stop_event=stop, debounce=120, step=30, recursive=False):
         await session.on_files_changed({p for _, p in changes})
 
@@ -343,6 +547,182 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
         session.publish({"type": "rebuilt", "reason": "answer", "build": payload})
         return JSONResponse(payload)
 
+    async def body_json(request: Request) -> dict:
+        raw = await request.body()
+        if not raw:
+            return {}
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            raise json.JSONDecodeError("body must be an object", "", 0)
+        return data
+
+    def err(msg, status=400, **extra):
+        return JSONResponse({"error": msg, **extra}, status_code=status)
+
+    async def api_intent(request: Request):
+        if request.method == "GET":
+            await asyncio.to_thread(session.load_intent) if session.intent_doc is None else None
+            return JSONResponse(session.intent_info())
+        try:
+            body = await body_json(request)
+        except json.JSONDecodeError:
+            return err("body must be a JSON object")
+        ops = body.get("ops") or []
+        if not isinstance(ops, list) or not all(isinstance(o, dict) for o in ops):
+            return err("ops must be a list of objects")
+        try:
+            res = await asyncio.to_thread(session.patch_intent, body.get("base_hash"), ops)
+        except intent_store.IntentConflict as e:
+            await asyncio.to_thread(session.load_intent)
+            return err(str(e), 409, conflict=True, current=session.intent_info())
+        except intent_store.IntentSchemaError as e:
+            return err(str(e), 400, errors=e.errors)
+        except intent_store.IntentOpError as e:
+            return err(str(e), 400)
+        payload = await asyncio.to_thread(session.refresh_payload)
+        info = session.intent_info()
+        session.publish({"type": "intent-changed", "intent": info, "changed": [os.path.relpath(session.intent_path)]})
+        if payload is not None:
+            session.publish({"type": "rebuilt", "reason": "intent-edit", "build": payload})
+        return JSONResponse({"intent": info, "build": payload, **res})
+
+    async def api_rename(request: Request):
+        try:
+            body = await body_json(request)
+        except json.JSONDecodeError:
+            return err("body must be a JSON object")
+        old, new = str(body.get("old") or ""), str(body.get("new") or "").strip()
+        try:
+            res = await asyncio.to_thread(session.rename_id, body.get("base_hash"), body.get("design_hash"), old, new)
+        except intent_store.IntentConflict as e:
+            return err(str(e), 409, conflict=True, current=session.intent_info())
+        except (intent_store.IntentOpError, intent_store.IntentSchemaError) as e:
+            return err(str(e))
+        payload = await asyncio.to_thread(session.build)
+        session.publish({"type": "design-changed", "design": design_info(session.design, session.path), "changed": []})
+        session.publish({"type": "rebuilt", "reason": "rename-id", "build": payload})
+        session.publish({"type": "intent-changed", "intent": session.intent_info(), "changed": []})
+        session.resolve_in_background()
+        return JSONResponse({**res, "intent": session.intent_info(), "build": payload})
+
+    def strip(p: dict) -> dict:
+        p = dict(p)
+        if p.get("evaluation"):
+            p["evaluation"] = {k: v for k, v in p["evaluation"].items() if k != "lock"}
+        return p
+
+    def evaluate_bg(pid: str) -> None:
+        if pid in session.evaluating:
+            return
+        session.evaluating.add(pid)
+
+        def run():
+            try:
+                session.store.evaluate(pid)
+            finally:
+                session.evaluating.discard(pid)
+                session.publish({"type": "proposals-changed", "id": pid})
+
+        threading.Thread(target=run, name=f"dipm-eval-{pid}", daemon=True).start()
+
+    async def api_proposals(request: Request):
+        if request.method == "GET":
+            ps = await asyncio.to_thread(session.store.list)
+            return JSONResponse({"proposals": [strip(p) for p in ps],
+                                 "requests": await asyncio.to_thread(session.store.requests)})
+        try:
+            body = await body_json(request)
+            p = await asyncio.to_thread(session.store.create, body.get("summary", ""), body.get("rationale", ""),
+                                        body.get("files") or {}, body.get("base_hashes") or {},
+                                        body.get("addresses_nodes") or [], body.get("revises"), "api")
+        except json.JSONDecodeError:
+            return err("body must be a JSON object")
+        except ProposalError as e:
+            return err(str(e))
+        if p["status"] == "pending":
+            evaluate_bg(p["id"])
+        session.publish({"type": "proposals-changed", "id": p["id"]})
+        return JSONResponse(strip(p), status_code=201)
+
+    async def api_proposal(request: Request):
+        try:
+            p = await asyncio.to_thread(lambda: session.store.refresh(session.store.get(request.path_params["id"])))
+        except ProposalError as e:
+            return err(str(e), 404)
+        return JSONResponse(strip(p))
+
+    async def api_proposal_mesh(request: Request):
+        try:
+            path = session.store.mesh_path(request.path_params["id"], request.path_params["which"])
+        except ProposalError as e:
+            return err(str(e), 404)
+        if not os.path.exists(path):
+            return err("no mesh for this proposal (not evaluated, or no geometry)", 404)
+        with open(path, "rb") as fh:
+            return Response(fh.read(), media_type="application/octet-stream", headers={"Cache-Control": "no-cache"})
+
+    def accept_and_reload(pid: str, comment: str) -> tuple:
+        mine = session.design_paths() | session.intent_paths()
+        session.writing |= mine
+        try:
+            p = session.store.accept(pid, comment)
+        finally:
+            for x in mine:
+                session.own_writes[x] = _sha(x)
+            session.writing -= mine
+        session.load()
+        payload = session.build()
+        return p, payload
+
+    async def api_proposal_action(request: Request):
+        pid, action = request.path_params["id"], request.path_params["action"]
+        try:
+            body = await body_json(request)
+        except json.JSONDecodeError:
+            return err("body must be a JSON object")
+        comment = str(body.get("comment") or "")
+        try:
+            if action == "accept":
+                p, payload = await asyncio.to_thread(accept_and_reload, pid, comment)
+                session.publish({"type": "design-changed", "design": design_info(session.design, session.path),
+                                 "changed": list(p.get("accepted", {}).get("written", []))})
+                session.publish({"type": "rebuilt", "reason": "proposal-accepted", "build": payload})
+                session.publish({"type": "intent-changed", "intent": session.intent_info(), "changed": []})
+                session.publish({"type": "proposals-changed", "id": pid})
+                session.resolve_in_background()
+                return JSONResponse({"proposal": strip(p), "build": payload})
+            if action == "reject":
+                p = await asyncio.to_thread(session.store.reject, pid, comment)
+                session.publish({"type": "proposals-changed", "id": pid})
+                return JSONResponse({"proposal": strip(p)})
+            if action == "evaluate":
+                evaluate_bg(pid)
+                return JSONResponse({"ok": True})
+        except ProposalError as e:
+            p = None
+            try:
+                p = strip(session.store.get(pid))
+            except ProposalError:
+                pass
+            return err(str(e), 409, proposal=p)
+        return err(f"unknown action {action}", 404)
+
+    async def api_requests(request: Request):
+        if request.method == "GET":
+            return JSONResponse({"requests": await asyncio.to_thread(session.store.requests)})
+        try:
+            body = await body_json(request)
+        except json.JSONDecodeError:
+            return err("body must be a JSON object")
+        node = str(body.get("node") or "")
+        if session.intent_doc is None or node not in session.intent_doc.node_ids():
+            return err(f"no intent node {node!r}")
+        plain = session.intent_doc.to_plain()
+        change = (session.review.stale(plain) if session.review else {}).get(node)
+        r = await asyncio.to_thread(session.store.create_request, node, str(body.get("note") or ""), jsonable(change))
+        session.publish({"type": "proposals-changed"})
+        return JSONResponse(r, status_code=201)
+
     async def events(ws: WebSocket):
         await ws.accept()
         q: asyncio.Queue = asyncio.Queue()
@@ -373,6 +753,13 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
 
     routes = [Route("/api/design", api_design), Route("/api/build", api_build, methods=["POST"]),
               Route("/api/mesh/{id}", api_mesh), Route("/api/answer", api_answer, methods=["POST"]),
+              Route("/api/intent", api_intent, methods=["GET", "PATCH"]),
+              Route("/api/intent/rename", api_rename, methods=["POST"]),
+              Route("/api/proposals", api_proposals, methods=["GET", "POST"]),
+              Route("/api/proposals/{id}", api_proposal),
+              Route("/api/proposals/{id}/mesh/{which}", api_proposal_mesh),
+              Route("/api/proposals/{id}/{action}", api_proposal_action, methods=["POST"]),
+              Route("/api/requests", api_requests, methods=["GET", "POST"]),
               WebSocketRoute("/api/events", events), Route("/", index)]
     if os.path.isdir(os.path.join(static_dir, "assets")):
         routes.append(Mount("/assets", StaticFiles(directory=os.path.join(static_dir, "assets")), name="assets"))

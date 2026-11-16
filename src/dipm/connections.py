@@ -104,23 +104,27 @@ def params_through_uses(direct: dict, uses: dict) -> dict:
 
 # ---------------------------------------------------------------- intent tree
 
-def parent_of(node: str) -> str | None:
+def parent_of(node: str, parents: dict | None = None) -> str | None:
+    """Parent of a node: from `parents` (the intent file's nesting) when it knows the node,
+    else derived from the dotted id (iteration-1 convention: `A.P.1` -> `A.P` -> `A` -> `R`)."""
+    if parents is not None and node in parents:
+        return parents[node]
     if "." in node:
         return node.rsplit(".", 1)[0]
     return None if node == ROOT else ROOT
 
 
-def ancestors(node: str) -> list:
-    out, p = [], parent_of(node)
-    while p is not None:
+def ancestors(node: str, parents: dict | None = None) -> list:
+    out, p = [], parent_of(node, parents)
+    while p is not None and p not in out:
         out.append(p)
-        p = parent_of(p)
+        p = parent_of(p, parents)
     return out
 
 
-def related(a: str, b: str) -> bool:
+def related(a: str, b: str, parents: dict | None = None) -> bool:
     """True if one node is the other or an ancestor of it."""
-    return a == b or a in ancestors(b) or b in ancestors(a)
+    return a == b or a in ancestors(b, parents) or b in ancestors(a, parents)
 
 
 def _sort_key(node: str) -> tuple:
@@ -141,6 +145,13 @@ class IntentNode:
     realized_by: list = field(default_factory=list)  # features shown as callouts (most specific node)
     status: str = "ok"
     implicit: bool = False                            # created only as an ancestor of a tagged node
+    # from the intent file (docs/gui.md §7.2); empty when the tree is derived from tags only
+    statement: str = ""
+    checks: list = field(default_factory=list)
+    assumptions: list = field(default_factory=list)
+    in_file: bool = False                             # declared in <design>.intent.yaml
+    stale: bool = False                               # intent changed since its solution was reviewed
+    hash: str = ""                                    # review.node_hash of its content
 
     def as_dict(self) -> dict:
         return dataclasses.asdict(self)
@@ -151,9 +162,9 @@ def feature_nodes(feature) -> list:
     return list(dict.fromkeys(t.node for t in feature.tags))
 
 
-def minimal_nodes(nodes) -> list:
+def minimal_nodes(nodes, parents: dict | None = None) -> list:
     """Drop nodes that are ancestors of another node in the list (A.P.holes: [A.P, A] -> [A.P])."""
-    return [n for n in nodes if not any(m != n and n in ancestors(m) for m in nodes)]
+    return [n for n in nodes if not any(m != n and n in ancestors(m, parents) for m in nodes)]
 
 
 def feature_status(rec, slot_ids_with_attention: set) -> str:
@@ -164,12 +175,52 @@ def feature_status(rec, slot_ids_with_attention: set) -> str:
     return "warn" if rec.id in slot_ids_with_attention else "ok"
 
 
-def intent_tree(design, build=None, attention: set | None = None) -> dict:
-    """{root, nodes: {id: IntentNode}} derived from the design's intent tags (and a build's
-    instance tags and statuses).  `attention`: feature ids with a pending question/notice."""
+def file_parents(intent: dict | None) -> dict | None:
+    """node id -> parent id (None for roots) from a plain intent document's nesting."""
+    if intent is None:
+        return None
+    out: dict = {}
+
+    def walk(lst, parent):
+        for n in lst or []:
+            out[n["id"]] = parent
+            walk(n.get("children"), n["id"])
+
+    walk(intent.get("intents"), None)
+    return out
+
+
+def intent_tree(design, build=None, attention: set | None = None, intent: dict | None = None,
+                stale=None) -> dict:
+    """{roots, order, nodes: {id: IntentNode}, parents}.
+
+    With `intent` (a plain intent document, `IntentDoc.to_plain()`), the hierarchy, order and
+    labels come from the file.  Ids the DSL uses but the file lacks are not invented as nodes:
+    they are listed in `missing` ({id: [feature ids]}), and a feature none of whose nodes is in
+    the file has no intent (docs/gui.md §7.2: "if features reference it, they become 'feature
+    with no intent'").  Without `intent` the tree is derived from the tags as in iteration 1.  `attention`: feature ids with a pending question/notice.
+    `stale`: ids of nodes whose intent changed since their solution was reviewed."""
     attention = attention or set()
     recs = {r.id: r for r in build.records} if build is not None else {}
     nodes: dict = {}
+    fparents = file_parents(intent)
+    file_order: list = []
+    if intent is not None:
+        from .review import node_hash
+
+        def add(lst, parent):
+            for n in lst or []:
+                nid = n["id"]
+                nodes[nid] = IntentNode(nid, n.get("statement", ""), parent, statement=n.get("statement", ""),
+                                        checks=list(n.get("checks") or []),
+                                        assumptions=list(n.get("assumptions") or []), in_file=True,
+                                        hash=node_hash(n))
+                file_order.append(nid)
+                add(n.get("children"), nid)
+
+        add(intent.get("intents"), None)
+    file_roots = [i for i in file_order if fparents and fparents[i] is None]
+    missing: dict = {}
 
     def get(nid: str, implicit: bool) -> IntentNode:
         if nid not in nodes:
@@ -181,8 +232,19 @@ def intent_tree(design, build=None, attention: set | None = None) -> dict:
             nodes[nid].implicit = False
         return nodes[nid]
 
+    def known(nid: str, fid: str) -> bool:
+        """With an intent file, only declared ids are nodes; others are recorded as missing."""
+        if fparents is None or nid in nodes:
+            return True
+        lst = missing.setdefault(nid, [])
+        if fid not in lst:
+            lst.append(fid)
+        return False
+
     for f in design.features:
         for t in f.tags:
+            if not known(t.node, f.id):
+                continue
             n = get(t.node, False)
             if t.word not in n.words:
                 n.words.append(t.word)
@@ -190,7 +252,7 @@ def intent_tree(design, build=None, attention: set | None = None) -> dict:
                 n.notes.append(t.note)
             if f.id not in n.features:
                 n.features.append(f.id)
-        for n_id in minimal_nodes(feature_nodes(f)):
+        for n_id in minimal_nodes([x for x in feature_nodes(f) if x in nodes], fparents):
             nodes[n_id].realized_by.append(f.id)
         inst = None
         if build is not None and f.id in recs:
@@ -199,25 +261,37 @@ def intent_tree(design, build=None, attention: set | None = None) -> dict:
             inst = {str(k): ts for k, ts in enumerate(f.instance_tags)}
         for k, ts in sorted((inst or {}).items(), key=lambda kv: int(kv[0]) if kv[0].isdigit() else kv[0]):
             for t in ts:
+                if not known(t.node, f.id):
+                    continue
                 n = get(t.node, False)
                 if t.word not in n.words:
                     n.words.append(t.word)
                 if t.note and t.note not in n.notes:
                     n.notes.append(t.note)
                 n.instances.append([f.id, k])
-    for nid, label in getattr(design, "intent_labels", {}).items():
+    labels = {} if intent is not None else getattr(design, "intent_labels", {})
+    for nid, label in labels.items():
         get(nid, False)
-    if nodes and ROOT not in nodes:
+    if nodes and ROOT not in nodes and intent is None:
         get(ROOT, True)
-    labels = getattr(design, "intent_labels", {})
     for n in nodes.values():
+        if n.in_file:
+            continue
         n.label = labels.get(n.id) or (n.notes[0] if n.notes else
                                        (", ".join(w.replace("_", " ") for w in n.words) if n.words else ""))
     for n in nodes.values():
         if n.parent is not None and n.parent in nodes:
             nodes[n.parent].children.append(n.id)
-    for n in nodes.values():
-        n.children.sort(key=_sort_key)
+    if intent is None:
+        for n in nodes.values():
+            n.children.sort(key=_sort_key)
+    else:   # file order; ids missing from the file go last
+        pos = {nid: i for i, nid in enumerate(file_order)}
+        for n in nodes.values():
+            n.children.sort(key=lambda c: (c not in pos, pos.get(c, 0), _sort_key(c)))
+    for nid in stale or ():
+        if nid in nodes:
+            nodes[nid].stale = True
     # status: worst of the features at or beneath each node
     fstat = {f.id: feature_status(recs.get(f.id) if build is not None else None, attention)
              if build is not None else "not_built" for f in design.features}
@@ -238,10 +312,15 @@ def intent_tree(design, build=None, attention: set | None = None) -> dict:
         for c in nodes[nid].children:
             walk(c)
 
-    roots = sorted((n.id for n in nodes.values() if n.parent is None or n.parent not in nodes), key=_sort_key)
+    if intent is None:
+        roots = sorted((n.id for n in nodes.values() if n.parent is None or n.parent not in nodes), key=_sort_key)
+    else:
+        roots = file_roots + sorted((n.id for n in nodes.values() if n.parent is None and not n.in_file), key=_sort_key)
     for r in roots:
         walk(r)
-    return {"roots": roots, "order": order, "nodes": {nid: nodes[nid] for nid in order}}
+    parents = {nid: nodes[nid].parent for nid in order}
+    return {"roots": roots, "order": order, "nodes": {nid: nodes[nid] for nid in order}, "parents": parents,
+            "from_file": intent is not None, "missing": missing}
 
 
 # ---------------------------------------------------------------- diagnostics
@@ -249,22 +328,31 @@ def intent_tree(design, build=None, attention: set | None = None) -> dict:
 def diagnostics(design, tree: dict, uses: dict) -> dict:
     """Connection diagnostics (docs/gui.md §2 item 9)."""
     nodes = tree["nodes"]
-    no_intent = [f.id for f in design.features if not f.tags]
+    par = tree.get("parents")
+    # no intent: no tags, or (with an intent file) none of its nodes is declared there
+    no_intent = [f.id for f in design.features
+                 if not f.tags or (tree.get("from_file") and not any(t.node in nodes for t in f.tags))]
     no_feature = []
     for nid, n in nodes.items():
-        sub = [nid] + [m for m in nodes if nid in ancestors(m)]
+        sub = [nid] + [m for m in nodes if nid in ancestors(m, par)]
         if not any(nodes[m].features or nodes[m].instances for m in sub):
             no_feature.append(nid)
     multi = []
+    def fn(f):
+        return [n for n in feature_nodes(f) if n in nodes]
+
     for f in design.features:
-        mins = minimal_nodes(feature_nodes(f))
+        mins = minimal_nodes(fn(f), par)
         if len(mins) > 1:
             multi.append({"feature": f.id, "nodes": mins})
-    fnodes = {f.id: minimal_nodes(feature_nodes(f)) for f in design.features}
+    fnodes = {f.id: minimal_nodes(fn(f), par) for f in design.features}
     cross = []
     for fid, gs in uses.items():
         for g in gs:
             a, b = fnodes.get(fid, []), fnodes.get(g, [])
-            if a and b and not any(related(x, y) for x in a for y in b):
+            if a and b and not any(related(x, y, par) for x in a for y in b):
                 cross.append({"from": fid, "to": g, "from_nodes": a, "to_nodes": b})
-    return {"no_intent": no_intent, "no_feature": no_feature, "multi_intent": multi, "cross_intent": cross}
+    # ids the DSL uses that the intent file does not declare (only with an intent file)
+    missing = list(tree.get("missing") or {}) if tree.get("from_file") else []
+    return {"no_intent": no_intent, "no_feature": no_feature, "multi_intent": multi, "cross_intent": cross,
+            "missing_in_file": missing}

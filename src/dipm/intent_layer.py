@@ -494,6 +494,24 @@ class circular_pattern(Placement):
 
 
 @dataclass(frozen=True)
+class offset(Placement):
+    """`base` moved `distance` along `direction`: '10 mm above the lower screw' is
+    `offset(wall_pts[0], Z, 10.0)`.  Couples the result to `base` on purpose (it is a relation
+    to another feature's point, not to a face)."""
+    base: Placement
+    direction: object
+    distance: object
+
+    def evaluate(self, ctx):
+        d = _v(ev(self.direction, ctx)).unit()
+        dist = float(ev(self.distance, ctx))
+        return [p + d * dist for p in ev(self.base, ctx)]
+
+    def __repr__(self):
+        return f"offset({self.base!r}, {self.direction!r}, {self.distance!r})"
+
+
+@dataclass(frozen=True)
 class at(Placement):
     """Escape hatch: explicit points (lazy expressions allowed).  Counts as literals in an
     idiomatic score; prefer relations."""

@@ -23,7 +23,7 @@ from .errors import (CardinalityError, DipmError, InteractionError, InvariantErr
 from .expr import Param, emax, emin, ev  # noqa: F401
 from .intent_layer import (THROUGH_ALL, at, blind, centered_on, centerline, circular_pattern, clearance,  # noqa: F401
                      clearance_diameter, countersink, distribute, edge_distance, face_point, head_diameter,
-                     linear_pattern, midpoint, plain, through, tool_access_radius)
+                     linear_pattern, midpoint, offset, plain, through, tool_access_radius)
 from .interpret import Interpretation, Preferences, resolve  # noqa: F401
 from .kernel import ORIGIN, X, Y, Z, Vec3  # noqa: F401
 from .ops import Expect  # noqa: F401
