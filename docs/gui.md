@@ -89,7 +89,7 @@ The same visual language as the overnight review page:
 | `WS /api/events` | `design-changed`, `rebuilt` |
 
 **Implementation notes (iteration 1):**
-- Meshing runs on a *copy* of the solid, so triangulations never enter the canonical BRep. It is single-threaded with fixed deflections, and the mesh is byte-identical across processes.
+- Meshing runs on a *copy* of the solid, so triangulations never enter the BRep text used to compare builds (see dsl.md §5.4 on what that comparison does and doesn't guarantee). It is single-threaded with fixed deflections, and the mesh is byte-identical across processes.
 - A stale interpretations lock doesn't block a rebuild: the server re-resolves in the background and pushes a second `rebuilt` event.
 - *Uses* = resolved references plus implicit geometric reads (NOTES #33).
 - Diagnostics: no intent, intent with no feature, several intents, and cross-intent dependency (NOTES #35).
@@ -116,9 +116,9 @@ The same visual language as the overnight review page:
 10. Light and dark themes both read well.
 11. Python API tests (pytest + TestClient) cover every endpoint. The frontend builds cleanly; type-checking passes.
 
-## 7. Iteration 2 (draft): editable intent
+## 7. Iteration 2: editable intent (built 2026-11-16)
 
-*Drafted 2026-11-16. Scope choice pending: **2a only**, or **2a + 2b** together.*
+*Drafted and built 2026-11-16 (2a + 2b together). All §7.2 and §7.3 acceptance criteria are verified by automated tests: pytest 170, vitest 22, Playwright 25. Claude is simulated in e2e by `gui/e2e/simulate_claude.py` over MCP stdio. Implementation decisions: `src/dipm/NOTES.md` #44–57. Run and workflow: [`gui/README.md`](../gui/README.md). Built extras: a LibCST rename-id codemod, an `offset(...)` placement, the MCP `get_requests` tool, and proposals under a gitignored `.dipm/`. Check priority is a field: `must | should | nice to have`.*
 
 ### 7.1 Goal
 
