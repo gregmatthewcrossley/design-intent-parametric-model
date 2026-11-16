@@ -1,4 +1,4 @@
-# Architecture: Intent → Solution
+# Architecture: Purposes → Solution
 
 *Status: working draft, 2026-11-15. Concepts are stable enough to build against; all syntax (YAML schemas, DSL) is illustrative and provisional.*
 
@@ -10,16 +10,53 @@ Related: [`dsl.md`](dsl.md) (DSL and engine), [`user-experience.md`](user-experi
 
 ## 1. Purpose and principles
 
-This project aims to turn physical **design intent** — expressed as text, sketches, drawings, or 3D geometry — into **parametric CAD models that capture that intent**, not merely reproduce a shape.
+**dipm: design imperatives → parametric models.** **dipm is a design environment where you state what a part is for, and AI builds the parametric model.** In CAD, "capture design intent" has come to mean *don't draw and dimension; use features and relations instead*. That is one rung above raw geometry, but still geometric and numeric. **dipm aims one rung higher:** you work in **purposes**, stated in your own words and each with a priority ("must hold a shelf to a wall", "should be easy to install alone", "nice if it feels calm"). Language models and dipm's engine derive the relations and build the feature tree, checking every step.
+
+**Terminology (2026-11-16).** dipm works across three levels: Rasmussen's abstraction hierarchy, or Gero's function–behavior–structure.
+- **Purposes:** verbal, qualitative statements of what the part is for, each with a priority (must / should / nice to have). The project name calls them "imperatives" in the everyday sense; see the README's note for programmers on why that word is not the programming-language one.
+- **Design intent**, in its established CAD sense: relations, features, and constraints.
+- **Geometry.**
+
+What this document calls the **intent tree** is the **purpose tree**. dipm itself is a *design environment*, not a model: "the model" in these docs always means the language model plugged into it, and "parametric model" means the CAD output. "Intent" in the DSL (`intent_layer.py`, intent words such as `centered_on`) means design intent in the CAD sense. File and code names (`<design>.intent.yaml`, `intent_store.py`, `IntentTag`) still use "intent" for the purpose tree; renaming them is an open question (§10).
+
+Purposes can be expressed as text, sketches, drawings, or 3D geometry, and become **parametric CAD models whose relations serve those purposes**, not merely reproduce a shape.
 
 Six principles drive everything below:
 
 1. **Intent is relational, not numeric.** "Put the hole in the middle" is a *midpoint relation*, not `x = length / 2` measured from today's geometry. A model that produces the right shape with the wrong relations has failed, even though shape metrics (Chamfer distance, IoU) cannot tell.
-2. **Solutions are deterministic.** A solution is a program in a DSL of known, atomic geometric operations. The same program always compiles to the same geometry. All non-determinism lives on the intent side.
+2. **Solutions are deterministic, once fully locked.** A solution is a program in a DSL of known, atomic geometric operations. A *fully locked* solution is the DSL source plus its interpretations lock, the designer's prefs, and pinned kernel and package versions. A fully locked solution compiles to the same geometry every time (on one platform so far; §7). The DSL source alone does not: without a lock, interpretation resolution picks readings (§10.2), and that choice can depend on the previous lock it starts from. Non-determinism is meant to live on the intent side, but today it also leaks into the build in a few named places, listed in §7.
 3. **Intent decomposes.** Large intents are broken into smaller supporting intents until each is small enough to solve directly. Solutions compose back up into a single program.
 4. **Quality must be computable.** "Idiomatic," "correct," and "done" are defined by checks and scores a machine can evaluate. Anything we cannot measure, we cannot iterate toward or train on — and loops that optimize unmeasured qualities tend to game whatever *is* measured.
 5. **Determinize early.** The model's foundational motivation: decompose non-deterministic intents and checks into deterministic ones *as early in the tree as possible*. Every check should be pushed as close to rung 1 of the determinism ladder (§4.1) as it will go, at the node where it enters. The less judgment that survives to the leaves, the more of the design is verifiable, repeatable, and trainable.
-6. **Optimized for humans, unapologetically.** As Ruby is optimized for programmer happiness, this model optimizes for the people who will look at, use, understand, assemble, maintain, and later edit what it makes. Visual harmony is necessary but not sufficient; a balanced panel no newcomer can operate has failed. Human factors get the same treatment as everything else: packaged knowledge, pushed toward deterministic checks (§4.7).
+6. **Optimized for humans, unapologetically.** As Ruby is optimized for programmer happiness, dipm optimizes for the people who will look at, use, understand, assemble, maintain, and later edit what it makes. Visual harmony is necessary but not sufficient; a balanced panel no newcomer can operate has failed. Human factors get the same treatment as everything else: packaged knowledge, pushed toward deterministic checks (§4.7).
+
+### 1.1 Prior art and what's actually new
+
+*Added 2026-11-16 after the fresh-eyes review (NOV-01..04, ISS-05). Citations checked against publisher or indexing records on that date unless marked otherwise.*
+
+Most of the conceptual architecture below re-derives older work. It is listed here so the docs stop implying otherwise, and so the known failure modes of that work are on the table.
+
+| dipm idea | Prior art | What that work already does |
+|---|---|---|
+| Features carry validity constraints, checked after every edit (§4, [`dsl.md` §4.3](dsl.md#43-trusted-primitives)) | **Semantic feature modelling:** Bidarra & Bronsvoort, "Semantic feature modelling", *Computer-Aided Design* 32(3):201–225, 2000. Background: Shah & Mäntylä, *Parametric and Feature-Based CAD/CAM*, Wiley, 1995 | Feature semantics specified as constraints and maintained through every modelling operation. This is the closest prior art to per-feature contracts and intent checks |
+| Stability harness: sweep parameters, check the model still regenerates the same way (§6, [`dsl.md` §5.7](dsl.md#5-invariants-checked-on-every-compiled-solution)) | **Valid parameter ranges:** Hoffmann & Kim, "Towards valid parametric CAD models", *Computer-Aided Design* 33(1):81–90, 2001. Joan-Arinyo & Mata, "Applying constructive geometric constraint solvers to geometric problems with interval parameters", *Nonlinear Analysis* 47(1):213–224, 2001, and later Hidalgo & Joan-Arinyo work on h-graphs | Computes the parameter intervals within which a model regenerates, for some constraint classes. dipm samples about 9 points of a space this work computes exactly |
+| Edit stability and "relations, not literals" as a quality measure (§6) | **CAD-education design-intent rubrics:** Company et al. (co-author list not checked), "Approach for developing coordinated rubrics to convey quality criteria in MCAD training", *Computer-Aided Design* 63:101–117, 2015. Otey, Company, Contero & Camba, "Revisiting the design intent concept in the context of mechanical CAD education", *CAD&A* 15(1):47–60, 2018. Otey et al., "Assessment of parametric assembly models based on CAD quality dimensions", *CAD&A* 16(4):628–653, 2019 | Rubrics that score models on validity, completeness, consistency, conciseness, clarity and design intent, where intent is largely "behaves as expected when altered" |
+| Rule packs, feature-choice rules, the idiomatic score (§4.6, §4.7, §6) | **Knowledge-based engineering:** ICAD (1980s), Siemens NX Knowledge Fusion, CATIA Knowledgeware, Creo Behavioral Modeling; review in La Rocca, "Knowledge based engineering: Between AI and CAD", *Advanced Engineering Informatics* 26(2):159–179, 2012. Also DFM/DFA checkers and CAD model-quality checkers (Q-Checker, CADIQ, VDA 4955, SASIG PDQ; product and guideline names, not checked individually) | Rule bases behind geometry, and model-quality metrics much like "no unexplained literals" and "tree depth". KBE's documented lesson: rule bases are expensive to keep up and tend to end up owned by one person |
+| Check flow-down: pass / allocate / translate / derive (§4.2) | **Systems-engineering requirement allocation and budgets** (e.g. the INCOSE *Systems Engineering Handbook*; mass and error budgets) | Standard requirement decomposition, allocation to subsystems, and re-verification at integration |
+| Intent → checks → solution | **Gero's Function–Behaviour–Structure:** Gero, "Design prototypes: a knowledge representation schema for design", *AI Magazine* 11(4):26–36, 1990 | Function, expected behaviour, and structure as separate layers, with behaviour derived from structure and compared against expectations |
+| "The tree is the design rationale" (§3.4) | **Design-rationale systems:** IBIS (Kunz & Rittel, "Issues as elements of information systems", IURD Working Paper 131, 1970); gIBIS (Conklin & Begeman, *ACM TOIS* 6(4):303–331, 1988); QOC (MacLean, Young, Bellotti & Moran, *Human–Computer Interaction* 6(3–4):201–250, 1991); DRed (Bracewell, Wallace, Moss & Knott, "Capturing design rationale", *Computer-Aided Design* 41:173–186, 2009) | Structured capture of issues, options and arguments. They mostly failed on capture cost, and on **Grudin's asymmetry** (Grudin, "Why CSCW applications fail", CSCW 1988, pp. 85–93): the person who has to do the extra work is not the person who benefits |
+
+**What is actually new, narrowly stated.** The review found three concrete things it could not match to prior art. They are smaller than the rest of this document suggests, and they are what dipm should lead with:
+
+1. **Interpretations** (§10.2, `src/dipm/interpret.py`). An intent word declares its candidate readings. Readings are eliminated by build checks across the parameter range, and the designer is asked only when the survivors give different geometry. The nearest analogue is disambiguation in programming by example (Mayer et al., "User interaction models for disambiguation in programming by example", UIST 2015), not anything known in CAD.
+2. **Per-feature topological contracts.** Expected ΔH, ΔS and volume sign are computed from how each feature interacts with the existing geometry, not fixed per feature type ([`dsl.md` §5.3](dsl.md#5-invariants-checked-on-every-compiled-solution)).
+3. **An edit-stability benchmark** over an open, kernel-neutral DSL.
+
+**The primary claim: purposes first, geometry derived.** Qualitative intent has been captured before (the design-rationale, FBS and KBE work in the table). That was done in the pre-LLM era, and largely as *additional* work the designer did **after** defining the quantitative, geometric design intent by hand. Grudin's cost asymmetry explains why it decayed. dipm reverses the order: the designer works in purposes, and language models plus the engine derive the relations and build the feature tree, verified at every step. The three items above are the concrete mechanisms that make that reversal checkable. This claim is a hypothesis to prove, not a result: no model is wired in yet (ISS-04).
+
+The rest (intent trees, flow-down, packs, executable rationale) is a recombination. Its claim to be different is that the rationale is *executable* and bound to kernel history, and that a language model may absorb the authoring cost that sank KBE and design-rationale tools. Neither claim has evidence in this repo yet. There may also be unpublished industrial equivalents of all three items above.
+
+**"Nobody measures intent" is too broad.** The survey's heading says so ([`reports/Parametric CAD generation survey.md`](../reports/Parametric%20CAD%20generation%20survey.md)). It holds for the recent ML literature on CAD generation, whose benchmarks measure shape similarity. It does not hold for CAD research and education: the rubrics and valid-range work above measure exactly that.
 
 ---
 
@@ -31,7 +68,7 @@ Six principles drive everything below:
               │
   intent ─────┤
               │
-              └────────────────────────────── SOLUTION side (deterministic)
+              └────────────────────────────── SOLUTION side (deterministic once fully locked, §7)
                   DSL program → compiler → CAD kernel → B-rep geometry
                                                   │
                   checks evaluated against ◄──────┘
@@ -68,8 +105,8 @@ The DSL is a small, typed language of atomic operations (sketch, constrain, extr
 
 - **Relations are first-class.** `midpoint`, `symmetric`, `equal`, `concentric`, `distribute`, `through_all`, `up_to(face)` are vocabulary, not afterthoughts. Literal numbers appear only for true design parameters.
 - **Geometry is referenced by query, never by index.** `plate.face(normal=-Y)` or a named export like `mount_face`, never `face[17]`. This is what makes rebuilds stable (the "topological naming problem").
-- **It compiles deterministically** to a pinned kernel (initial target: build123d/CadQuery on OpenCascade; FeatureScript as a later export target).
-- **It has two layers.** A rich *intent layer* (`midpoint`, `hole`, `pattern`, `gusset`) lowers to a small, mathematically grounded *core layer*, and intent tags survive the lowering. Sketch steps carry explicit **branch tags** so constraints can't "flip". References are resolved through kernel history and declare their cardinality. Full design: [`dsl.md`](dsl.md).
+- **It compiles deterministically**, once fully locked (§7), to a pinned kernel (initial target: build123d/CadQuery on OpenCascade; FeatureScript as a later export target).
+- **It has two layers.** A rich *intent layer* (`midpoint`, `hole`, `pattern`, `gusset`) is meant to lower to a small *core layer* grounded in solid-modelling theory, and intent tags survive the lowering. v0 has no explicit core IR yet, and most real features (fillet, chamfer, shell, draft) sit outside the theory as runtime-checked trusted primitives ([`dsl.md` §4.3](dsl.md#43-trusted-primitives)). Sketch steps carry explicit **branch tags** so constraints can't "flip". References are resolved through kernel history and declare their cardinality. Full design: [`dsl.md`](dsl.md).
 
 ### 2.3 References and interfaces
 
@@ -109,7 +146,7 @@ The tree (intents + checks + provenance + solutions) is more valuable than the f
 
 - **It is the design rationale.** Every feature traces to a reason.
 - **It localizes edits.** "Make it hold a heavier shelf" re-solves only the affected subtree.
-- **It is the training data.** A procedural generator can emit (intent tree, solution) pairs directly, with ground-truth intent known by construction.
+- **It is the training data.** A procedural generator can emit (intent tree, solution) pairs directly. The intent labels are exact, but only *for the generator's own ontology*: a model trained on them learns the generator's intents, not designers'. Real-designer data is needed too (§9).
 
 ---
 
@@ -124,12 +161,12 @@ Every check is labeled with its kind. The kinds form a **determinism ladder**; p
 | 1 | **relation** | centered, concentric, through-all, symmetric | CAD kernel | Yes | Exact |
 | 1 | **rule** | clearance-hole tables, edge distance ≥ 2d, min wall, overhang ≤ 45° | computation | Yes | Exact (given the rule) |
 | 2 | **analysis** | holds 20 kg; tip deflection ≤ 1 mm | hand-calc / FEA, pinned solver + settings | Yes | Only as good as the model (load case, boundary conditions, material) |
-| 3 | **learned score** | visual balance, style conformance | pinned scorer on deterministic renders | Yes, given pinned weights | Statistical; validated against human ratings |
+| 3 | **learned score** | visual balance, style conformance | pinned scorer on deterministic renders | Only with deterministic inference (CPU or deterministic GPU kernels); otherwise give scores a noise band. Pinned weights alone are not enough | Statistical; validated against human ratings |
 | 4 | **live judgment** | "does this look right to you?" | VLM or human | No | Varies |
 
 Two separate questions: *is it repeatable* and *does it reflect reality*. Analysis is fully repeatable once its assumptions are grounded; its uncertainty lives in those assumptions, which is where grounding effort goes.
 
-Rung 1 also includes **invariants that run on every compiled solution regardless of intent**: kernel validity, the Euler–Poincaré relation, per-feature topological deltas (each feature computes its expected change in genus from how it interacts with existing geometry), a stored topological signature, sketch constraint health, and reference determinism. See [`dsl.md` §5](dsl.md#5-invariants-checked-on-every-compiled-solution).
+Rung 1 also includes **invariants that run on every compiled solution regardless of intent**: kernel validity, an Euler–Poincaré parity check, per-feature topological deltas (each feature computes its expected change in genus and shell count from how it interacts with existing geometry), a stored topological signature, sketch constraint health, and reference determinism. The Euler check on its own is weak: dipm solves for genus H from the formula, so it only fails when V − E + F − R is odd or H comes out negative. The real protection is the per-feature ΔH/ΔS contracts, which compare against an expectation computed independently. See [`dsl.md` §5](dsl.md#5-invariants-checked-on-every-compiled-solution).
 
 Rungs 1–2 can be hard gates. Rungs 3–4 are soft scores: they rank and refine, but early versions don't block on them.
 
@@ -212,7 +249,7 @@ Other early packs: `fdm_printing`, `fasteners`, `sheet_metal`, `cnc_milling`. Th
 
 **Conflicts.** World and geometric intents can collide (crisp sharp corners vs. a molding radius minimum). Checks carry a priority; manufacturability and safety typically outrank aesthetics, and every override is recorded in the tree.
 
-**Different data and evaluation.** Geometric intents can be procedurally generated with ground truth. Grounding needs curated knowledge (DFM guides, fastener and material standards) and expert-authored test cases: "given this intent and context, these checks must appear."
+**Different data and evaluation.** Geometric intents can be procedurally generated, with labels that are exact for the generator's ontology (§9). Grounding needs curated knowledge (DFM guides, fastener and material standards) and expert-authored test cases: "given this intent and context, these checks must appear."
 
 ### 4.7 Human packs
 
@@ -379,14 +416,26 @@ This score is both the **pass-loop termination criterion** and, later, a **train
 
 ## 7. Determinism requirements
 
-"Same DSL → identical geometry" requires:
+The guarantee is **"same fully locked solution → identical geometry"**, not "same DSL → identical geometry". A fully locked solution is the DSL source, the interpretations lock, the designer's prefs, and pinned kernel and package versions. (Review INC-01 / ISS-03, corrected 2026-11-16.)
+
+**Where non-determinism lives today**, outside that guarantee:
+
+- **Interpretation resolution.** Without a lock, `Design.build()` uses unchecked ranked defaults, so the same `.py` can build different geometry depending on which lock and prefs files sit next to it. Resolution is Gauss–Seidel, warm-started from the previous lock, so its result can depend on history (`src/dipm/NOTES.md` DECISIONS #26, #30).
+- **Background re-resolution in the server.** The GUI shows one geometry, re-resolves interpretations in the background, and may rebuild with different readings about 2.5 s later (NOTES #38).
+- **Learned scorers** (rung 3). GPU rendering and inference are not bit-reproducible by default (§4.1).
+- **`BRepOffset` join mode.** Its BRep bytes differ on every build, though geometry and references stay the same ([`dsl.md` §5.4](dsl.md#5-invariants-checked-on-every-compiled-solution)).
+- **The DSL is arbitrary Python** today, and the server does not reload imported modules (NOTES #38).
+
+The direction is to make the lock mandatory for any build that is displayed or exported, and to fail closed when it is missing or stale (review INC-01). The lock key must also cover the lowering code, not just the design file (work item B6 in [`review-response.md`](review-response.md)).
+
+Within the guarantee, determinism requires:
 
 - A pinned kernel, solver, compiler, and package versions (a lockfile), recorded with every solution.
 - Query-based topological references only (§2.2): structural references resolved through kernel history, declared cardinality, no ordinal indices, no references to contingent fragments ([`dsl.md` §3.4](dsl.md#34-references-the-topological-naming-problem)).
 - Explicit branch tags on every sketch construction step, so a constraint system's choice of solution is written down rather than inherited from previous geometry.
-- Determinism verified in CI by rebuilding and comparing topological signatures and canonical BRep text. Spike 01 found byte-identical output across 64 builds per model, in-process and across processes, with OCCT's parallel mode on and off (single machine; cross-platform untested).
+- Determinism verified in CI by rebuilding and comparing topological signatures and BRep text bytes (byte equality, not a canonical form; see [`dsl.md` §5.4](dsl.md#5-invariants-checked-on-every-compiled-solution) for what each hash is stable under). Spike 01 found byte-identical output across 64 builds per model, in-process and across processes, with OCCT's parallel mode on and off (single machine; cross-platform untested).
 - Deterministic evaluation order in the compiler; no reliance on hash ordering or float-sensitive tie-breaking without explicit tolerance rules.
-- A canonical serialization of solutions, so equality can be checked textually as well as geometrically.
+- A canonical serialization of solutions, so equality can be checked textually as well as geometrically. This is a goal: BRep text is a stable serialization on one platform, not a canonical one, and a canonicalizing serializer is an open item.
 
 ---
 
@@ -428,6 +477,10 @@ skeleton: |
   body = extrude(profile, distance=6 * t, symmetric=True)
 exports: [wall_face, mount_face, shelf_face, inner_corner]
 ```
+
+> **Known issues in this example (review INC-02, INC-03, ISS-09; noted 2026-11-16, not yet fixed).**
+> - **"The only literals" is not true.** The skeleton and §8.5 also contain 0.75, 0.8, 6, 0.4, `u=0.75`, `v=0.5`, and `diameter=8 mm`, `examples/shelf_bracket.py` adds `plain(8.0)` and `across=(X, 0.5)`, and `src/dipm/intent_layer.py` hard-codes `TOOL_ACCESS_DIAMETER = 30.0`. The engine adds its own epsilons (1 mm and 2 mm overshoots, a 0.01 mm exposure tolerance, 16 rays). Multiplying a number by a parameter does not make it a relation. These are three different things and should be counted separately in the relations-vs-literals metric (§6): **relations**, **ratio constants** (design decisions that need a reason), and **engine epsilons**.
+> - **Convenience couplings.** `width = 6 * t` means changing material thickness from 5 to 8 mm widens the bracket from 30 to 48 mm. `leg = 0.75 * shelf_depth` and `gusset size = 0.4 * shelf_depth` tie the leg and gusset to shelf depth with no stated purpose. This is the false coupling §5.1 warns against. Each should become an independent parameter, or get an intent node and a check that explains the ratio.
 
 ### 8.2 First decomposition
 
@@ -488,6 +541,8 @@ Candidate fixes the solver can compare by idiomatic score:
 
 Option 2 is shown below: it keeps one gusset (brevity) and adds one meaningful relation. Note this shrinks the lever arm between the screws, which re-triggers R.c1 — exactly how upward verification is supposed to interact with new checks.
 
+> **Known open finding: option 2 probably fails R.c1 (review INC-06, noted 2026-11-16).** Choosing option 2 for brevity contradicts §5, where idiom passes run only on solutions that pass all hard checks, and R.c1 was never actually evaluated. In the v0 build the wall screws sit at about z ≈ 9 and 50 mm on a 150 mm leg. A simplified rigid-pivot estimate about the bottom of the leg gives M ≈ 196 N × 0.16 m ≈ 31 N·m and an upper-anchor pull-out of T = M·z₁/Σzᵢ² ≈ **600 N at 20 kg before the safety factor** (≈ 1.2 kN with SF 2). Screws near the top of the leg would see about 220 N. The model ignores how the leg bears on the wall and the anchors' stiffness, so the absolute numbers are rough; the factor of about 2.7 between the layouts is the robust part. Drywall anchors are unlikely to hold 1.2 kN. The example is left as it is for now. Work item B2 ([`review-response.md`](review-response.md)) implements R.c1 as an executable rung-2 hand-calc, which should make option 2 fail upward verification for real and let option 1 (twin edge gussets) win. Until then, the GUI's PASS on this example means only that the kernel invariants passed.
+
 ### 8.5 Final solution (illustrative DSL)
 
 ```python
@@ -544,6 +599,8 @@ fillet(inner_corner, radius=t)
 | `t` 5 → 8 | Fillet radius and gusset thickness follow | Parameter expressions |
 | Move wall pattern | Cable hole does **not** move (if its intent is "plate center") | No false coupling |
 
+> The first three tests pass partly *because of* the convenience couplings noted in §8.1: "gusset scales" is the 0.4 × `shelf_depth` ratio doing its job, not evidence that the scaling is meant. Once those ratios are justified or replaced, these tests need restating.
+
 ---
 
 ## 9. Where learning happens
@@ -562,7 +619,19 @@ The solution side is deterministic software. Learning targets the intent side:
 | Refactoring (passes 6–7) | Idiomatic-score improvement with all checks preserved |
 | Multimodal grounding | Matching dimensions/relations extracted from images, drawings, or meshes |
 
-Data strategy (from the survey): most large public CAD datasets are non-commercial and strip constraints. A **procedural generator that emits full intent trees with checks** gives license-clean data with ground-truth intent — something no public dataset provides.
+Data strategy (from the survey): most large public CAD datasets are non-commercial and strip constraints. A **procedural generator that emits full intent trees with checks** gives license-clean data with exact intent labels, something no public dataset provides.
+
+**The limit of procedural data (corrected 2026-11-16, review INC-12 / ISS-04).** Earlier drafts called this "ground-truth intent by construction". That is circular. The labels are ground truth *of the generator's ontology*: the intents someone wrote into the generator. A decomposer trained on them learns to recover those intents, not the ones real designers hold, and evaluating it on more generator output can only confirm that. Procedural data is good for pre-training and for regression tests. It cannot tell us whether the system understands designers.
+
+**Real-designer data, needed from day one, at least for evaluation.** A small corpus of (designer intent, designer's model, designer's judgment) is the minimum. Plausible sources, roughly in order of cost:
+
+- **The designer's own answers** to interpretation questions (§10.2) and assumption reviews (§4.8). Every answer is a labelled "this is what I meant".
+- **Accepted and rejected proposals.** When the system proposes a decomposition, check, or refactor, the designer's accept, edit, or reject is a preference label.
+- **Redlines** (see [`user-experience.md`](user-experience.md)): marked-up corrections on renders say what was wrong and where.
+- **Hand-authored evaluation cases:** a few dozen real parts modelled by experienced designers, with their stated intent and their own edit tests, held out from any training.
+- **Licensed feature-tree datasets** (e.g. Onshape-derived or Fusion 360 Gallery data, subject to their licenses, several of which are non-commercial or evaluation-only). They record real feature and end-condition choices, though not the reasons behind them.
+
+None of this corpus exists yet.
 
 The first working system will likely use a frontier model as the intent engine (agent + tools); fine-tuning a smaller open model comes later, rewarded by the same checks and score.
 
@@ -593,3 +662,4 @@ The first working system will likely use a frontier model as the intent engine (
 11. **DSL and engine.** See [`dsl.md` §7](dsl.md#7-open-risks) for DSL-specific risks.
 12. ~~**Where the designer works.**~~ Decided: standalone for now. See [`user-experience.md` §5](user-experience.md#5-decision-where-does-the-designer-work).
 13. **Score weights.** How to set and validate the idiomatic-score weights — possibly against human CAD-expert rankings.
+14. **Rename "intent" → "purpose" in files, code and UI?** E.g. `<design>.purposes.yaml`, `IntentTag` → `PurposeTag`, the GUI's "Intent tree" label → "Purposes", so the code matches the terminology above. Deferred; the docs disambiguate in the meantime.
