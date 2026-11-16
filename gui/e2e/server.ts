@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const ROOT = resolve(here, "../..");
-const PY = join(ROOT, ".venv/bin/python");
+export const PY = join(ROOT, ".venv/bin/python");
 let nextPort = 8800 + Math.floor(Math.random() * 100);
 
 export interface Server { url: string; proc: ChildProcess; dir: string; design: string; stop: () => void }
@@ -16,9 +16,12 @@ export interface Server { url: string; proc: ChildProcess; dir: string; design: 
 export function copyDesign(rel: string): string {
   const src = join(ROOT, rel);
   const dir = mkdtempSync(join(tmpdir(), "dipm-e2e-"));
-  const lock = src.replace(/\.py$/, ".interpretations.json");
   cpSync(src, join(dir, basename(src)));
-  if (existsSync(lock)) cpSync(lock, join(dir, basename(lock)));
+  // the design set: lock, intent file, review record (iteration 2)
+  for (const suffix of [".interpretations.json", ".intent.yaml", ".review.json"]) {
+    const f = src.replace(/\.py$/, suffix);
+    if (existsSync(f)) cpSync(f, join(dir, basename(f)));
+  }
   return join(dir, basename(src));
 }
 

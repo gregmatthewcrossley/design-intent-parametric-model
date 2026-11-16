@@ -36,7 +36,8 @@ async function clickFace(page: Page, tag: string) {
 
 test.describe("shelf bracket", () => {
   let srv: Server;
-  test.beforeAll(async () => { srv = await startServer(join(process.cwd(), "../examples/shelf_bracket.py")); });
+  // a copy: since iteration 2 the GUI can write the intent file, and these tests must never touch examples/
+  test.beforeAll(async () => { srv = await startServer(copyDesign("examples/shelf_bracket.py")); });
   test.afterAll(() => srv.stop());
 
   test("1: the tree shows R, A, A.P, A.P.1, A.P.2, A.3, B, B.1, C with green dots", async ({ page }) => {

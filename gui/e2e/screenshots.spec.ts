@@ -1,7 +1,7 @@
 // Saves review screenshots to gui/screenshots/ (light and dark).  `npm run screenshots`.
 import { test, type Page } from "@playwright/test";
 import { join } from "node:path";
-import { startServer, type Server } from "./server";
+import { copyDesign, startServer, type Server } from "./server";
 
 const OUT = join(process.cwd(), "screenshots");
 
@@ -23,7 +23,7 @@ async function clickFace(page: Page, tag: string) {
 
 test.describe("screenshots", () => {
   let srv: Server;
-  test.beforeAll(async () => { srv = await startServer(join(process.cwd(), "../examples/shelf_bracket.py")); });
+  test.beforeAll(async () => { srv = await startServer(copyDesign("examples/shelf_bracket.py")); });
   test.afterAll(() => srv.stop());
 
   test("bracket, WHY, countersink pinned (light)", async ({ page }) => {
