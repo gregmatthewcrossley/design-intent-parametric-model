@@ -51,7 +51,11 @@ export function bracket(): BuildJ {
     touched_by: [e.feature], failing: false, failing_touched: false, text: "",
   });
   return {
-    design: "shelf_bracket", params: { shelf_depth: 200, t: 5, screw: "#8" }, ok: true, status: "PASS", error_count: 0,
+    design: "shelf_bracket", params: { shelf_depth: 200, t: 5, screw: "#8" }, ok: true,
+    status: { kernel: { state: "pass", failures: 0, features: 6 },
+              intent: { total: 0, run: 0, not_run: 0, failing: 0, thin: 0, ample: 0, failing_ids: [], thin_ids: [],
+                        ample_ids: [], not_run_ids: [] }, headline: "Kernel ✓ · Intent checks: none stated", text: "" },
+    error_count: 0,
     errors: [], ms: 40, features, failing: [],
     tree: { roots: ["R"], order: ["R", "A", "A.P", "A.P.1", "A.P.2", "A.3", "B", "B.1", "C"], nodes },
     diagnostics: { no_intent: [], no_feature: [], multi_intent: [], cross_intent: [] },

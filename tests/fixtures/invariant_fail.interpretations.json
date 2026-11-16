@@ -5,6 +5,11 @@
     "design_source_sha256": "06bd47a09b136e2d67a35b3a663bdd054b37efefcbbb771c2aef40086a3041dc",
     "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
+    "code_sha256": "e43874da57a56b683f4eacc8779476c89cc82900b50ead0335dd27d6ae1d76a3",
+    "packages": {
+      "cadquery-ocp-novtk": "8.0.1.1.0",
+      "build123d": "0.13.0"
+    },
     "dipm": "0.0.1"
   },
   "prefs": null,
@@ -51,7 +56,11 @@
       "eliminated": [],
       "supports": [
         "H.hole"
-      ]
+      ],
+      "feasible": [
+        "through(t)"
+      ],
+      "resolution": "author"
     }
   ],
   "questions": [],

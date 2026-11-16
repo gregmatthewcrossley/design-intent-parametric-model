@@ -1,0 +1,175 @@
+{
+  "dipm_resolution": 1,
+  "design": "invariant_fail",
+  "context": {
+    "assumed": {
+      "process": {
+        "value": "fdm_printing",
+        "made_by": "model",
+        "status": "proposed",
+        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+      },
+      "material": {
+        "value": "PLA",
+        "made_by": "model",
+        "status": "proposed",
+        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+      },
+      "layer_height": {
+        "value": "0.2 mm",
+        "made_by": "model",
+        "status": "proposed",
+        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+      },
+      "nozzle": {
+        "value": "0.4 mm",
+        "made_by": "model",
+        "status": "proposed",
+        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+      }
+    }
+  },
+  "orientation": {
+    "up": [
+      0.0,
+      0.0,
+      -1.0
+    ],
+    "label": "Print with the R.plate.cap(END) down",
+    "chosen": {
+      "up": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "overhang_mm2": 0.0,
+      "support_mm3": 0.0,
+      "bed_mm2": 2380.4,
+      "cost": -238.04,
+      "overhang_faces": [],
+      "down_face": "R.plate.cap(END)",
+      "down_face_id": 6,
+      "down_face_area_mm2": 2380.4
+    },
+    "runner_up": {
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "overhang_mm2": 0.0,
+      "support_mm3": 0.0,
+      "bed_mm2": 700.0,
+      "cost": -70.0,
+      "overhang_faces": [],
+      "down_face": "R.plate.side(a-b)",
+      "down_face_id": 0,
+      "down_face_area_mm2": 400.0
+    },
+    "candidates": [
+      {
+        "up": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "overhang_mm2": 0.0,
+        "support_mm3": 0.0,
+        "bed_mm2": 2380.4,
+        "cost": -238.04,
+        "overhang_faces": [],
+        "down_face": "R.plate.cap(END)",
+        "down_face_id": 6,
+        "down_face_area_mm2": 2380.4
+      },
+      {
+        "up": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "overhang_mm2": 0.0,
+        "support_mm3": 0.0,
+        "bed_mm2": 700.0,
+        "cost": -70.0,
+        "overhang_faces": [],
+        "down_face": "R.plate.side(a-b)",
+        "down_face_id": 0,
+        "down_face_area_mm2": 400.0
+      },
+      {
+        "up": [
+          0.0,
+          -1.0,
+          0.0
+        ],
+        "overhang_mm2": 0.0,
+        "support_mm3": 0.0,
+        "bed_mm2": 700.0,
+        "cost": -70.0,
+        "overhang_faces": [],
+        "down_face": "R.plate.side(c-d)",
+        "down_face_id": 7,
+        "down_face_area_mm2": 400.0
+      },
+      {
+        "up": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "overhang_mm2": 450.0,
+        "support_mm3": 4500.0,
+        "bed_mm2": 150.0,
+        "cost": 525.0,
+        "overhang_faces": [
+          10
+        ],
+        "down_face": "R.plate.side(b-c)",
+        "down_face_id": 2,
+        "down_face_area_mm2": 150.0
+      },
+      {
+        "up": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "overhang_mm2": 450.0,
+        "support_mm3": 22500.0,
+        "bed_mm2": 150.0,
+        "cost": 885.0,
+        "overhang_faces": [
+          8
+        ],
+        "down_face": "R.plate.side(d-a)",
+        "down_face_id": 1,
+        "down_face_area_mm2": 150.0
+      },
+      {
+        "up": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "overhang_mm2": 1780.4,
+        "support_mm3": 26706.0,
+        "bed_mm2": 600.0,
+        "cost": 2254.52,
+        "overhang_faces": [
+          3,
+          5
+        ],
+        "down_face": "S.rib.cap(START)",
+        "down_face_id": 11,
+        "down_face_area_mm2": 600.0
+      }
+    ],
+    "rationale": "Print with the R.plate.cap(END) down: 0 mm² overhang beyond 45°, 0 mm³ support, 2,380 mm² on the bed; runner-up R.plate.side(a-b) down: 0 mm² overhang, 0 mm³ support, 700 mm² on the bed. Horizontal holes up to Ø10 mm bridge and are not counted; cost = overhang + 0.02×support − 0.1×bed contact (placeholder weights)",
+    "made_by": "model",
+    "status": "proposed",
+    "reviewed": false,
+    "pack": "fdm_printing@0.0-placeholder",
+    "key": "77517719a701ec93"
+  }
+}

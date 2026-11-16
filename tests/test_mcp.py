@@ -44,7 +44,9 @@ def test_read_tools(tmp_path):
         i, _, _ = await call("get_intent")
         assert i["doc"]["intents"][0]["id"] == "R" and i["stale_nodes"] == [] and i["sha256"]
         b, _, _ = await call("build", {"params": {"shelf_depth": 300}})
-        assert b["status"] == "PASS" and b["params"]["shelf_depth"] == 300
+        # B1: tiered status, no bare PASS; the bracket fails R.c1 honestly (architecture §8.4a)
+        assert b["kernel"] == "pass" and b["params"]["shelf_depth"] == 300
+        assert "R.c1" in b["status"]["intent"]["failing_ids"] and "PASS" not in json.dumps(b["status"])
         bad, err, text = await call("build", {"params": {"shelf_depth": 1000}})
         assert err and "shelf_depth" in text
         w, _, _ = await call("why", {"face_id": 0})
@@ -88,7 +90,8 @@ def test_stale_nodes_requests_propose_feedback(tmp_path):
             "summary": "A.3: offset 10 mm above the lower screw", "rationale": "the intent changed",
             "files": {"shelf_bracket.py": new}, "base_hashes": src["base_hashes"], "addresses_nodes": ["A.3"]})
         assert not err, text
-        assert p["status"] == "ready" and p["checks_pass"] and p["evaluation"]["after"]["status"] == "PASS"
+        assert p["status"] == "ready" and p["checks_pass"] and p["evaluation"]["after"]["kernel"] == "pass"
+        assert p["failing_checks"] == []        # R.c1 fails at R, not at the addressed A.3 (#54)
         assert p["evaluation"]["after"]["stale_nodes"] == []
         assert "offset(wall_pts[0], Z, 10.0)" in p["evaluation"]["text_diff"]["shelf_bracket.py"]
         # stale base: refused for application, marked stale

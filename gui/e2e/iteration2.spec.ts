@@ -209,10 +209,12 @@ test("rename id: the intent file and the DSL's intent literals change together",
     await selectNode(page, "A.3");
     await page.getByTestId("rename-id").click();
     await page.getByTestId("rename-input").fill("A.C");
+    await expect(page.getByTestId("rename-features")).not.toBeChecked();   // NOTES #49 change: opt-in, off by default
     await page.getByTestId("rename-go").click();
     await expect(row(page, "A.C")).toBeVisible();
     await expect(row(page, "A.3")).toHaveCount(0);
     expect(readFileSync(srv.design, "utf8")).toContain('intent("A.C", "hole"');
+    expect(readFileSync(srv.design, "utf8")).toContain('"A.3.cable"');           // feature ids untouched by default
     expect(readFileSync(intentFile(srv), "utf8")).toContain("id: A.C\n");
     await expect(page.locator(".stale-tag")).toHaveCount(0);   // a rename is not an intent change
     await expect(page.getByTestId("diagnostics")).not.toContainText("missing from the intent file");
@@ -254,11 +256,11 @@ test.describe("iteration 2b: the model in the loop", () => {
     const p2 = simulateClaude(srv.design, "propose", "10", "p1");
     expect(p2.revises).toBe("p1");
     const item2 = page.locator('[data-proposal="p2"]');
-    await expect(item2).toContainText("checks pass");
+    await expect(item2).toContainText("no failing checks here");     // R.c1 fails at R, not at the addressed A.3
     await item2.click();
     const detail = page.getByTestId("proposal-detail");
     await expect(detail).toContainText("revises p1");
-    await expect(page.getByTestId("proposal-check-status")).toHaveText("PASS");
+    await expect(page.getByTestId("proposal-check-status")).toContainText("Kernel ✓");
     await expect(detail).toContainText("9/9 parameter sample points pass");
     await expect(page.getByTestId("text-diff")).toContainText("+    d.hole(\"A.3.cable\", on=mount_face, at=offset(wall_pts[0], Z, 10.0)");
     await expect(page.getByTestId("semantic-diff")).toContainText("interpretation − A.3.cable/centered_on.point");
@@ -270,6 +272,7 @@ test.describe("iteration 2b: the model in the loop", () => {
     const nSelected = () => page.evaluate(() => (window as any).__dipm.viewer.states().filter((s: string) => s === "selected").length);
     await page.getByTestId("compare-before").click();
     await expect(page.getByTestId("compare-banner")).toContainText("before");
+    await expect(page.getByTestId("compare-banner")).toContainText("COMPARING PROPOSAL p2 · inspection paused");   // #57
     await expect.poll(nSelected).toBe(1);                     // the proposal mesh is loaded and painted
     expect(await zOf(ev.changed_faces.before[0])).toBeCloseTo(32.5, 0);
     await page.getByTestId("compare-after").click();
@@ -293,7 +296,7 @@ test.describe("iteration 2b: the model in the loop", () => {
     await expect(page.getByTestId("compare-banner")).toHaveCount(0);
     expect(readFileSync(srv.design, "utf8")).toContain("at=offset(wall_pts[0], Z, 10.0)");
     const b = await buildOf(page);
-    expect(b.status).toBe("PASS");
+    expect(b.status.kernel.state).toBe("pass");
     expect(b.features.find((f: any) => f.id === "A.3.cable").detail.centres[0][2]).toBeCloseTo(19, 4);
     expect(b.interpretations.slots.length).toBe(3);
     const fb2 = simulateClaude(srv.design, "feedback");

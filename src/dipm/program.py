@@ -263,11 +263,13 @@ class Build:
         intent tags (feature + instance), and the events it went through.  Edges that no
         feature tagged are explained as `edges_between` their adjacent faces."""
         rec = {r.id: r for r in self.records}
+        dt = self.design.display_tag
         entries = []
         for e in self.ledger.who(sub):
             r = rec.get(e.tag.feature)
             entries.append(WhyEntry(e.tag, e.tag.feature, r.op if r else "?", r.lowered_from if r else None,
-                                    r.tags if r else (), r.instance_tags.get(e.tag.source, ()) if r else (),
+                                    tuple(dt(t) for t in r.tags) if r else (),
+                                    tuple(dt(t) for t in r.instance_tags.get(e.tag.source, ())) if r else (),
                                     e.genealogy))
         kind = K.KIND_NAME.get(sub.ShapeType(), "?")
         w = Why(kind, K.describe(sub, self.shape), entries)
@@ -357,6 +359,44 @@ class Design:
         self._interp_source = ""
         self.intent_labels: dict = {}               # intent node id -> label (optional; see label_intent)
         self.intent_file: str | None = None         # <design>.intent.yaml (see use_intent)
+        self.checks: dict = {}                      # intent check id -> checks.IntentCheck (see check)
+        self._statements: tuple | None = None       # (intent file hash, {node id: statement})
+
+    def check(self, check_id: str, impl) -> "Design":
+        """Bind an executable check (`dipm.checks`) to an intent-file check id, e.g. R.c1.  The
+        statement stays in the intent file; the grounding (which features, which load) lives
+        here, next to the geometry it reads (docs/gui.md §8.2 3E.3)."""
+        if check_id in self.checks:
+            raise ValueError(f"check {check_id!r} bound twice")
+        self.checks[check_id] = impl
+        return self
+
+    def intent_statements(self) -> dict:
+        """node id -> statement from the intent file (empty without one).  Re-read when the file
+        changes (by content hash)."""
+        from .intent_store import path_for
+        from .fileio import file_sha256
+        path = self.intent_file
+        if path is None and self.lock is not None:
+            path = path_for(self.lock.design_file)
+        if not path or not os.path.exists(path):
+            return {}
+        h = file_sha256(path)
+        if self._statements is None or self._statements[0] != h:
+            from . import intent_store
+            try:
+                doc = intent_store.load(path)
+                st = {i: str(doc.find(i)[0].get("statement", "")) for i in doc.node_ids()}
+            except Exception:   # noqa: BLE001 - an invalid file falls back to the tag notes
+                st = {}
+            self._statements = (h, st)
+        return self._statements[1]
+
+    def display_tag(self, t: "IntentTag") -> "IntentTag":
+        """The tag as shown to people (NOTES #45 change): with an intent file its note is the
+        node's statement; tag notes are only a fallback for designs without a file."""
+        st = self.intent_statements().get(t.node)
+        return IntentTag(t.node, t.word, st) if st else t
 
     def label_intent(self, node: str, label: str) -> "Design":
         """Name an intent-tree node for display (docs/gui.md §2 item 4).  Optional: without it

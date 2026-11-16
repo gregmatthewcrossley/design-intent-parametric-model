@@ -1,9 +1,12 @@
 // Right panel: inspector ("why is this here?"), checks, interpretations (docs/gui.md §2 items 5–7).
 
-import { answer, answering, build, design, hover, select, selection } from "../store";
-import type { BuildJ, FaceJ, FeatureJ, IntentTagJ, Selection, WhyEntryJ } from "../types";
+import { useEffect, useRef } from "preact/hooks";
+import { answer, answering, build, design, focusCheck, hover, persist, select, selection, showDetails } from "../store";
+import type { BuildJ, CheckTermJ, FaceJ, FeatureJ, IntentCheckJ, IntentTagJ, Selection, WhyEntryJ } from "../types";
 import { faceLabel, featureMap, fmtNumber } from "../model";
-import { Dot, Mono, Section } from "./common";
+import { Dot, Guess, Mono, Section } from "./common";
+import { acceptGuess } from "../intent";
+import { marginBar, STATE_TEXT } from "../margins";
 import { staleFeatures } from "../edit";
 import { NodeEditor, StaleTag, editable } from "./IntentEditor";
 import { ProposalsPanel, proposalBadge } from "./Proposals";
@@ -18,8 +21,10 @@ export function RightPanel() {
       <Section id="inspector" title="INSPECTOR" badge={<span class="muted">why is this here?</span>}>
         <Inspector />
       </Section>
-      <Section id="checks" title="CHECKS" attention={nFail > 0}
-               badge={b ? (nFail ? <span class="count fail">{nFail} failing</span> : <span class="count ok">all pass</span>) : null}>
+      <Section id="checks" title="CHECKS" attention={nFail > 0 || (b?.status.intent.failing ?? 0) > 0}
+               forceOpen={focusCheck.value?.at}
+               badge={b ? <span class={`count ${nFail || b.status.intent.failing ? "fail" : "neutral"}`} data-testid="checks-badge">
+                 {b.status.intent.failing ? `${b.status.intent.failing} failing · ` : ""}{nFail ? `kernel ✗${nFail}` : "kernel ✓"} · {b.status.intent.run}/{b.status.intent.total} run</span> : null}>
         <Checks />
       </Section>
       <Section id="interpretations" title="INTERPRETATIONS" attention={nAttn > 0}
@@ -96,6 +101,7 @@ function FaceInspector({ b, f }: { b: BuildJ; f: FaceJ }) {
   return (
     <div class="inspector" data-testid="inspector-face">
       <div class="insp-head"><span class="kind">face</span> <Mono>f{f.id}</Mono> <span class="muted">{f.descriptor}</span></div>
+      {f.size && <div class="small" data-testid="face-size">{f.size}</div>}
       {f.failing && <div class="callout fail">touched by a failing feature</div>}
       {f.entries.length === 0 && <div class="muted">no genealogy (untracked)</div>}
       {f.entries.map((e, i) => <Entry key={i} e={e} />)}
@@ -147,7 +153,10 @@ function NodeInspector({ b, id }: { b: BuildJ; id: string }) {
   return (
     <div class="inspector" data-testid="inspector-node">
       <div class="insp-head"><span class="kind">intent</span> <Mono>{id}</Mono> <Dot status={n.status} />
-        {n.stale && <StaleTag compact />}</div>
+        {n.stale && <StaleTag compact />}
+        {n.review_state === "reviewed_failing" && <span class="pill fail-pill" data-testid="reviewed-failing">reviewed with failing checks</span>}
+        {n.review_state === "unreviewed" && <span class="guess-chip guess">not reviewed</span>}</div>
+      <NodeChecks b={b} id={id} />
       {fileTree ? <NodeEditor b={b} n={n} /> :
         <div class="insp-label">{n.label || <span class="muted">(no label)</span>}</div>}
       <dl class="kv">
@@ -237,11 +246,61 @@ function ErrorBox({ e }: { e: NonNullable<FeatureJ["error"]> }) {
 const CHECK_COLS: [string, string][] = [["validity", "valid"], ["euler", "Euler"], ["delta_H", "ΔH"], ["delta_S", "ΔS"],
                                          ["volume_sign", "vol"]];
 
+/** Checks grouped by tier (docs/gui.md §8.3 item 2): the kernel tier in plain words (engine terms
+ *  behind Details), then every intent check, run or not, each with a margin bar and a state. */
 export function Checks() {
   const b = build.value;
+  const ref = useRef<HTMLDivElement>(null);
+  const fc = focusCheck.value;
+  useEffect(() => {
+    if (!fc || !ref.current) return;
+    const el = ref.current.querySelector(`[data-check-id="${CSS.escape(fc.id)}"]`) as HTMLElement | null;
+    if (el) {
+      el.scrollIntoView({ block: "nearest" });
+      el.classList.add("flash");
+      setTimeout(() => el.classList.remove("flash"), 1200);
+    }
+  }, [fc?.at]);
   if (!b) return null;
+  const det = showDetails.value;
+  const k = b.status.kernel;
+  const ics = b.intent_checks ?? [];
   return (
-    <div class="checks">
+    <div class="checks" ref={ref}>
+      <div class="checks-tools">
+        <label class="small"><input type="checkbox" checked={det} data-testid="details-toggle"
+               onChange={(e) => { showDetails.value = (e.target as HTMLInputElement).checked; persist("showDetails", showDetails.value); }} />
+          Details (engine terms)</label>
+      </div>
+      <div class="tier-group" data-testid="tier-kernel-group">
+        <div class="tier-head">Kernel <span class={k.state === "pass" ? "pass-text" : "fail-text"}>
+          {k.state === "pass" ? "✓ every feature passed" : `✗ ${k.failures} failure(s)`}</span></div>
+        <div class={`check-plain ${k.state === "pass" ? "ok" : "fail"}`} data-check-id="kernel">
+          {k.state === "pass" ? `The geometry is a valid solid and each of its ${k.features} features did what it says ` +
+            "(made the holes it should, removed or added material, split nothing)." :
+            "A feature did not do what it says: see the red rows."}
+        </div>
+        {(det || k.state !== "pass") && <KernelTable b={b} />}
+      </div>
+      <div class="tier-group" data-testid="tier-intent-group">
+        <div class="tier-head">Intent checks <span class="muted">{b.status.intent.run} of {b.status.intent.total} run · worst case over
+          the input ranges</span></div>
+        {ics.map((c) => <IntentCheckRow key={c.id} c={c} det={det} />)}
+        {ics.length === 0 && <div class="small muted">No intent checks stated for this design.</div>}
+      </div>
+      {b.signature && det && (
+        <div class="sig mono small muted">
+          (V,E,F,R,S,H) = ({b.signature.VEFRSH.join(", ")}) · vol {fmtNumber(b.signature.volume, 7)} mm³ ·
+          {" "}{b.coverage.with_genealogy}/{b.coverage.faces} faces explained
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KernelTable({ b }: { b: BuildJ }) {
+  return (
+    <>
       <table class="checks-table">
         <thead>
           <tr><th>#</th><th>feature</th>{CHECK_COLS.map(([, h]) => <th key={h} class="c">{h}</th>)}<th class="c">refs</th></tr>
@@ -253,7 +312,8 @@ export function Checks() {
             const sel = selection.value?.kind === "feature" && selection.value.id === f.id;
             return (
               <tr key={f.id} class={`${f.status} ${sel ? "selected" : ""}`} onClick={() => select(s)}
-                  onMouseEnter={() => (hover.value = s)} onMouseLeave={() => (hover.value = null)} data-check-row={f.id}>
+                  onMouseEnter={() => (hover.value = s)} onMouseLeave={() => (hover.value = null)} data-check-row={f.id}
+                  data-check-id={`feature:${f.id}`}>
                 <td class="mono num muted">{f.index + 1}</td>
                 <td class="mono">{f.id}</td>
                 {CHECK_COLS.map(([k]) => {
@@ -282,12 +342,96 @@ export function Checks() {
           {(e.expected !== null || e.got !== null) && <div class="mono small">expected {e.expected} · got {e.got}</div>}
         </div>
       ))}
-      {b.signature && (
-        <div class="sig mono small muted">
-          (V,E,F,R,S,H) = ({b.signature.VEFRSH.join(", ")}) · vol {fmtNumber(b.signature.volume, 7)} mm³ ·
-          {" "}{b.coverage.with_genealogy}/{b.coverage.faces} faces explained
+    </>
+  );
+}
+
+function num(x: number, unit = ""): string {
+  if (x === null || x === undefined || !isFinite(x)) return String(x);
+  const a = Math.abs(x);
+  const t = a >= 100 ? x.toLocaleString("en-US", { maximumFractionDigits: 0 }) : a >= 1 ? x.toFixed(2) : x.toPrecision(2);
+  return unit ? `${t} ${unit}` : t;
+}
+
+export function MarginBar({ t }: { t: CheckTermJ }) {
+  const lim = Math.abs(t.limit) > 1e-12 ? Math.abs(t.limit) : null;
+  const relN = lim ? t.margin / lim : (t.margin < 0 ? -1 : t.margin > 0 ? 1 : 0);
+  const relW = t.margin_rel ?? (t.margin_worst < 0 ? -1 : t.margin_worst > 0 ? 1 : 0);
+  const m = marginBar(relN, relW);
+  return (
+    <div class={`margin-bar ${m.negative ? "neg" : "pos"} st-${t.state}`} data-testid="margin-bar"
+         data-sign={m.negative ? "negative" : "positive"}
+         title={`margin ${num(t.margin, t.unit)} nominal, ${num(t.margin_worst, t.unit)} worst case`}>
+      <div class="mb-track">
+        <div class="mb-neg" />
+        <div class="mb-zero" style={{ left: `${m.zero * 100}%` }} />
+        <div class="mb-span" style={{ left: `${Math.min(m.zero, m.worst) * 100}%`, width: `${Math.abs(m.worst - m.zero) * 100}%` }} />
+        <div class="mb-nom" style={{ left: `${m.nominal * 100}%` }} title="nominal" />
+        <div class="mb-worst" style={{ left: `${m.worst * 100}%` }} title="worst case" />
+        {m.offLeft && <span class="mb-off left">◀</span>}
+      </div>
+      <div class="mb-labels small mono">
+        <span>{t.sense === "<=" ? "value" : "value"} {num(t.nominal, t.unit)} <span class="muted">(worst {num(t.worst, t.unit)})</span></span>
+        <span>limit {t.sense === "<=" ? "≤" : "≥"} {num(t.limit, t.unit)}{t.limit_worst !== t.limit ? <span class="muted"> (worst {num(t.limit_worst, t.unit)})</span> : null}</span>
+        <span class={t.margin_worst < 0 ? "fail-text" : t.state === "thin" ? "warn-text" : "pass-text"}>
+          margin {num(t.margin, t.unit)} · worst {num(t.margin_worst, t.unit)}</span>
+      </div>
+    </div>
+  );
+}
+
+function IntentCheckRow({ c, det }: { c: IntentCheckJ; det: boolean }) {
+  const b = build.value;
+  const h = c.headline;
+  return (
+    <div class={`ic-row st-${c.state.replace(" ", "-")}`} data-check-id={c.id} data-testid={`check-${c.id}`}>
+      <div class="ic-head">
+        <Mono class="cid">{c.id}</Mono>
+        <span class={`state-chip st-${c.state.replace(" ", "-")}`} data-testid="check-state">{STATE_TEXT[c.state] ?? c.state}</span>
+        <Guess pkey={`check:${c.id}`} label={<span class="small">{c.priority || c.kind}</span>}
+               onAccept={() => void acceptGuess(`check:${c.id}`, b)} />
+      </div>
+      <div class="ic-plain">{c.plain || c.statement}</div>
+      {c.state === "not run" && <div class="small muted">not run: {c.reason}</div>}
+      {h && <MarginBar t={h} />}
+      {c.terms.length > 1 && !det && <div class="small muted">governed by {c.governing}; {c.terms.length - 1} more term(s) under Details</div>}
+      {c.assumptions.length > 0 && (
+        <div class="small ic-asm">relies on {c.assumptions.map((a) => (
+          <Guess key={a.id} pkey={a.id === "print_orientation" ? "orientation" : `assumption:${a.id}`}
+                 label={<span>{a.id === "print_orientation" ? "print orientation" : a.id}</span>} title={a.statement}
+                 onAccept={() => void acceptGuess(a.id === "print_orientation" ? "orientation" : `assumption:${a.id}`, b)} />))}</div>
+      )}
+      {det && (
+        <div class="ic-details small" data-testid="check-details">
+          {c.terms.map((t) => (
+            <div key={t.name} class="ic-term">
+              <div><b>{t.name}</b>{t.name === c.governing && c.terms.length > 1 ? " (governs)" : ""} · <Mono>{t.formula}</Mono></div>
+              {t !== h && <MarginBar t={t} />}
+              <div class="muted">{t.method}</div>
+              <ul class="ic-inputs">{t.inputs.map((q) => (
+                <li key={q.name}><Mono>{q.label || q.name}</Mono> {num(q.nominal, q.unit)}{q.lo !== q.hi ? ` [${num(q.lo)}, ${num(q.hi)}]` : ""}
+                  <span class="muted"> · {q.source}{q.placeholder ? " (placeholder)" : ""}</span></li>))}</ul>
+            </div>
+          ))}
+          {c.method_assumptions.length > 0 && <ul class="ic-model">{c.method_assumptions.map((a, i) => <li key={i}>{a}</li>)}</ul>}
+          <div class="muted">{c.kind} (rung {c.rung}){c.source ? ` · ${c.source}` : ""} · node {c.node}</div>
         </div>
       )}
+    </div>
+  );
+}
+
+function NodeChecks({ b, id }: { b: BuildJ; id: string }) {
+  const cs = (b.intent_checks ?? []).filter((c) => c.node === id);
+  if (!cs.length) return null;
+  return (
+    <div class="node-checks" data-testid="node-checks">
+      {cs.map((c) => (
+        <button key={c.id} class={`ic-mini st-${c.state.replace(" ", "-")}`} onClick={() => (focusCheck.value = { id: c.id, at: Date.now() })}
+                title={c.plain || c.statement}>
+          <Mono>{c.id}</Mono> {STATE_TEXT[c.state]}
+        </button>
+      ))}
     </div>
   );
 }
@@ -331,10 +475,18 @@ export function Interpretations() {
             <button class="link mono" onClick={() => select({ kind: "feature", id: s.feature })}>{s.id}</button>
           </div>
           <div class="slot-chosen">
-            <span class="reading chosen mono">{s.chosen}</span>
-            <span class={`sens sens-${s.sensitivity}`} title={s.sensitivity_detail}>sensitivity {s.sensitivity}</span>
+            <Guess pkey={`slot:${s.id}`} label={<span class="reading chosen mono">{s.chosen}</span>}
+                   onAccept={() => void acceptGuess(`slot:${s.id}`, b)} testid="slot-guess" />
+            <span class={`sens sens-${s.sensitivity}`} title={s.sensitivity_detail}>
+              {s.sensitivity === "forced" ? "forced" : s.sensitivity === "insensitive" ? "insensitive" : `sensitivity ${s.sensitivity}`}</span>
             <span class="made-by">{s.made_by}</span>
           </div>
+          {s.resolution && s.resolution !== "author" && (
+            <div class={`small resolution res-${s.resolution}`} data-testid="slot-resolution">
+              {s.resolution === "confirmed" ? <>meant: confirmed by {s.confirmed_by?.join(", ")}</> :
+                <>feasible ({(s.feasible ?? []).join(", ")}), not confirmed as meant: no intent check at {s.node} has run</>}
+            </div>
+          )}
           <div class="small">{s.rationale}</div>
           {s.alternatives.length > 0 && (
             <div class="small muted">also survive: {s.alternatives.map((a) => <span class="reading mono" key={a}>{a}</span>)}

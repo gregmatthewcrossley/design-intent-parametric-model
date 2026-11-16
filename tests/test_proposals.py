@@ -61,7 +61,8 @@ def test_lifecycle_evaluate_accept_records_review_and_clears_staleness(design):
     p = st.evaluate("p1")
     assert p["status"] == "ready", p.get("status_detail")
     ev = p["evaluation"]
-    assert ev["ok"] and ev["after"]["status"] == "PASS" and ev["sweep"]["failing"] == []
+    assert ev["ok"] and ev["after"]["kernel"] == "pass" and ev["sweep"]["failing"] == []   # B1: tiered status
+    assert ev["failing_checks"] == [] and not ev["needs_override"]
     assert ev["before"]["stale_nodes"] == ["A.3"] and ev["after"]["stale_nodes"] == []
     ch = {c["id"]: c for c in ev["semantic_diff"]["features"]["changed"]}
     assert ch["A.3.cable"]["detail"]["before"]["centres"] == [[0.0, 5.0, 32.5]]
@@ -158,7 +159,7 @@ def test_http_api_create_accept_reject_and_requests(design):
         j = c.post(f"/api/proposals/{pid}/accept", json={}).json()
         assert j["proposal"]["status"] == "accepted"
         b = j["build"]
-        assert b["status"] == "PASS" and not b["tree"]["nodes"]["A.3"]["stale"] and b["stale"] == {}
+        assert b["kernel_ok"] and not b["tree"]["nodes"]["A.3"]["stale"] and b["stale"] == {}
         cable = next(f for f in b["features"] if f["id"] == "A.3.cable")
         assert cable["detail"]["centres"][0][2] == pytest.approx(19.0)
         lst = c.get("/api/proposals").json()

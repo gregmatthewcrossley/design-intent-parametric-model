@@ -1,0 +1,166 @@
+{
+  "dipm_resolution": 1,
+  "design": "shelf_bracket",
+  "context": {
+    "assumed": {
+      "layer_height": {
+        "value": "0.2 mm",
+        "made_by": "model",
+        "status": "proposed",
+        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+      },
+      "nozzle": {
+        "value": "0.4 mm",
+        "made_by": "model",
+        "status": "proposed",
+        "source": "fdm_printing pack default (0.0-placeholder), tolerance-uncertainty §4.2"
+      }
+    }
+  },
+  "orientation": {
+    "up": [
+      0.0,
+      0.0,
+      -1.0
+    ],
+    "label": "Print with the shelf face down",
+    "chosen": {
+      "up": [
+        0.0,
+        0.0,
+        -1.0
+      ],
+      "overhang_mm2": 0.0,
+      "support_mm3": 0.0,
+      "bed_mm2": 4784.1,
+      "cost": -478.41,
+      "overhang_faces": [],
+      "down_face": "shelf face",
+      "down_face_id": 15,
+      "down_face_area_mm2": 4784.1
+    },
+    "runner_up": {
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "overhang_mm2": 0.0,
+      "support_mm3": 0.0,
+      "bed_mm2": 4418.1,
+      "cost": -441.81,
+      "overhang_faces": [],
+      "down_face": "wall face",
+      "down_face_id": 13,
+      "down_face_area_mm2": 4417.9
+    },
+    "candidates": [
+      {
+        "up": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "overhang_mm2": 0.0,
+        "support_mm3": 0.0,
+        "bed_mm2": 4784.1,
+        "cost": -478.41,
+        "overhang_faces": [],
+        "down_face": "shelf face",
+        "down_face_id": 15,
+        "down_face_area_mm2": 4784.1
+      },
+      {
+        "up": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "overhang_mm2": 0.0,
+        "support_mm3": 0.0,
+        "bed_mm2": 4418.1,
+        "cost": -441.81,
+        "overhang_faces": [],
+        "down_face": "wall face",
+        "down_face_id": 13,
+        "down_face_area_mm2": 4417.9
+      },
+      {
+        "up": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "overhang_mm2": 3194.6,
+        "support_mm3": 39932.5,
+        "bed_mm2": 1530.4,
+        "cost": 3840.21,
+        "overhang_faces": [
+          4
+        ],
+        "down_face": "R.body.cap(START)",
+        "down_face_id": 1,
+        "down_face_area_mm2": 1530.4
+      },
+      {
+        "up": [
+          -1.0,
+          0.0,
+          0.0
+        ],
+        "overhang_mm2": 3194.6,
+        "support_mm3": 39932.5,
+        "bed_mm2": 1530.4,
+        "cost": 3840.21,
+        "overhang_faces": [
+          8
+        ],
+        "down_face": "R.body.cap(END)",
+        "down_face_id": 5,
+        "down_face_area_mm2": 1530.4
+      },
+      {
+        "up": [
+          0.0,
+          -1.0,
+          0.0
+        ],
+        "overhang_mm2": 3778.0,
+        "support_mm3": 580274.2,
+        "bed_mm2": 150.0,
+        "cost": 15368.46,
+        "overhang_faces": [
+          0,
+          9,
+          11
+        ],
+        "down_face": "R.body.side(arm_tip)",
+        "down_face_id": 14,
+        "down_face_area_mm2": 150.0
+      },
+      {
+        "up": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "overhang_mm2": 4109.1,
+        "support_mm3": 595822.7,
+        "bed_mm2": 150.0,
+        "cost": 16010.58,
+        "overhang_faces": [
+          12
+        ],
+        "down_face": "R.body.side(leg_end)",
+        "down_face_id": 3,
+        "down_face_area_mm2": 150.0
+      }
+    ],
+    "rationale": "Print with the shelf face down: 0 mm² overhang beyond 45°, 0 mm³ support, 4,784 mm² on the bed; runner-up wall face down: 0 mm² overhang, 0 mm³ support, 4,418 mm² on the bed. Horizontal holes up to Ø10 mm bridge and are not counted; cost = overhang + 0.02×support − 0.1×bed contact (placeholder weights)",
+    "made_by": "model",
+    "status": "proposed",
+    "reviewed": false,
+    "pack": "fdm_printing@0.0-placeholder",
+    "key": "6ebb268ccef97983"
+  }
+}

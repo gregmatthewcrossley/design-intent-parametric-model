@@ -37,7 +37,7 @@ The name uses "imperatives" in its everyday and design sense, not the programmin
 | [`docs/tolerance-uncertainty.md`](docs/tolerance-uncertainty.md) | Tolerance, uncertainty, guesses and scale: engine model, visualization, scale cues, order of work |
 | [`reports/Fresh eyes review.md`](reports/Fresh%20eyes%20review.md) | Independent expert review (65 items) and the author's [response](reports/Fresh%20eyes%20review.response.md) |
 | [`docs/review-response.md`](docs/review-response.md) | Action plan from the fresh-eyes review |
-| [`docs/gui.md`](docs/gui.md) | Web GUI iteration 1 spec: scope, layout, style, API, acceptance criteria |
+| [`docs/gui.md`](docs/gui.md) | Web GUI specs: iterations 1–3 (built), scope, layout, style, API, acceptance criteria |
 | [`gui/README.md`](gui/README.md) | The GUI as built: build, run, develop, test; `python -m dipm serve examples/shelf_bracket.py` |
 | [`docs/user-experience.md`](docs/user-experience.md) | How a designer uses it: versioning, GUI, interfaces to Onshape, slicers, CAM |
 | [`docs/explore-further.md`](docs/explore-further.md) | Research and inspiration threads still to pull on |

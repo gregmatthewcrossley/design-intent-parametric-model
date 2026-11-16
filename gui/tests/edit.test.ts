@@ -65,7 +65,7 @@ describe("proposals", () => {
     semantic_diff: {
       intent: { added: [], removed: [], moved: [], changed: [{ id: "A.3", statement: { before: "centered", after: "offset" } }] },
       features: { added: [], removed: [], changed: [{ id: "A.3.cable", detail: { before: { centres: [[0, 5, 32.5]] }, after: { centres: [[0, 5, 19]] } } } as never] },
-      checks: { before: { status: "PASS", errors: 0 }, after: { status: "PASS", errors: 0 }, features: [],
+      checks: { before: { status: "Kernel ✓", errors: 0 }, after: { status: "Kernel ✓", errors: 0 }, features: [],
                 diagnostics_after: { no_intent: [], no_feature: [], multi_intent: [], cross_intent: [] } },
       interpretations: { added: [], removed: [{ id: "A.3.cable/centered_on.point", chosen: "exposed_region_midpoint" }],
                          changed: [], questions: [0, 0], notices: [0, 0] },

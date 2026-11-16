@@ -65,10 +65,17 @@ export function canAccept(p: ProposalJ): boolean {
   return p.status === "ready";
 }
 
-/** Per-face display states for a proposal mesh: changed faces highlighted, the rest plain. */
-export function compareStates(nFaces: number, changed: number[]): ("base" | "selected")[] {
-  const set = new Set(changed);
-  return Array.from({ length: nFaces }, (_, i) => (set.has(i) ? "selected" : "base"));
+/** Per-face display states for a proposal mesh: changed faces highlighted, faces whose surface
+ *  stayed but whose outline changed in a lighter tint (NOTES #53 change), the rest plain. */
+export function compareStates(nFaces: number, changed: number[], outline: number[] = []): ("base" | "selected" | "outline")[] {
+  const set = new Set(changed), ol = new Set(outline);
+  return Array.from({ length: nFaces }, (_, i) => (set.has(i) ? "selected" : ol.has(i) ? "outline" : "base"));
+}
+
+/** Accept needs a reason when the proposal fails checks (#54). */
+export function needsOverride(p: ProposalJ): boolean {
+  const ev = p.evaluation;
+  return !!ev && (!!ev.needs_override || (ev.failing_checks?.length ?? 0) > 0 || ev.ok === false);
 }
 
 /** One-line summaries of a proposal's semantic diff, for the panel and tests. */
@@ -92,6 +99,7 @@ export function semanticSummary(ev: EvaluationJ | null): string[] {
   for (const s of sd.interpretations.removed) out.push(`interpretation − ${s.id} (was ${s.chosen})`);
   for (const s of sd.interpretations.added) out.push(`interpretation + ${s.id} → ${s.chosen}`);
   for (const s of sd.interpretations.changed) out.push(`interpretation ${s.id}: ${s.before} → ${s.after}`);
+  for (const c of sd.checks.intent ?? []) out.push(`check ${c.id}: ${c.before ?? "—"} → ${c.after}`);
   return out;
 }
 

@@ -181,6 +181,22 @@ class Preferences:
                 return self.answers[key]["reading"], key
         return None
 
+    def rename_node(self, design: str, old: str, new: str) -> int:
+        """Move answers keyed `<word>.<slot>@<design>:<old>` (and `:<old>.…`) to the new id
+        (NOTES #49 change: preferences follow a renamed intent node).  Returns how many moved."""
+        moved = 0
+        for k in list(self.answers):
+            word_slot, _, ctx = k.partition("@")
+            d, _, node = ctx.partition(":")
+            if d != design or not (node == old or node.startswith(old + ".")):
+                continue
+            nk = f"{word_slot}@{d}:{new + node[len(old):]}"
+            if nk not in self.answers:
+                self.answers[nk] = self.answers[k]
+            del self.answers[k]
+            moved += 1
+        return moved
+
     def record(self, word: str, slot: str, context: str, reading: str, note: str = "") -> str:
         key = f"{word}.{slot}@{context}"
         self.answers[key] = {"reading": reading, **({"note": note} if note else {})}
@@ -272,6 +288,8 @@ class Assumption:
     alternatives: list = field(default_factory=list)       # surviving readings not chosen
     eliminated: list = field(default_factory=list)         # Elimination as dicts
     supports: list = field(default_factory=list)           # what depends on it (the feature)
+    feasible: list = field(default_factory=list)           # readings that pass every check (B3: feasible)
+    resolution: str = "unconfirmed"   # B3: "unconfirmed" until an intent-level check confirms the survivor is meant
 
 
 @dataclass
@@ -325,7 +343,9 @@ class Interpretation:
     @classmethod
     def from_json(cls, text: str) -> "Interpretation":
         d = json.loads(text)
-        return cls(d["design"], d["choices"], [Assumption(**a) for a in d["assumptions"]],
+        return cls(d["design"], d["choices"], [Assumption(**{k: v for k, v in a.items()
+                                                                  if k in Assumption.__dataclass_fields__})
+                                               for a in d["assumptions"]],
                    [Question(**q) for q in d["questions"]], [Notice(**n) for n in d["notices"]],
                    d["sample_points"], d.get("key", {}), d.get("prefs"))
 
@@ -344,6 +364,7 @@ class _Outcome:
     volume: float | None
     slots: tuple
     touch: dict = field(default_factory=dict)   # feature id -> frozenset of features it interacts with
+    geom: dict = field(default_factory=dict)    # ledger tag -> (centroid, bbox lo, bbox hi): geometric distance (B4)
 
 
 def _summarize(design, b) -> _Outcome:
@@ -358,7 +379,41 @@ def _summarize(design, b) -> _Outcome:
     touched = b.touched()
     touch = {r.id: b.interactions(r.id, touched) for r in b.records}
     return _Outcome(fail, sig.VEFRSH if sig else None, sig.roles_geom if sig else None,
-                    sig.volume if sig else None, tuple(b.slots), touch)
+                    sig.volume if sig else None, tuple(b.slots), touch, _geometry_points(b))
+
+
+def _geometry_points(b) -> dict:
+    """tag -> (centroid, bbox lo, bbox hi) of every tagged sub-shape: what moves, by how much."""
+    from . import kernel as K
+    if b.shape is None:
+        return {}
+    out = {}
+    for e in b.ledger.items:
+        try:
+            c = K.centroid(e.shape)
+            lo, hi = K.bbox(e.shape)
+        except Exception:   # noqa: BLE001 - a degenerate sub-shape has no distance
+            continue
+        k = str(e.tag)
+        pts = ((c.x, c.y, c.z), (lo.x, lo.y, lo.z), (hi.x, hi.y, hi.z))
+        out[k] = out.get(k, ()) + (pts,)
+    return out
+
+
+def geometric_distance(a: dict, b: dict) -> float | None:
+    """Largest displacement (mm) of any tagged sub-shape's centroid or bounding box between two
+    builds; None if their tags differ (topology changed)."""
+    if set(a) != set(b):
+        return None
+    d = 0.0
+    for k in a:
+        pa, pb = sorted(a[k]), sorted(b[k])
+        if len(pa) != len(pb):
+            return None
+        for x, y in zip(pa, pb):
+            for p, q in zip(x, y):
+                d = max(d, math.dist(p, q))
+    return d
 
 
 def sample_points(design) -> list:
@@ -371,21 +426,31 @@ def sample_points(design) -> list:
 
 # ---------------------------------------------------------------- sensitivity
 
-def grade_sensitivity(n_diff: int, n_points: int, max_dv_rel: float, topology_differs: bool) -> str:
-    """How much the choice matters within the declared ranges (NOTES DECISIONS #25).
+SENSITIVITY_MM = (0.5, 5.0)   # low below 0.5 mm, medium below 5 mm, high above (NOTES DECISIONS #61)
 
-      none    survivors identical (VEFRSH, role-geometry fingerprint, volume) at every point
-      high    topology (V,E,F,R,S,H) differs anywhere, or volume differs by >= 1 %
-      medium  differs at >= half the points, or volume differs by >= 0.1 %
-      low     otherwise (e.g. a small move at a few points)
+
+def grade_sensitivity(n_survivors: int, max_distance: float | None, topology_differs: bool) -> str:
+    """How much the choice matters within the declared ranges, graded by how far geometry
+    moves (review B4; NOTES DECISIONS #61, replacing #25's volume rule).
+
+      forced       only one reading survives: the checks decided, the choice cannot matter
+      insensitive  several survive and give the same geometry at every sample point
+      low / medium / high
+                   several survive and differ: the largest displacement of any tagged face,
+                   edge or vertex (centroid or bounding box) is < 0.5 mm / < 5 mm / >= 5 mm;
+                   a topology change anywhere is high
     """
-    if n_diff == 0:
-        return "none"
-    if topology_differs or max_dv_rel >= 0.01:
+    if n_survivors <= 1:
+        return "forced"
+    if topology_differs or max_distance is None:
         return "high"
-    if n_diff * 2 >= n_points or max_dv_rel >= 0.001:
+    if max_distance <= 1e-6:
+        return "insensitive"
+    if max_distance < SENSITIVITY_MM[0]:
+        return "low"
+    if max_distance < SENSITIVITY_MM[1]:
         return "medium"
-    return "low"
+    return "high"
 
 
 # ---------------------------------------------------------------- resolution
@@ -450,7 +515,8 @@ def resolve(design, prefs: Preferences | None = None, points: list | None = None
             assumptions.append(Assumption(
                 sid, u.word, u.slot, u.feature, u.node,
                 f"{u.feature}: {u.word} {u.slot} given explicitly as {u.reading}", u.reading, MADE_BY_AUTHOR,
-                "explicit in the design; not interpreted", "accepted", "n/a", supports=[u.feature]))
+                "explicit in the design; not interpreted", "accepted", "n/a", supports=[u.feature],
+                feasible=[u.reading], resolution="author"))
             continue
         r = results[sid]
         assumptions.append(r["assumption"])
@@ -518,7 +584,7 @@ def _analyse(design, u: SlotUse, choices: dict, points: list, prefs: Preferences
         why = (f"package default '{pack.name}' eliminated; next by prior/simplicity: {chosen.rationale}"
                if pack.name in eliminated else f"ranked first by prior/simplicity: {chosen.rationale}")
     # --- 3. sensitivity among survivors
-    n_diff, max_dv, topo = set(), 0.0, False
+    n_diff, max_dv, topo, max_mm = set(), 0.0, False, 0.0
     per_alt = {}
     for o in survivors:
         if o is chosen:
@@ -527,18 +593,21 @@ def _analyse(design, u: SlotUse, choices: dict, points: list, prefs: Preferences
         for i in range(len(points)):
             a, b = outs[chosen.name][i], outs[o.name][i]
             dv = 0.0 if (a.volume is None or b.volume is None) else abs(a.volume - b.volume) / max(abs(a.volume), 1e-9)
-            if (a.vefrsh, a.roles) != (b.vefrsh, b.roles) or dv > 1e-9:
+            dist = geometric_distance(a.geom, b.geom)
+            if (a.vefrsh, a.roles) != (b.vefrsh, b.roles) or dv > 1e-9 or dist is None or dist > 1e-6:
                 n_diff.add(i)
                 d_o += 1
                 max_dv = max(max_dv, dv)
-                topo = topo or a.vefrsh != b.vefrsh
+                topo = topo or a.vefrsh != b.vefrsh or dist is None
+                if dist is not None:
+                    max_mm = max(max_mm, dist)
         per_alt[o.name] = d_o
-    sens = grade_sensitivity(len(n_diff), len(points), max_dv, topo)
-    detail = ("survivors identical at every sample point" if len(survivors) > 1 and not n_diff else
-              "only one reading survives" if len(survivors) == 1 else
+    sens = grade_sensitivity(len(survivors), max_mm, topo)
+    detail = ("forced: only one reading survives the checks" if len(survivors) == 1 else
               "no reading survives" if not survivors else
-              f"survivors differ at {len(n_diff)}/{len(points)} points, max |ΔV|/V = {max_dv:.3g}"
-              + (", topology differs" if topo else ""))
+              "insensitive: the surviving readings give identical geometry at every sample point" if not n_diff else
+              f"survivors differ at {len(n_diff)}/{len(points)} points: "
+              + ("topology differs" if topo else f"up to {max_mm:.3g} mm apart") + f" (max |ΔV|/V = {max_dv:.3g})")
     notices, questions = [], []
     if not survivors:
         notices.append(Notice(u.id, "no_survivor",
@@ -583,7 +652,7 @@ def _analyse(design, u: SlotUse, choices: dict, points: list, prefs: Preferences
                    f"{u.feature}: {u.word} {u.slot} read as '{chosen.name}' ({chosen.rationale})",
                    chosen.name, made_by, why, status, sens, detail, [r.name for r in offered],
                    [r.name for r in survivors if r is not chosen],
-                   [asdict(e) for e in eliminated.values()], [u.feature])
+                   [asdict(e) for e in eliminated.values()], [u.feature], [r.name for r in survivors])
     return {"chosen": chosen.name, "assumption": a, "questions": questions, "notices": notices}
 
 
@@ -608,13 +677,42 @@ def lock_path_for(design_file: str) -> str:
     return root + ".interpretations.json"
 
 
+# The lowering code: every module whose behaviour can change a build or an elimination
+# (review B6).  Editing any of them makes every lock stale.
+LOWERING_MODULES = ("expr", "intent_layer", "interpret", "invariants", "kernel", "ops", "program", "refs", "sketch")
+PINNED_PACKAGES = ("cadquery-ocp-novtk", "build123d")
+
+
+def code_digest() -> str:
+    """sha256 over the source of the lowering modules (B6)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    h = hashlib.sha256()
+    for m in LOWERING_MODULES:
+        with open(os.path.join(here, m + ".py"), "rb") as fh:
+            h.update(m.encode() + b"\0" + fh.read() + b"\0")
+    return h.hexdigest()
+
+
+def package_versions() -> dict:
+    from importlib import metadata
+    out = {}
+    for p in PINNED_PACKAGES:
+        try:
+            out[p] = metadata.version(p)
+        except metadata.PackageNotFoundError:
+            out[p] = None
+    return out
+
+
 def lock_key(design_file: str, prefs: Preferences) -> dict:
-    """What a lock is valid for: the design source, the preferences, the reading tables."""
+    """What a lock is valid for: the design source, the preferences, the reading tables, the
+    lowering code and the pinned kernel packages (review B6)."""
     from . import __version__
     with open(design_file, "rb") as fh:
         src = hashlib.sha256(fh.read()).hexdigest()
     return {"design_source_sha256": src, "prefs_sha256": prefs.digest(),
-            "readings_sha256": readings_digest(), "dipm": __version__}
+            "readings_sha256": readings_digest(), "code_sha256": code_digest(), "packages": package_versions(),
+            "dipm": __version__}
 
 
 def read_lock(path: str) -> Interpretation | None:
@@ -679,7 +777,10 @@ def format_interpretation(interp: Interpretation | None, slot_uses=(), source: s
     L.append(f"Interpretations ({len(interp.assumptions)} slot(s), {nq} question(s), {nn} notice(s)"
              + (f"; {source}" if source else "") + "):")
     for a in interp.assumptions:
-        L.append(f"  {a.id}  -> {a.chosen}   [made_by: {a.made_by}; status: {a.status}; sensitivity: {a.sensitivity}]")
+        res = {"unconfirmed": "feasible, not confirmed as meant", "confirmed": "confirmed by an intent check",
+               "author": "explicit"}.get(a.resolution, a.resolution)
+        L.append(f"  {a.id}  -> {a.chosen}   [made_by: {a.made_by}; status: {a.status}; sensitivity: {a.sensitivity}; "
+                 f"{res}]")
         if a.made_by != MADE_BY_AUTHOR:
             L.append(f"      why: {a.rationale}")
             if a.alternatives:

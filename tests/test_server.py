@@ -55,7 +55,9 @@ def test_design_endpoint(client):
 def test_build_bracket_tree_and_status(bracket_payload):
     """Criterion 1: the tree shows R, A, A.P, A.P.1, A.P.2, A.3, B, B.1, C, all green."""
     j = bracket_payload
-    assert j["status"] == "PASS" and j["ok"] and j["mesh_id"]
+    # B1: no bare PASS; tiered status (kernel ✓, intent checks run / failing)
+    assert j["status"]["kernel"]["state"] == "pass" and j["ok"] and j["mesh_id"]
+    assert j["status"]["headline"].startswith("Kernel ✓ · Intent checks 3 of 11 run")
     assert j["tree"]["order"] == ["R", "A", "A.P", "A.P.1", "A.P.2", "A.3", "B", "B.1", "C"]
     nodes = j["tree"]["nodes"]
     assert all(n["status"] == "ok" for n in nodes.values())
@@ -96,8 +98,9 @@ def test_countersink_face_genealogy(bracket_payload):
     (face,) = [f for f in bracket_payload["faces"] if f["entries"] and f["entries"][0]["tag"] ==
                "A.P.holes.countersink(1)"]
     e = face["entries"][0]
-    assert [t["text"] for t in e["instance_intent"]] == ["hole@A.P.2"]
-    assert "pattern@A.P (wall screw pattern)" in [t["text"] for t in e["intent"]]
+    # NOTES #45 change: wording comes from the intent file's statements, not duplicated tag notes
+    assert [t["text"] for t in e["instance_intent"]] == ["hole@A.P.2 (Upper wall screw hole)"]
+    assert "pattern@A.P (Wall screw pattern)" in [t["text"] for t in e["intent"]]
     assert face["nodes"][0] == "A.P.2" and face["surface"] == "Cone"
 
 
@@ -133,7 +136,7 @@ def test_parameter_edit_rebuilds(client):
     """Criterion 2 (engine side): shelf_depth 300 rebuilds; holes re-spread; the cable stays mid-plate."""
     a = client.post("/api/build", json={"params": {"shelf_depth": 200}}).json()
     b = client.post("/api/build", json={"params": {"shelf_depth": 300}}).json()
-    assert b["status"] == "PASS" and a["mesh_id"] != b["mesh_id"]
+    assert b["kernel_ok"] and a["mesh_id"] != b["mesh_id"]
     ca = {f["id"]: f["detail"] for f in a["features"]}
     cb = {f["id"]: f["detail"] for f in b["features"]}
     assert ca["A.P.holes"]["centres"] != cb["A.P.holes"]["centres"]
@@ -227,9 +230,9 @@ def test_answer_round_trip(tmp_path):
 def test_failed_build_payload_keeps_last_good_model():
     with TestClient(create_app(str(FIX / "invariant_fail.py"), watch_files=False)) as c:
         good = c.post("/api/build", json={"params": {"hole_u": 0.3}}).json()
-        assert good["status"] == "PASS"
+        assert good["kernel_ok"]
         bad = c.post("/api/build", json={"params": {"hole_u": 0.75}}).json()
-        assert bad["status"] == "FAIL" and bad["failing"] == ["H.hole"] and bad["error_count"] == 1
+        assert bad["status"]["kernel"]["state"] == "fail" and bad["failing"] == ["H.hole"] and bad["error_count"] == 1
         f = {x["id"]: x for x in bad["features"]}
         assert f["H.hole"]["status"] == "fail" and f["H.hole"]["error"]["invariant"] == "delta_H"
         assert [c_["ok"] for c_ in f["H.hole"]["checks"] if c_["name"] == "delta_H"] == [False]
@@ -301,7 +304,7 @@ def test_session_events_on_file_change(tmp_path):
 
     a, b = asyncio.run(run())
     assert a["type"] == "design-changed" and a["design"]["name"] == "invariant_fail"
-    assert b["type"] == "rebuilt" and b["build"]["params"]["hole_u"] == 0.2 and b["build"]["status"] == "PASS"
+    assert b["type"] == "rebuilt" and b["build"]["params"]["hole_u"] == 0.2 and b["build"]["kernel_ok"]
 
 
 def test_websocket_pushes_rebuild_on_save(tmp_path):

@@ -58,6 +58,7 @@ class DesignFiles:
         self.intent = intent_store.path_for(self.design)
         self.review = review_path_for(self.design)
         self.lock = os.path.join(self.dir, self.stem + ".interpretations.json")
+        self.record = os.path.join(self.dir, self.stem + ".resolution.json")
         self.dipm_dir = os.path.join(self.dir, ".dipm")
         self.proposals_dir = os.path.join(self.dipm_dir, "proposals")
         self.requests_dir = os.path.join(self.dipm_dir, "requests")
@@ -187,17 +188,29 @@ def load_and_build(design_path: str, params: dict | None = None, resolve: bool =
             "interp_note": note}
 
 
-def build_summary(design, b, intent: dict | None = None, stale: dict | None = None) -> dict:
-    """A compact, model-readable build report (MCP `build`, proposal evaluations)."""
+def build_summary(design, b, intent: dict | None = None, stale: dict | None = None, record_path: str | None = None) -> dict:
+    """A compact, model-readable build report (MCP `build`, proposal evaluations).  `status` is
+    tiered (kernel / intent checks / margins), never a bare PASS (B1)."""
+    from .assess import assess
+    from .resolution import ResolutionRecord
     from .server.serialize import build_payload
-    p = build_payload(design, b, None, intent=_intent_arg(intent, stale))
+    a = assess(design, b, intent, ResolutionRecord.load(record_path) if record_path else None)
+    p = build_payload(design, b, None, intent=_intent_arg(intent, stale), assessment=a)
     feats = [{"id": f["id"], "index": f["index"], "op": f["op"], "lowered_from": f["lowered_from"],
               "serves": f["serves"], "status": f["status"], "uses": f["uses"], "params": f["params"],
               "detail": f["detail"],
               "failed_checks": [c for c in f["checks"] if not c["ok"]], "error": f["error"]}
              for f in p["features"]]
     interp = p["interpretations"]
-    return {"status": p["status"], "ok": p["ok"], "params": p["params"], "errors": p["errors"],
+    checks = [{"id": c["id"], "node": c["node"], "state": c["state"], "plain": c["plain"],
+               "headline": ({k: c["headline"][k] for k in ("name", "unit", "nominal", "worst", "limit", "limit_worst",
+                                                             "margin", "margin_worst")} if c.get("headline") else None),
+               "reason": c.get("reason", "")} for c in p["intent_checks"]]
+    return {"status": p["status"], "kernel": "pass" if p["ok"] else "fail", "ok": p["ok"], "params": p["params"],
+            "errors": p["errors"], "intent_checks": checks,
+            "context": p["context"], "orientation": ({k: p["orientation"].get(k) for k in ("label", "up", "rationale",
+                                                                                          "made_by", "reviewed")}
+                                                     if p["orientation"] else None),
             "features": feats, "signature": p["signature"], "diagnostics": p["diagnostics"],
             "interpretations": {"source": interp["source"],
                                 "slots": [{"id": s["id"], "chosen": s.get("chosen"), "made_by": s.get("made_by"),
@@ -261,6 +274,39 @@ def face_signatures(b) -> list:
         tag = str(w.entries[0].tag) if w.entries else "untracked"
         out.append((tag, _surface_signature(f)))
     return out
+
+
+def face_outlines(b) -> list:
+    """Per face: (area, edge count, rounded bounding box), to tell a face whose surface stayed
+    but whose outline changed (a plane with a hole moved in it; NOTES #53 change)."""
+    from . import kernel as K
+    if b is None or b.shape is None:
+        return []
+    out = []
+    for f in b.faces():
+        lo, hi = K.bbox(f)
+        out.append((round(K.area(f), 3), len(K.subshapes(f, K.KINDS["edge"])),
+                    tuple(round(v, 3) for v in (lo.x, lo.y, lo.z, hi.x, hi.y, hi.z))))
+    return out
+
+
+def outline_changed(before_sigs: list, after_sigs: list, before_out: list, after_out: list,
+                    changed_before: list, changed_after: list) -> tuple[list, list]:
+    """Faces matched by (tag, surface) on both sides whose outline differs (lighter tint)."""
+    cb, ca = set(changed_before), set(changed_after)
+    pool: dict = {}
+    for i, s in enumerate(before_sigs):
+        if i not in cb:
+            pool.setdefault(s, []).append(i)
+    ob, oa = [], []
+    for j, s in enumerate(after_sigs):
+        if j in ca or not pool.get(s):
+            continue
+        i = pool[s].pop(0)
+        if before_out[i] != after_out[j]:
+            ob.append(i)
+            oa.append(j)
+    return sorted(ob), sorted(oa)
 
 
 def changed_faces(before: list, after: list) -> tuple[list, list]:
@@ -351,8 +397,11 @@ def interpretation_diff(before: dict, after: dict) -> dict:
 
 def check_diff(before: dict, after: dict) -> dict:
     fa = {f["id"]: f["status"] for f in before["features"]}
-    return {"before": {"status": before["status"], "errors": len(before["errors"])},
-            "after": {"status": after["status"], "errors": len(after["errors"])},
+    ib = {c["id"]: c["state"] for c in before.get("intent_checks") or []}
+    return {"before": {"status": before["status"]["headline"], "kernel": before["kernel"], "errors": len(before["errors"])},
+            "after": {"status": after["status"]["headline"], "kernel": after["kernel"], "errors": len(after["errors"])},
+            "intent": [{"id": c["id"], "before": ib.get(c["id"]), "after": c["state"]}
+                       for c in after.get("intent_checks") or [] if ib.get(c["id"]) != c["state"]],
             "features": [{"id": f["id"], "before": fa.get(f["id"]), "after": f["status"],
                           "failed_checks": f["failed_checks"]} for f in after["features"]],
             "diagnostics_after": after["diagnostics"]}
@@ -496,8 +545,11 @@ class ProposalStore:
         return p
 
     # -------------------------------------------------------------- evaluating
-    def evaluate(self, pid: str, params: dict | None = None) -> dict:
-        """Build the proposal in a temp copy and store the evaluation (status ready | failed)."""
+    def evaluate(self, pid: str, params: dict | None = None, view_params: dict | None = None) -> dict:
+        """Build the proposal in a temp copy and store the evaluation (status ready | failed).
+        The verdict uses `params` (default: the design's defaults) plus the sweep; the
+        before/after geometry the designer looks at is built at `view_params` (the GUI's
+        current parameters, NOTES #53 change) when given."""
         p = self.refresh(self.get(pid))
         if p["status"] not in ("pending", "evaluating", "ready", "failed"):
             return p
@@ -505,33 +557,32 @@ class ProposalStore:
         self.save(p)
         t0 = time.perf_counter()
         try:
-            ev = self._evaluate(p, params)
+            ev = self._evaluate(p, params, view_params)
             p["evaluation"] = ev
             p["status"] = "ready"
-            p["status_detail"] = "" if ev["after"]["ok"] else "the proposed design fails checks"
+            p["status_detail"] = ("" if not ev.get("failing_checks") else
+                                  "the proposed design fails checks: " + ", ".join(ev["failing_checks"]))
         except Exception as e:   # noqa: BLE001 - a broken proposal is reported, not raised
             p["evaluation"] = {"ok": False, "error": f"{type(e).__name__}: {e}",
                                "ms": round((time.perf_counter() - t0) * 1000, 1)}
             p["status"] = "failed"
             p["status_detail"] = f"evaluation failed: {type(e).__name__}: {e}"
-        cur = self.get(pid)          # the designer may have acted meanwhile
-        if cur.get("status") in ("accepted", "rejected"):
-            return cur
-        self.save(p)
+        with self._lock:             # the designer may have acted meanwhile (accept holds this lock)
+            cur = self.get(pid)
+            if cur.get("status") in ("accepted", "rejected"):
+                return cur
+            self.save(p)
         return self.refresh(p)
 
-    def _evaluate(self, p: dict, params: dict | None) -> dict:
-        from .server.mesh import mesh_bytes
+    def _evaluate(self, p: dict, params: dict | None, view_params: dict | None = None) -> dict:
         t0 = time.perf_counter()
         F = self.files
         before = load_and_build(F.design, params)
         review = ReviewRecord.load(F.review)
-        if before["intent"] is not None:
-            review.baseline(before["intent"])
         stale_before = review.stale(before["intent"]) if before["intent"] is not None else {}
         tmp = tempfile.mkdtemp(prefix="dipm-proposal-")
         try:
-            for src in (F.design, F.intent, F.lock, F.review):
+            for src in (F.design, F.intent, F.lock, F.review, F.record):
                 if os.path.exists(src):
                     shutil.copy2(src, os.path.join(tmp, os.path.basename(src)))
             for f in os.listdir(F.dir):                    # preferences next to the design
@@ -548,8 +599,9 @@ class ProposalStore:
             if after["intent"] is not None:
                 rev_after.mark(after["intent"], p.get("addresses_nodes") or [])
             stale_after = rev_after.stale(after["intent"]) if after["intent"] is not None else {}
-            sb = build_summary(before["design"], before["build"], before["intent"], stale_before)
-            sa = build_summary(after["design"], after["build"], after["intent"], stale_after)
+            sb = build_summary(before["design"], before["build"], before["intent"], stale_before, F.record)
+            sa = build_summary(after["design"], after["build"], after["intent"], stale_after,
+                               os.path.join(tmp, os.path.basename(F.record)))
             # sweep the proposed design over the stability sample points (checks across the ranges)
             from .interpret import sample_points
             sweep = []
@@ -561,14 +613,12 @@ class ProposalStore:
                 except Exception as e:   # noqa: BLE001
                     sweep.append({"params": pt, "errors": [f"{type(e).__name__}: {e}"]})
             n_points = len(sample_points(after["design"]))
-            meshes = {}
-            for which, res in (("before", before), ("after", after)):
-                if res["build"].shape is not None:
-                    mid, data = mesh_bytes(res["build"].shape)
-                    with open(self.mesh_path(p["id"], which), "wb") as fh:
-                        fh.write(data)
-                    meshes[which] = mid
-            cb, ca = changed_faces(face_signatures(before["build"]), face_signatures(after["build"]))
+            view = self._view_geometry(p["id"], before["design"], after["design"], before["build"], after["build"],
+                                       view_params)
+            # checks that fail and would need "Accept anyway…" (#54): kernel failures at the
+            # defaults or in the sweep, and failing intent checks at the addressed nodes or
+            # beneath them (a pre-existing failure elsewhere, e.g. R.c1, does not block an A.3 fix)
+            failing = self._failing_checks(sa, sweep, after["intent"], p.get("addresses_nodes") or [])
             # the lock the proposed design resolved to, written on accept so it is not stale
             lock_text = None
             d = after["design"]
@@ -577,18 +627,17 @@ class ProposalStore:
             idiff = intent_diff(before["intent"], after["intent"])
             ev = {
                 "ok": bool(sa["ok"] and not sweep),
+                "failing_checks": failing, "needs_override": bool(failing),
                 "params": {k: v for k, v in sa["params"].items()},
-                "before": {"status": sb["status"], "ok": sb["ok"], "stale_nodes": sb["stale_nodes"]},
-                "after": {"status": sa["status"], "ok": sa["ok"], "errors": sa["errors"],
-                          "stale_nodes": sa["stale_nodes"]},
+                "before": {"status": sb["status"], "kernel": sb["kernel"], "ok": sb["ok"],
+                           "stale_nodes": sb["stale_nodes"], "intent_checks": sb["intent_checks"]},
+                "after": {"status": sa["status"], "kernel": sa["kernel"], "ok": sa["ok"], "errors": sa["errors"],
+                          "stale_nodes": sa["stale_nodes"], "intent_checks": sa["intent_checks"]},
                 "sweep": {"points": n_points, "failing": sweep},
                 "semantic_diff": {"intent": idiff, "features": feature_diff(sb, sa),
                                   "checks": check_diff(sb, sa), "interpretations": interpretation_diff(sb, sa)},
                 "text_diff": {n: e.get("diff", "") for n, e in p["patches"].items()},
-                "meshes": meshes,
-                "changed_faces": {"before": cb, "after": ca},
-                "face_tags": {"before": [t for t, _s in face_signatures(before["build"])],
-                              "after": [t for t, _s in face_signatures(after["build"])]},
+                **view,
                 "interp_note": after["interp_note"],
                 "lock": lock_text,
                 "ms": round((time.perf_counter() - t0) * 1000, 1),
@@ -597,10 +646,103 @@ class ProposalStore:
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    def _view_geometry(self, pid: str, dbefore, dafter, bbefore, bafter, view_params: dict | None) -> dict:
+        """Meshes, changed and outline-changed faces and face tags, at `view_params` when they
+        differ from the builds' own parameters (NOTES #53 change)."""
+        from .server.mesh import mesh_bytes
+        vp = None
+        if view_params:
+            try:
+                vb = dbefore.resolve_params(view_params)
+                va = dafter.resolve_params({k: v for k, v in view_params.items() if k in dafter.params})
+                if vb != bbefore.params:
+                    bbefore = dbefore.build(vb, on_fail="record")
+                if va != bafter.params:
+                    bafter = dafter.build(va, on_fail="record")
+                vp = {k: v for k, v in vb.items()}
+            except Exception:   # noqa: BLE001 - fall back to the verdict builds
+                vp = None
+        meshes = {}
+        for which, b in (("before", bbefore), ("after", bafter)):
+            if b.shape is not None:
+                mid, data = mesh_bytes(b.shape)
+                with open(self.mesh_path(pid, which), "wb") as fh:
+                    fh.write(data)
+                meshes[which] = mid
+        sb, sa = face_signatures(bbefore), face_signatures(bafter)
+        cb, ca = changed_faces(sb, sa)
+        ob, oa = outline_changed(sb, sa, face_outlines(bbefore), face_outlines(bafter), cb, ca)
+        return {"meshes": meshes, "view_params": vp or dict(bafter.params),
+                "changed_faces": {"before": cb, "after": ca, "outline_before": ob, "outline_after": oa},
+                "face_tags": {"before": [t for t, _s in sb], "after": [t for t, _s in sa]}}
+
+    def view(self, pid: str, params: dict) -> dict:
+        """Rebuild only the before/after geometry of an evaluated proposal at `params` (the GUI's
+        current parameters).  The verdict is unchanged."""
+        p = self.refresh(self.get(pid))
+        ev = p.get("evaluation") or {}
+        if not ev or ev.get("error"):
+            raise ProposalError(f"{pid} has no evaluation to view")
+        F = self.files
+        tmp = tempfile.mkdtemp(prefix="dipm-view-")
+        try:
+            for src in (F.design, F.intent, F.lock, F.review):
+                if os.path.exists(src):
+                    shutil.copy2(src, os.path.join(tmp, os.path.basename(src)))
+            for name, entry in p["patches"].items():
+                atomic_write(os.path.join(tmp, name), entry["new_text"])
+            if ev.get("lock"):
+                atomic_write(os.path.join(tmp, os.path.basename(F.lock)), ev["lock"])
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                before = load_and_build(F.design, None)
+                after = load_and_build(os.path.join(tmp, os.path.basename(F.design)), None)
+            view = self._view_geometry(pid, before["design"], after["design"], before["build"], after["build"], params)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        with self._lock:
+            p = self.get(pid)
+            p["evaluation"] = {**(p.get("evaluation") or {}), **view}
+            self.save(p)
+        return self.refresh(p)
+
+    @staticmethod
+    def _failing_checks(sa: dict, sweep: list, intent: dict | None, nodes: list) -> list:
+        out = []
+        if not sa["ok"]:
+            out += [f"kernel: {e.get('feature') or 'build'} {e.get('invariant') or e.get('kind')}" for e in sa["errors"]]
+        if sweep:
+            out.append(f"kernel: {len(sweep)} sweep point(s) fail")
+        from .connections import file_parents
+        parents = file_parents(intent) or {}
+
+        def under(n):
+            while n is not None:
+                if n in nodes:
+                    return True
+                n = parents.get(n)
+            return False
+
+        for c in sa.get("intent_checks") or []:
+            if c["state"] != "failing":
+                continue
+            if under(c["node"]):
+                out.append(c["id"])
+        return out
+
+    def claude_prompt(self) -> str:
+        """The copyable prompt for "Queue for Claude" (#55): nothing is pushed to Claude."""
+        n = len(self.requests("open"))
+        return (f"Use the dipm MCP server for {os.path.basename(self.files.design)}: call get_requests and "
+                f"get_stale_nodes, read the design with get_source, and handle the {n} open request(s) by "
+                "submitting a proposal for each with propose_patch (never edit the design files directly).")
+
     # -------------------------------------------------------------- deciding
-    def accept(self, pid: str, comment: str = "") -> dict:
+    def accept(self, pid: str, comment: str = "", override_reason: str | None = None) -> dict:
         """Apply the proposal's patches atomically (all or nothing), write the resolved lock,
-        record review hashes for the addressed nodes, close their requests."""
+        record review hashes for the addressed nodes, close their requests.  A proposal that
+        fails checks needs `override_reason` ("Accept anyway…", #54): the override (failing
+        checks, reason, time) is recorded in the review record for the addressed nodes."""
         from .interpret import Interpretation, Preferences, lock_key, prefs_path_from_lock, LockSpec
         with self._lock:
             p = self.refresh(self.get(pid))
@@ -612,10 +754,12 @@ class ProposalStore:
             for n, h in p["base_hashes"].items():
                 if cur.get(n) != h:
                     raise ProposalError(f"{n} changed since {pid} was made")
-            # the review record as it stands before the patch (baseline = the pre-patch intent)
+            ev0 = p.get("evaluation") or {}
+            failing = list(ev0.get("failing_checks") or ([] if ev0.get("ok", True) else ["kernel"]))
+            reason = (override_reason or "").strip()
+            if failing and not reason:
+                raise ProposalError(f"{pid} fails checks ({', '.join(failing)}); accept anyway needs a reason")
             rec = ReviewRecord.load(self.files.review)
-            if not rec.exists and os.path.exists(self.files.intent):
-                rec.baseline(intent_store.load(self.files.intent).to_plain())
             # write every file: temps first, then rename; roll back on failure
             targets = {self.files.patchable[n]: e["new_text"] for n, e in p["patches"].items()}
             backups = {t: (read_text(t) if os.path.exists(t) else None) for t in targets}
@@ -648,13 +792,17 @@ class ProposalStore:
             if os.path.exists(self.files.intent):
                 doc = intent_store.load(self.files.intent).to_plain()
                 reviewed = rec.mark(doc, p.get("addresses_nodes") or [])
-                if reviewed:
+                if failing:
+                    rec.override(reviewed or (p.get("addresses_nodes") or []), failing, reason, _now(), pid)
+                if reviewed or failing:
                     rec.save()
                     written.append(self.files.review)
             p["status"] = "accepted"
             p["status_detail"] = f"applied {', '.join(os.path.basename(w) for w in written)}"
-            p["accepted"] = {"at": _now(), "written": [os.path.basename(w) for w in written], "reviewed": reviewed}
-            p.setdefault("feedback", []).append({"at": _now(), "kind": "accept", "by": "designer", "comment": comment})
+            p["accepted"] = {"at": _now(), "written": [os.path.basename(w) for w in written], "reviewed": reviewed,
+                             **({"override": {"failing": failing, "reason": reason}} if failing else {})}
+            p.setdefault("feedback", []).append({"at": _now(), "kind": "accept anyway" if failing else "accept",
+                                                 "by": "designer", "comment": reason if failing else comment})
             self.save(p)
             self.close_requests(p.get("addresses_nodes") or [], pid)
             return p

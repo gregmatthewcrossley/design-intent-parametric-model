@@ -1,5 +1,7 @@
 # Tolerance, Uncertainty and Scale
 
+*Status: steps 1, 2 and 4 of §5 built in GUI iteration 3 (2026-11-16): margins with worst-case ranges, heatmap and guess styling, all four scale cues; as-made prediction (3) and sampling (5) remain. Pack numbers are placeholders (NOTES #58).*
+
 *Discussed and decided 2026-11-16, in response to review items MATH-07, MATH-09, PAIN-05 and PAIN-12 (see [`review-response.md`](review-response.md) C1, C2). The author asked for tolerance and uncertainty to be first-class concerns.*
 
 ## 1. Four concepts, kept apart

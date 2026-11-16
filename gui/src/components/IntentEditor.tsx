@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { featuresUnder, moveTargets, subtree } from "../edit";
 import {
   askClaude, commitEdit, confirmDelete, conflict, editing, intentBusy, intentError, intentInfo, markReviewed,
-  patchIntent, reapplyAfterConflict, reloadAfterConflict, renameId, requests, startEdit,
+  acceptGuess, patchIntent, reapplyAfterConflict, reloadAfterConflict, renameId, requests, startEdit,
 } from "../intent";
 import { build, select } from "../store";
 import type { AssumptionSpec, BuildJ, CheckSpec, IntentNodeJ } from "../types";
@@ -140,6 +140,7 @@ export function NodeEditor({ b, n }: { b: BuildJ; n: IntentNodeJ }) {
       {n.in_file && <Structure b={b} n={n} />}
       {n.in_file && <ChecksEditor n={n} />}
       {n.in_file && <AssumptionsEditor n={n} />}
+      {n.in_file && n.parent === null && <OrientationRow b={b} />}
       {intentError.value && <div class="callout fail small">{intentError.value}</div>}
     </div>
   );
@@ -175,11 +176,11 @@ function StaleBox({ b, n }: { b: BuildJ; n: IntentNodeJ }) {
         <button class="btn primary" data-testid="ask-claude" onClick={async () => {
           const r = await askClaude(n.id, note);
           if (r) { setAsked(r.id); setNote(""); }
-        }}>Ask Claude</button>
+        }} title="queue a request; nothing is sent until you ask Claude to handle the queue">Queue for Claude</button>
         {(asked || open.length > 0) && (
           <div class="small muted" data-testid="request-pending">
-            request {asked ?? open[open.length - 1].id} pending: in your Claude Code session, ask Claude to
-            handle the open dipm requests (MCP tool <Mono>get_stale_nodes</Mono>)
+            request {asked ?? open[open.length - 1].id} waiting: copy the prompt from “requests waiting” in the header into
+            your Claude Code session (MCP tools <Mono>get_requests</Mono>, <Mono>propose_patch</Mono>)
           </div>
         )}
       </div>
@@ -217,12 +218,13 @@ function Structure({ b, n }: { b: BuildJ; n: IntentNodeJ }) {
 function RenameId({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
   const [v, setV] = useState(id);
+  const [feats, setFeats] = useState(false);
   if (!open) {
     return <button class="link small" onClick={() => { setV(id); setOpen(true); }} data-testid="rename-id"
                    title="rename this id in the intent file and in the DSL's intent(...) / instance_tags literals">rename id…</button>;
   }
   const go = async () => {
-    if (v.trim() && v.trim() !== id && await renameId(id, v.trim())) {
+    if (v.trim() && v.trim() !== id && await renameId(id, v.trim(), feats)) {
       setOpen(false);
       select({ kind: "node", id: v.trim() });
     }
@@ -233,6 +235,10 @@ function RenameId({ id }: { id: string }) {
              onInput={(e) => setV((e.target as HTMLInputElement).value)} onKeyDown={(e) => { if (e.key === "Enter") void go(); }} />
       <button class="btn" onClick={go} data-testid="rename-go">Rename</button>
       <button class="btn" onClick={() => setOpen(false)}>Cancel</button>
+      <label class="small rename-opt"><input type="checkbox" checked={feats} data-testid="rename-features"
+             onChange={(e) => setFeats((e.target as HTMLInputElement).checked)} />
+        also rename matching feature ids (e.g. <Mono>{id}.cable</Mono> → <Mono>{v || "…"}.cable</Mono>)</label>
+      <span class="small muted">Saved answers to interpretation questions move with the id.</span>
     </span>
   );
 }
@@ -305,12 +311,14 @@ function AssumptionsEditor({ n }: { n: IntentNodeJ }) {
 }
 
 function AssumptionRow({ node, a }: { node: string; a: AssumptionSpec }) {
+  const guess = (a.status ?? "proposed") !== "accepted";
   const [rat, setRat] = useState(a.rationale ?? "");
   useEffect(() => setRat(a.rationale ?? ""), [a.rationale]);
   const edit = (fields: Partial<AssumptionSpec>) =>
     patchIntent([{ op: "edit_assumption", id: node, assumption_id: a.id, fields }]);
   return (
-    <div class={`assumption st-${a.status ?? "proposed"}`} data-assumption={a.id}>
+    <div class={`assumption st-${a.status ?? "proposed"} ${guess ? "guess" : "confirmed"}`} data-assumption={a.id}
+         data-guess={guess ? "1" : "0"}>
       <div class="a-head">
         <Mono>{a.id}</Mono>
         <select aria-label={`status of ${a.id}`} value={a.status ?? "proposed"} data-testid={`status-${a.id}`}
@@ -363,4 +371,21 @@ export function IntentBanners() {
 
 export function describeOps(ops: { op: string; [k: string]: unknown }[]): string {
   return ops.map((o) => o.op === "edit_statement" ? `${o.id}: “${o.statement}”` : `${o.op} ${o.id ?? o.parent ?? ""}`).join("; ");
+}
+
+/** The print orientation at the root (3E.10): a model guess from the resolution record until the
+ *  designer accepts it into the intent file. */
+function OrientationRow({ b }: { b: BuildJ }) {
+  const o = b.orientation;
+  if (!o) return null;
+  return (
+    <div class={`sub-editor orient ${o.reviewed ? "confirmed" : "guess"}`} data-testid="orientation-row">
+      <div class="field-label">print orientation <span class="muted">({o.reviewed ? "accepted, in the intent file" :
+        "model guess, in the resolution record"})</span></div>
+      <div class="small"><b>{o.label}</b></div>
+      {o.rationale && <div class="small muted">{o.rationale}</div>}
+      {!o.reviewed && <button class="btn" onClick={() => void acceptGuess("orientation", b)} data-testid="accept-orientation-inspector">
+        Accept orientation</button>}
+    </div>
+  );
 }

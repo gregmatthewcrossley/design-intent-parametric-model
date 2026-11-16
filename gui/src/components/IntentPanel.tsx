@@ -7,7 +7,7 @@ import { canDrop, staleFeatures } from "../edit";
 import { confirmDelete, dragging, dropTarget, editing, patchIntent, startEdit } from "../intent";
 import { rowsFor, type Chip, type Row, type View } from "../model";
 import { active, build, expanded, hover, lit, persist, select, selection, showLinks, view } from "../store";
-import type { Selection } from "../types";
+import type { BuildJ, Selection } from "../types";
 import { Dot } from "./common";
 import { ConfirmDelete, editable, RowActions, rowKeys, StaleTag, StatementInput } from "./IntentEditor";
 
@@ -200,6 +200,17 @@ function RowView({ r }: { r: Row }) {
         )}
         {n?.stale && <StaleTag id={r.id} compact />}
         {fStale && <StaleTag id={`feat-${r.id}`} compact />}
+        {r.kind === "node" && n?.check_state && n.check_state !== "ample" && (
+          <span class={`ic-badge st-${n.check_state}`} data-testid="node-check-badge"
+                title={`intent checks at ${r.id}: ${n.check_state}`}>{n.check_state === "failing" ? "✗" : "thin"}</span>
+        )}
+        {r.kind === "node" && n?.review_state === "reviewed_failing" && (
+          <span class="ic-badge st-failing" title="reviewed with failing checks (accepted anyway)">reviewed ✗</span>
+        )}
+        {r.kind === "node" && guessesAt(b, r.id) > 0 && (
+          <span class="guess-chip guess tiny" data-testid="node-guesses" data-node={r.id}
+                title={`${guessesAt(b, r.id)} model-made item(s) here that nobody reviewed yet`}>{guessesAt(b, r.id)}?</span>
+        )}
         {r.kind === "feature" && <Dot status={r.status} />}
         {canEdit && !isEditing && <RowActions n={n!} />}
       </span>
@@ -379,4 +390,21 @@ export function useEscapeToClear() {
     addEventListener("keydown", h);
     return () => removeEventListener("keydown", h);
   }, []);
+}
+
+/** Unreviewed model-made items attached to an intent node (B5): its assumptions, the readings of
+ *  features tagged at it, and, at the root, the assumed context and print orientation. */
+export function guessesAt(b: BuildJ | null, node: string): number {
+  if (!b?.provenance) return 0;
+  const root = b.tree.roots[0];
+  let n = 0;
+  for (const [k, v] of Object.entries(b.provenance)) {
+    if (!v.guess || k.startsWith("check:")) continue;
+    if (k.startsWith("assumption:") && v.node === node) n++;
+    else if (k.startsWith("slot:")) {
+      const s = b.interpretations.slots.find((x) => `slot:${x.id}` === k);
+      if (s && s.node === node) n++;
+    } else if ((k.startsWith("context:") || k === "orientation") && node === root) n++;
+  }
+  return n;
 }

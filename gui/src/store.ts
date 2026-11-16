@@ -116,3 +116,28 @@ export async function answer(assumptionId: string, reading: string): Promise<voi
     answering.value = null;
   }
 }
+
+// ------------------------------------------------------------------ iteration 3: view settings (docs/gui.md §8.3)
+
+export type ViewMode = "work" | "photo";
+export type Uncertainty = "none" | "heatmap";
+
+export const viewMode = signal<ViewMode>(stored<ViewMode>("viewMode", "work"));
+/** 1:1 real size requested (the scale itself lives in realsize.ts). */
+export const oneToOneOn = signal(false);
+export const textureOn = signal<boolean>(stored("textureOn", true));
+/** Reference objects, per view: off in the crisp work view, on in photo view (§8.3 items 10, 11). */
+export const refsOn = signal<Record<ViewMode, boolean>>(stored("refsOn", { work: false, photo: true }));
+export const scaleBarOn = signal<boolean>(stored("scaleBarOn", true));
+export const uncertainty = signal<Uncertainty>(stored<Uncertainty>("uncertainty", "none"));
+/** Engine terms (ΔH, ledger, genus) behind a Details toggle (B8, PAIN-06). */
+export const showDetails = signal<boolean>(stored("showDetails", false));
+/** First-open review prompt dismissed for this page load (#48). */
+export const firstOpenDismissed = signal(false);
+/** A request from the header status to open the checks panel at a row. */
+export const focusCheck = signal<{ id: string; at: number } | null>(null);
+
+export function setView<T>(sig: { value: T }, key: string, v: T): void {
+  sig.value = v;
+  persist(key, v);
+}

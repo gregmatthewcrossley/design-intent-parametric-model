@@ -11,6 +11,11 @@ so comments and formatting are untouched) and rewrites **only** intent-id string
 `A.P.1`), the same rule `intent_store.rename_id_in_doc` applies to the intent file.  Strings
 anywhere else (docs, notes, feature ids like "A.P.holes" passed as the feature name) are not
 touched, so a rename never silently changes geometry or feature ids.
+
+`rename_features=True` (NOTES #49 change, an opt-in checkbox in the GUI) also renames feature
+ids that start with the intent id: the first argument of the design's feature constructors
+(`d.hole("A.3.cable", …)` -> `d.hole("A.C.cable", …)`).  Geometry is unchanged, but feature ids
+appear in interpretation slot ids, so the lock is re-resolved.
 """
 from __future__ import annotations
 
@@ -25,10 +30,15 @@ def _renamed(value: str, old: str, new: str) -> str | None:
     return None
 
 
+FEATURE_CTORS = ("extrude", "revolve", "fillet", "chamfer", "mirror", "transform", "shell", "draft", "clean", "hole")
+
+
 class _Renamer(cst.CSTTransformer):
-    def __init__(self, old: str, new: str):
+    def __init__(self, old: str, new: str, rename_features: bool = False):
         self.old, self.new = old, new
         self.count = 0
+        self.features = rename_features
+        self.feature_count = 0
 
     def _fix(self, node: cst.BaseExpression) -> cst.BaseExpression:
         if isinstance(node, cst.SimpleString):
@@ -52,6 +62,19 @@ class _Renamer(cst.CSTTransformer):
         args = list(updated.args)
         changed = False
         for i, a in enumerate(args):
+            if (self.features and isinstance(f, cst.Attribute) and name in FEATURE_CTORS and i == 0
+                    and a.keyword is None and isinstance(a.value, cst.SimpleString)):
+                try:
+                    val = ast.literal_eval(a.value.value)
+                except (ValueError, SyntaxError):
+                    val = None
+                if isinstance(val, str) and val.startswith(self.old + "."):
+                    q = a.value.quote
+                    args[i] = a.with_changes(value=a.value.with_changes(
+                        value=f"{a.value.prefix}{q}{self.new + val[len(self.old):]}{q}"))
+                    self.feature_count += 1
+                    changed = True
+                    continue
             if name == "intent" and ((i == 0 and a.keyword is None) or (a.keyword and a.keyword.value == "node")):
                 v = self._fix(a.value)
                 if v is not a.value:
@@ -65,9 +88,9 @@ class _Renamer(cst.CSTTransformer):
         return updated.with_changes(args=args) if changed else updated
 
 
-def rename_intent_id(source: str, old: str, new: str) -> tuple[str, int]:
-    """(new source, number of literals rewritten)."""
+def rename_intent_id(source: str, old: str, new: str, rename_features: bool = False) -> tuple[str, int]:
+    """(new source, number of literals rewritten, feature ids included)."""
     mod = cst.parse_module(source)
-    t = _Renamer(old, new)
+    t = _Renamer(old, new, rename_features)
     out = mod.visit(t)
-    return out.code, t.count
+    return out.code, t.count + t.feature_count

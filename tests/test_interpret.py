@@ -51,7 +51,8 @@ def test_bracket_zero_questions_and_expected_choices(bracket_interp):
     for sid in ("A.P.holes/hole.extent", "A.3.cable/hole.extent", "B.1.screw/hole.extent"):
         a = by[sid]
         assert a.chosen == "through_plate" and a.made_by == "pack default" and a.status == "proposed"
-        assert a.sensitivity == "none" and a.alternatives == ["through_all", "up_to_next"] and a.eliminated == []
+        assert a.sensitivity == "insensitive" and a.alternatives == ["through_all", "up_to_next"] and a.eliminated == []
+        assert a.feasible == ["through_plate", "through_all", "up_to_next"] and a.resolution == "unconfirmed"   # B3
     c = by["A.3.cable/centered_on.point"]
     assert c.chosen == "exposed_region_midpoint" and c.made_by == "model"
     (e,) = c.eliminated                              # elimination with a recorded reason
@@ -60,7 +61,7 @@ def test_bracket_zero_questions_and_expected_choices(bracket_interp):
     assert "between_siblings" not in c.readings      # opt-in only
     # DECISIONS #32: face_centroid is structurally impossible (not on the face) and the survivor's
     # tool meets nothing the default would not have: an ordinary elimination, no notice
-    assert it.notices == [] and c.sensitivity == "none"
+    assert it.notices == [] and c.sensitivity == "forced"          # B4: only one survives
     assert "no extra interaction" in c.sensitivity_detail
 
 
@@ -127,7 +128,7 @@ def test_sensitivity_zero_means_no_question():
     it = resolve(d)
     assert it.questions == [] and it.notices == []
     assert {a.id: (a.chosen, a.sensitivity) for a in it.assumptions} == {
-        "H/centered_on.point": ("face_centroid", "none"), "H/hole.extent": ("through_plate", "none")}
+        "H/centered_on.point": ("face_centroid", "insensitive"), "H/hole.extent": ("through_plate", "insensitive")}
 
 
 def test_preference_selects_and_suppresses_the_question(tmp_path):
@@ -264,12 +265,15 @@ def test_sample_points_are_the_stability_points(bracket):
 
 
 def test_grade_sensitivity_rule():
-    assert grade_sensitivity(0, 9, 0.0, False) == "none"
-    assert grade_sensitivity(1, 9, 0.0, True) == "high"
-    assert grade_sensitivity(1, 9, 0.02, False) == "high"
-    assert grade_sensitivity(5, 9, 0.0, False) == "medium"
-    assert grade_sensitivity(1, 9, 0.002, False) == "medium"
-    assert grade_sensitivity(1, 9, 0.0, False) == "low"
+    """B4 (NOTES #61): forced vs insensitive, then graded by geometric distance, not volume."""
+    assert grade_sensitivity(1, 0.0, False) == "forced"
+    assert grade_sensitivity(0, None, False) == "forced"
+    assert grade_sensitivity(3, 0.0, False) == "insensitive"
+    assert grade_sensitivity(2, 0.2, False) == "low"
+    assert grade_sensitivity(2, 2.0, False) == "medium"
+    assert grade_sensitivity(2, 7.5, False) == "high"
+    assert grade_sensitivity(2, 0.0, True) == "high"
+    assert grade_sensitivity(2, None, False) == "high"
 
 
 def test_interpretation_json_has_assumption_fields(bracket_interp):

@@ -44,7 +44,7 @@ def block(name="block", Lx=40.0, Wy=30.0, Hz=20.0):
 
 
 BRACKET_SET = ("shelf_bracket.py", "shelf_bracket.intent.yaml", "shelf_bracket.interpretations.json",
-               "shelf_bracket.review.json")
+               "shelf_bracket.review.json", "shelf_bracket.resolution.json")
 
 
 def copy_bracket(dst: pathlib.Path) -> pathlib.Path:

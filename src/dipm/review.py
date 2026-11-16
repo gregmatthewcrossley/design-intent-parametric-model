@@ -10,8 +10,15 @@ proposal) confirms the solution still fits.
   that content (so the GUI and Claude can show *what* changed).  Machine-written JSON, stable
   key order, no timestamps; commit it next to the design like the interpretations lock.
 * A node is stale if its current hash differs from the recorded one, or it has no record.
-* **No review file yet:** the first time a design's intent is seen without one, the current
-  content is the baseline (nothing is stale); it is written on the first review write.
+* **No review file yet** (NOTES #48 change, iteration 3): nothing is reviewed and nothing is
+  written automatically.  The GUI asks once: *mark all reviewed* (writes every node) or
+  *review one by one* (writes an empty record, so the prompt does not come back).
+* **Accepted items** (`accepted`): model-made items the designer reviewed that do not live in
+  the intent file, e.g. an interpretation reading (`slot:<id>` -> the reading accepted).  It
+  stays reviewed only while the same reading is chosen.
+* **Overrides** (`overrides`, #54): nodes accepted with failing checks ("Accept anyway…"),
+  with the failing checks, the reason and the time.  Such a node shows as *reviewed with
+  failing checks* until its checks pass.
 """
 from __future__ import annotations
 
@@ -59,10 +66,13 @@ def current_hashes(intent_plain: dict) -> dict:
 class ReviewRecord:
     """`<design>.review.json`: {"version": 1, "reviewed": {node id: {"hash", "content"}}}."""
 
-    def __init__(self, path: str, reviewed: dict | None = None, exists: bool = False):
+    def __init__(self, path: str, reviewed: dict | None = None, exists: bool = False,
+                 accepted: dict | None = None, overrides: dict | None = None):
         self.path = path
         self.reviewed: dict = reviewed or {}
         self.exists = exists
+        self.accepted: dict = accepted or {}
+        self.overrides: dict = overrides or {}
 
     @classmethod
     def load(cls, path: str) -> "ReviewRecord":
@@ -70,10 +80,23 @@ class ReviewRecord:
             return cls(path, {}, False)
         with open(path, encoding="utf-8") as fh:
             data = json.load(fh)
-        return cls(path, dict(data.get("reviewed") or {}), True)
+        return cls(path, dict(data.get("reviewed") or {}), True, dict(data.get("accepted") or {}),
+                   dict(data.get("overrides") or {}))
+
+    def accept_item(self, key: str, value) -> None:
+        self.accepted[key] = value
+
+    def item_reviewed(self, key: str, value) -> bool:
+        return key in self.accepted and self.accepted[key] == value
+
+    def override(self, nodes, failing: list, reason: str, at: str, proposal: str = "") -> None:
+        for n in nodes:
+            self.overrides[n] = {"failing": list(failing), "reason": reason, "at": at,
+                                 **({"proposal": proposal} if proposal else {})}
 
     def baseline(self, intent_plain: dict) -> None:
-        """No review file yet: accept the current content as reviewed (in memory)."""
+        """Accept the current content of every node as reviewed (in memory).  Used only for the
+        designer's explicit "mark all reviewed" (never automatically since iteration 3)."""
         if self.exists or self.reviewed:
             return
         for nid, n in plain_nodes(intent_plain).items():
@@ -96,6 +119,10 @@ class ReviewRecord:
 
     def text(self) -> str:
         data = {"version": 1, "reviewed": {k: self.reviewed[k] for k in sorted(self.reviewed)}}
+        if self.accepted:
+            data["accepted"] = {k: self.accepted[k] for k in sorted(self.accepted)}
+        if self.overrides:
+            data["overrides"] = {k: self.overrides[k] for k in sorted(self.overrides)}
         return json.dumps(data, indent=2, sort_keys=False, ensure_ascii=False) + "\n"
 
     def save(self) -> None:

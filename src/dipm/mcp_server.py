@@ -73,10 +73,9 @@ class DesignContext:
                 rec = ReviewRecord.load(self.files.review)
                 stale = {}
                 if res["intent"] is not None:
-                    rec.baseline(res["intent"])
-                    stale = rec.stale(res["intent"])
+                    stale = rec.stale(res["intent"])      # no automatic baseline (#48)
                 res["stale"] = stale
-                res["summary"] = build_summary(res["design"], res["build"], res["intent"], stale)
+                res["summary"] = build_summary(res["design"], res["build"], res["intent"], stale, self.files.record)
                 if params:
                     return res
                 self._cur, self._key = res, key
@@ -223,10 +222,11 @@ def _proposal_view(p: dict, full: bool = False) -> dict:
     ev = p.get("evaluation") or {}
     v = {"id": p["id"], "status": p["status"], "status_detail": p.get("status_detail", ""), "summary": p["summary"],
          "created": p["created"], "addresses_nodes": p.get("addresses_nodes", []), "revises": p.get("revises"),
-         "files": sorted(p.get("patches", {})), "checks_pass": ev.get("ok") if ev else None}
+         "files": sorted(p.get("patches", {})), "checks_pass": ev.get("ok") if ev else None,
+         "failing_checks": ev.get("failing_checks") if ev else None}
     if full and ev:
-        v["evaluation"] = {k: ev[k] for k in ("ok", "before", "after", "sweep", "semantic_diff", "text_diff",
-                                               "changed_faces", "error", "ms") if k in ev}
+        v["evaluation"] = {k: ev[k] for k in ("ok", "failing_checks", "before", "after", "sweep", "semantic_diff",
+                                               "text_diff", "changed_faces", "error", "ms") if k in ev}
     if full:
         v["feedback"] = p.get("feedback", [])
     return v

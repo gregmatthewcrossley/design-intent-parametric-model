@@ -25,13 +25,19 @@ def test_params_through_uses():
 
 
 def test_bracket_intent_tree(bracket, bracket_build):
+    from dipm import intent_store
     t = intent_tree(bracket, bracket_build)
     assert t["roots"] == ["R"] and t["order"] == ["R", "A", "A.P", "A.P.1", "A.P.2", "A.3", "B", "B.1", "C"]
     n = t["nodes"]
     assert n["R"].children == ["A", "B", "C"] and n["A"].children == ["A.P", "A.3"]
     assert n["A"].implicit is False and n["A"].features == ["A.P.holes", "A.3.cable"]
-    assert n["A.3"].label == "cable pass-through, centred on the plate"
+    # NOTES #45 change: the DSL's tags carry no wording when an intent file exists; without the
+    # file the label falls back to the intent words, with it the statement wins
+    assert n["A.3"].label == "hole"
     assert all(x.status == "ok" for x in n.values())
+    plain = intent_store.load(str(bracket.intent_file)).to_plain()
+    t2 = intent_tree(bracket, bracket_build, intent=plain)
+    assert t2["nodes"]["A.3"].label == "Cable pass-through, centered on the plate"
 
 
 def test_tree_without_a_build_and_implicit_nodes():

@@ -18,17 +18,17 @@ export function copyDesign(rel: string): string {
   const dir = mkdtempSync(join(tmpdir(), "dipm-e2e-"));
   cpSync(src, join(dir, basename(src)));
   // the design set: lock, intent file, review record (iteration 2)
-  for (const suffix of [".interpretations.json", ".intent.yaml", ".review.json"]) {
+  for (const suffix of [".interpretations.json", ".intent.yaml", ".review.json", ".resolution.json"]) {
     const f = src.replace(/\.py$/, suffix);
     if (existsSync(f)) cpSync(f, join(dir, basename(f)));
   }
   return join(dir, basename(src));
 }
 
-export async function startServer(design: string): Promise<Server> {
+export async function startServer(design: string, env: Record<string, string> = {}): Promise<Server> {
   const port = nextPort++;
   const proc = spawn(PY, ["-m", "dipm", "serve", design, "--no-open", "--port", String(port)], {
-    cwd: ROOT, stdio: ["ignore", "pipe", "pipe"],
+    cwd: ROOT, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ...env },
   });
   let out = "";
   proc.stdout!.on("data", (d) => (out += d));

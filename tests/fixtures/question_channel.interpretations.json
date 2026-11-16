@@ -5,6 +5,11 @@
     "design_source_sha256": "eb0f32c857de26a7cf6e852edcd42406fddbf7f9d7caa15eb2f7ad2c68b3bc75",
     "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
+    "code_sha256": "e43874da57a56b683f4eacc8779476c89cc82900b50ead0335dd27d6ae1d76a3",
+    "packages": {
+      "cadquery-ocp-novtk": "8.0.1.1.0",
+      "build123d": "0.13.0"
+    },
     "dipm": "0.0.1"
   },
   "prefs": null,
@@ -47,7 +52,7 @@
       "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
       "status": "proposed",
       "sensitivity": "high",
-      "sensitivity_detail": "survivors differ at 7/7 points, max |ΔV|/V = 0.00489, topology differs",
+      "sensitivity_detail": "survivors differ at 7/7 points: topology differs (max |ΔV|/V = 0.00489)",
       "readings": [
         "through_plate",
         "through_all",
@@ -60,13 +65,19 @@
       "eliminated": [],
       "supports": [
         "D.drain"
-      ]
+      ],
+      "feasible": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "resolution": "unconfirmed"
     }
   ],
   "questions": [
     {
       "id": "D.drain/hole.extent",
-      "text": "D.drain (D): which meaning of hole extent? 3 readings pass every check but give different geometry (survivors differ at 7/7 points, max |ΔV|/V = 0.00489, topology differs).",
+      "text": "D.drain (D): which meaning of hole extent? 3 readings pass every check but give different geometry (survivors differ at 7/7 points: topology differs (max |ΔV|/V = 0.00489)).",
       "options": [
         {
           "reading": "through_plate",

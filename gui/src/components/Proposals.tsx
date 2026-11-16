@@ -3,7 +3,7 @@
 // patch atomically; reject stores a comment that Claude reads with get_proposal_feedback.
 
 import { useState } from "preact/hooks";
-import { canAccept, centreMove, diffLines, isOpen, semanticSummary } from "../edit";
+import { canAccept, centreMove, diffLines, isOpen, needsOverride, semanticSummary } from "../edit";
 import {
   acceptProposal, compare, proposalBusy, proposals, rejectProposal, requests, selectedProposal,
 } from "../intent";
@@ -30,7 +30,7 @@ export function ProposalsPanel() {
       {ps.length === 0 && (
         <div class="muted small">
           No proposals yet. Proposals come from Claude through <Mono>dipm mcp</Mono> (see gui/README.md); use
-          <b> Ask Claude</b> on a stale intent node to request one.
+          <b> Queue for Claude</b> on a stale intent node to request one.
         </div>
       )}
       <ul class="p-list" role="listbox" aria-label="proposals">
@@ -44,7 +44,8 @@ export function ProposalsPanel() {
             <Mono class="pid">{p.id}</Mono>
             <span class={`p-status st-${p.status}`} data-testid="proposal-status">{STATUS_TEXT[p.status] ?? p.status}</span>
             {p.evaluation && p.status !== "failed" && (
-              <span class={`p-checks ${p.evaluation.ok ? "ok" : "fail"}`}>{p.evaluation.ok ? "checks pass" : "checks fail"}</span>
+              <span class={`p-checks ${needsOverride(p) ? "fail" : "ok"}`}>
+                {needsOverride(p) ? `fails ${(p.evaluation.failing_checks ?? []).join(", ") || "checks"}` : "no failing checks here"}</span>
             )}
             <span class="p-summary">{p.summary}</span>
             {p.addresses_nodes.length > 0 && <span class="p-nodes mono">{p.addresses_nodes.join(" ")}</span>}
@@ -54,10 +55,10 @@ export function ProposalsPanel() {
       {sel && <ProposalDetail p={sel} />}
       {reqs.length > 0 && (
         <div class="requests" data-testid="requests">
-          <div class="field-label">open requests for Claude</div>
+          <div class="field-label">{reqs.length} request{reqs.length === 1 ? "" : "s"} waiting for Claude</div>
           {reqs.map((r) => (
             <div key={r.id} class="small req">
-              <Mono>{r.id}</Mono> · <button class="link mono" onClick={() => select({ kind: "node", id: r.node })}>{r.node}</button>
+              <Mono>{r.id}</Mono> waiting · <button class="link mono" onClick={() => select({ kind: "node", id: r.node })}>{r.node}</button>
               {r.note && <> · “{r.note}”</>}
             </div>
           ))}
@@ -70,6 +71,9 @@ export function ProposalsPanel() {
 function ProposalDetail({ p }: { p: ProposalJ }) {
   const ev = p.evaluation;
   const [comment, setComment] = useState("");
+  const [anyway, setAnyway] = useState(false);
+  const [reason, setReason] = useState("");
+  const override = needsOverride(p);
   const busy = proposalBusy.value === p.id;
   const cmp = compare.value?.id === p.id ? compare.value.mode : null;
   const lines = semanticSummary(ev);
@@ -89,11 +93,17 @@ function ProposalDetail({ p }: { p: ProposalJ }) {
         <div class="p-block" data-testid="proposal-checks">
           <div class="field-label">checks</div>
           <div class="small">
-            proposed build <span class={after.ok ? "pass-text" : "fail-text"} data-testid="proposal-check-status">{after.status}</span>
+            proposed build <span class={after.ok ? "pass-text" : "fail-text"} data-testid="proposal-check-status">
+              {after.status.headline}</span>
             {ev?.sweep && <> · <span class={ev.sweep.failing.length ? "fail-text" : "pass-text"}>
               {ev.sweep.points - ev.sweep.failing.length}/{ev.sweep.points}</span> parameter sample points pass</>}
-            {" "}· before <span class="muted">{ev?.before?.status}</span>
+            {" "}· before <span class="muted">{ev?.before?.status.headline}</span>
           </div>
+          {(ev?.failing_checks ?? []).length > 0 && (
+            <div class="small fail-text" data-testid="proposal-failing">failing at the addressed intent: {ev!.failing_checks!.join(", ")}</div>
+          )}
+          <div class="small muted">verdict at the design's defaults plus {ev?.sweep?.points ?? 0} sample points; geometry
+            shown at {Object.entries(ev?.view_params ?? ev?.params ?? {}).map(([k, v]) => `${k}=${v}`).join(", ")}</div>
           {after.errors.map((e, i) => <div key={i} class="small fail-text">{e.feature}: {e.message}</div>)}
           {(after.stale_nodes ?? []).length > 0 && (
             <div class="small warn-text">still stale after accepting: {after.stale_nodes.join(", ")}</div>
@@ -139,10 +149,28 @@ function ProposalDetail({ p }: { p: ProposalJ }) {
 
       {isOpen(p) && (
         <div class="p-actions">
-          <button class="btn primary" disabled={!canAccept(p) || busy} onClick={() => void acceptProposal(p.id)}
-                  data-testid="accept-proposal" title="apply the patch to the design files (atomic), record review, rebuild">
-            Accept
-          </button>
+          {!override ? (
+            <button class="btn primary" disabled={!canAccept(p) || busy} onClick={() => void acceptProposal(p.id)}
+                    data-testid="accept-proposal" title="apply the patch to the design files (atomic), record review, rebuild">
+              Accept
+            </button>
+          ) : !anyway ? (
+            <button class="btn danger-outline" disabled={!canAccept(p) || busy} onClick={() => setAnyway(true)}
+                    data-testid="accept-anyway" title="this proposal fails checks: accepting records an override">
+              Accept anyway…
+            </button>
+          ) : (
+            <div class="anyway" data-testid="accept-anyway-form">
+              <label class="field-label" for={`why-${p.id}`}>why accept with failing checks? (recorded in the review record)</label>
+              <textarea id={`why-${p.id}`} rows={2} value={reason} data-testid="override-reason"
+                        onInput={(e) => setReason((e.target as HTMLTextAreaElement).value)} />
+              <div class="confirm-actions">
+                <button class="btn danger" disabled={!reason.trim() || busy} data-testid="confirm-accept-anyway"
+                        onClick={() => void acceptProposal(p.id, reason.trim())}>Accept with failing checks</button>
+                <button class="btn" onClick={() => { setAnyway(false); setReason(""); }}>Cancel</button>
+              </div>
+            </div>
+          )}
           <textarea rows={2} placeholder="what should change? (sent to Claude)" value={comment} aria-label="rejection comment"
                     onInput={(e) => setComment((e.target as HTMLTextAreaElement).value)} data-testid="reject-comment" />
           <button class="btn danger-outline" disabled={busy || !comment.trim()} data-testid="reject-proposal"

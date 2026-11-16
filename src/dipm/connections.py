@@ -152,6 +152,10 @@ class IntentNode:
     in_file: bool = False                             # declared in <design>.intent.yaml
     stale: bool = False                               # intent changed since its solution was reviewed
     hash: str = ""                                    # review.node_hash of its content
+    # iteration 3 (set by the serializer): intent checks at this node and how it was reviewed
+    check_state: str = ""                             # worst of its checks that ran: failing | thin | ample | ""
+    checks_not_run: int = 0
+    review_state: str = ""                            # reviewed | unreviewed | stale | reviewed_failing
 
     def as_dict(self) -> dict:
         return dataclasses.asdict(self)

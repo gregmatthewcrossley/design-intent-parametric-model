@@ -1,4 +1,4 @@
-# dipm GUI (iterations 1 and 2)
+# dipm GUI (iterations 1–3)
 
 The browser front end for `python -m dipm serve <design.py>`. The spec is [`docs/gui.md`](../docs/gui.md). Iteration 1 shows a design live, makes its intent visible, and rebuilds whenever the design file is saved. Iteration 2 (§7) makes the **intent editable** in the GUI (`<design>.intent.yaml`), tracks which solutions are **stale** after an intent edit, and puts **Claude in the loop** through an MCP server whose proposals the designer reviews and accepts here. The DSL itself is still edited in a text editor, or through accepted proposals.
 
@@ -37,7 +37,7 @@ npm run build && npm run e2e      # Playwright: the gui.md §6 acceptance criter
 npm run screenshots        # writes screenshots/*.png (light and dark; DIPM_SHOTS=1 adds the iter2-*.png flows)
 ```
 
-`e2e/acceptance.spec.ts` covers gui.md §6 (iteration 1); `e2e/iteration2.spec.ts` covers §7.2 criteria 1–6 and §7.3, with Claude simulated by `e2e/simulate_claude.py` (it drives `python -m dipm mcp` over stdio with the official MCP client, exactly as Claude Code does).
+`e2e/acceptance.spec.ts` covers gui.md §6 (iteration 1); `e2e/iteration3.spec.ts` covers §8.4 (iteration 3, with `/api/display` stubbed through `DIPM_DISPLAY_STUB`); `e2e/iteration2.spec.ts` covers §7.2 criteria 1–6 and §7.3, with Claude simulated by `e2e/simulate_claude.py` (it drives `python -m dipm mcp` over stdio with the official MCP client, exactly as Claude Code does).
 
 The e2e tests start their own servers from `../.venv` (`e2e/server.ts`). Tests that write preferences or edit a design work on temp copies of the fixtures in `tests/fixtures/`. WebGL runs headless through SwiftShader (`playwright.config.ts`).
 
@@ -78,7 +78,7 @@ A design's intent tree lives in `<design>.intent.yaml` next to it (`examples/she
 - Every write is canonical YAML (comments, key order and quote style preserved; a one-line edit is a one-line diff), atomic, and carries the hash of the file it was based on.
 - **Conflicts.** If the file changed on disk since your edit started (an editor, Claude, another tab), the write is refused (HTTP 409) and a red **CONFLICT** banner offers **Reload (drop my edit)** or **Re-apply my edit** on top of the new file. Nothing is overwritten silently. An invalid intent file (bad YAML or schema) shows a banner with the readable errors and the GUI keeps the last good tree.
 
-**Stale solutions.** Each node's content (statement, checks, assumptions) is hashed; `<design>.review.json` records the hashes (and a snapshot) the designer accepted. The first time a design with an intent file is served, the current content becomes the baseline. An edited node, and the features that realize it, show **Δ intent changed · solution not reviewed** in the WHY tree (amber chips), the HOW list and the connections view. The inspector shows what it said before, a **Mark reviewed** button ("the solution still fits"), and **Ask Claude**.
+**Stale solutions.** Each node's content (statement, checks, assumptions) is hashed; `<design>.review.json` records the hashes (and a snapshot) the designer accepted. Since iteration 3 nothing is baselined automatically: a design with no review record opens with a prompt, *Mark all reviewed* or *Review one by one*. An edited node, and the features that realize it, show **Δ intent changed · solution not reviewed** in the WHY tree (amber chips), the HOW list and the connections view. The inspector shows what it said before, a **Mark reviewed** button ("the solution still fits"), and **Ask Claude**.
 
 ## Claude in the loop (iteration 2b)
 
@@ -105,6 +105,38 @@ The syntax is `claude mcp add [options] <name> -- <command> [args...]` (stdio is
 6. **Accept** applies the patch atomically (all files or none), writes the interpretations lock resolved during evaluation, records review hashes for the addressed nodes (staleness clears) and closes their requests. Or **Reject with comment**: Claude reads it with `get_proposal_feedback` and proposes again with `revises=<id>`.
 
 A proposal whose base hashes no longer match the files is marked **stale** and cannot be applied; ask Claude to regenerate it. Accepted patches are ordinary file changes, visible in `git diff`.
+
+## Honest status and real scale (iteration 3)
+
+Spec: docs/gui.md §8. Engine decisions: `src/dipm/NOTES.md` #58–72.
+
+- **Header status:** no bare PASS. It reads "Kernel ✓ · Intent checks 3 of 11 run · 2 failing · N guesses unreviewed", and each tier opens the checks panel at its row. On the bracket, R.c1 (load) fails, and so does R.c4 (tool access) at worst case.
+- **Checks panel:** grouped by tier.
+  - The kernel tier is in plain words; the ΔH/ΔS table sits behind **Details**.
+  - Each intent check shows its plain statement, a state (ample, thin, failing or not run) and a **margin bar**, centred on zero margin, with the nominal, worst case and limit.
+  - Details adds the formula, inputs with ranges and sources (placeholders marked), and the hand-calc model's assumptions.
+- **Guesses vs. confirmed:** model-made or unreviewed items are hatched with a dashed outline everywhere. This covers readings, assumptions, the context chip, the print orientation and check chips. **accept** makes an item solid everywhere at once.
+- **Context chip:** "Assumed: PLA · FDM 0.2 mm · shelf face down · change". The picker (material, layer height, nozzle) writes the intent file's `context:`. The orientation, with its rationale and runner-up, is accepted or re-inferred there too. Until accepted, both live in `<design>.resolution.json` (machine-written; commit it with the lock).
+- **View menu** (header):
+  - **Work / Photo view.** Photo view has thin-lens depth of field (focus under the cursor, blur capped) and procedural soft lighting.
+  - **1:1 real size.** Uses `GET /api/display`; with no plausible size, an ID-1 card calibration plus an optional coin check.
+  - **Process texture.** FDM layer lines along the build direction.
+  - **Reference objects**, per view: a screw from the hole's spec, or a hand or card for the part.
+  - **Scale bar.**
+  - **Uncertainty:** None, or Margin heatmap (with a legend).
+- **Size callouts:** hovering a face shows its main size ("Ø8.6 countersink (#8) · 9.0 mm from edge").
+- **Proposals:**
+  - Before/after geometry is shown at your current parameters; outline-only changes get a lighter tint.
+  - A proposal that fails checks needs **Accept anyway…** with a reason, and its nodes then show *reviewed with failing checks*.
+  - **Queue for Claude** queues a request; the header shows "N requests waiting" with a copyable prompt.
+  - The comparison banner says "inspection paused".
+- **Rename id:** saved answers move with the id; an optional checkbox also renames matching feature ids.
+- **New API:**
+  - `GET /api/display` (with `width,height,dpr,label,internal,left,top`, it also returns the matching display)
+  - `POST /api/context`, `POST /api/orientation`, `POST /api/review`
+  - `POST /api/proposals/{id}/view`, and `override_reason` on accept
+- **Test hooks:** `window.__dipm.viewer` adds `photoState()`, `textureState()`, `referenceState()`, `oneToOneState()`, `measureCssPx()`, `dolly()`, `lookAt()` and `partBounds()`; `window.__dipm.measure(screenOverride)` remeasures 1:1.
+- **New pure modules** (vitest): `scale.ts`, `photo.ts`, `texture.ts`, `margins.ts`, `reference.ts`. `realsize.ts` is the 1:1 controller.
 
 ## Architecture
 

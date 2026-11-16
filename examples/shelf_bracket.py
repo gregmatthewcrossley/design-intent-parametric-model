@@ -26,6 +26,8 @@ Run:  .venv/bin/python -m dipm build examples/shelf_bracket.py --param shelf_dep
 """
 from dipm import (Design, X, Y, Z, centered_on, centerline, clearance, clearance_diameter, countersink,
                   distribute, edge_distance, exactly, face_point, intent, plain, tool_access_radius)
+from dipm.checks import cantilever_load, overhang, tool_access
+from dipm.intent_layer import TOOL_ACCESS_DIAMETER
 from dipm.sketch import YZ, Profile
 
 
@@ -76,23 +78,23 @@ def make_design(shelf_hole_u: float = 0.75) -> Design:
     screw_zone = centerline(mount_face, Z).before(gusset_footprint_bottom, clearance=tool_access_radius(screw))
     wall_pts = distribute(along=screw_zone, count=2,
                           inset=(edge_distance(clearance_diameter(screw)), 0.0))   # spread as far as allowed
-    d.hole("A.P.holes", on=mount_face, at=wall_pts, spec=countersink(screw),
-           tags=(intent("A.P", "pattern", "wall screw pattern"), intent("A", "wall_mount")),
+    holes = d.hole("A.P.holes", on=mount_face, at=wall_pts, spec=countersink(screw),
+           tags=(intent("A.P", "pattern"), intent("A", "wall_mount")),
            instance_tags=["A.P.1", "A.P.2"])
 
     # --- A.3 cable pass-through: centred on the plate, independent of the pattern ----------
     # Which "centre" is interpreted (DECISIONS #8 -> #24): the face centroid lies under the
     # gusset and is eliminated; the exposed-region midpoint is the plate below the gusset.
     d.hole("A.3.cable", on=mount_face, at=centered_on(mount_face), spec=plain(8.0),
-           tags=(intent("A.3", "hole", "cable pass-through, centred on the plate"), intent("A", "wall_mount")))
+           tags=(intent("A.3", "hole"), intent("A", "wall_mount")))
 
     # --- B.1 shelf screw: toward the front, centred across the width, through the arm ------
     d.hole("B.1.screw", on=shelf_face, at=face_point(shelf_face, along=(Y, shelf_hole_u), across=(X, 0.5)),
            spec=clearance(screw),
-           tags=(intent("B.1", "hole", "screw up into the shelf"), intent("B", "shelf_support")))
+           tags=(intent("B.1", "hole"), intent("B", "shelf_support")))
 
     # --- R.c2 printable: inner-corner fillet, radius follows t -----------------------------
-    fillet = d.fillet("R.fillet", inner_corner, radius=t, tags=intent("R", "fillet", "R.c2 printable"))
+    fillet = d.fillet("R.fillet", inner_corner, radius=t, tags=intent("R", "fillet"))
 
     # --- named exports (architecture §2.3), watched by the stability harness ---------------
     d.export("wall_face", wall_face)
@@ -100,6 +102,18 @@ def make_design(shelf_hole_u: float = 0.75) -> Design:
     d.export("shelf_face", shelf_face)
     d.export("gusset_hyp", gusset.side("hypotenuse"))
     d.export("corner_blend", fillet.blend(of=inner_corner, card=exactly(2)))
+
+    # --- executable intent checks (docs/gui.md §8.2 3E.3): statements live in the intent file,
+    # the grounding lives here.  R.c1 is expected to FAIL (architecture §8.4a); it is reported,
+    # not tuned away.
+    d.check("R.c1", cantilever_load(            # rung 2 hand calc: pivot model, anchors, arm bending
+        load_kg=20.0, load_range=(0.0, 30.0),   # architecture §8.1 `load: 20 kg`; R.a1 range (tolerance §2)
+        safety_factor=2.0,                      # "safety factor ≥ 2" in the R.c1 statement
+        anchors=holes, section_width=width, section_depth=t, section_at=t + gusset_size,
+        involves=(body.side("shelf"), body.side("arm_under"), body.side("arm_tip"))))
+    d.check("R.c2", overhang())                 # in the inferred / accepted print orientation (3E.10)
+    d.check("R.c4", tool_access(holes, diameter=TOOL_ACCESS_DIAMETER, length=150.0,
+                                involves=(gusset.side("hypotenuse"),)))
     d.use_lock(__file__)       # resolved interpretations: shelf_bracket.interpretations.json
     return d
 

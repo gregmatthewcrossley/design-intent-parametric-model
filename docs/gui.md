@@ -1,6 +1,6 @@
 # Web GUI: Iteration 1 Spec
 
-*Status: agreed 2026-11-16 (scope, layout, and style chosen by the user). **Iteration 1 built 2026-11-16**: see [`gui/README.md`](../gui/README.md) (build, run, develop) and `src/dipm/NOTES.md` DECISIONS #32–43; all §6 criteria verified headless (Playwright). Context: [`user-experience.md`](user-experience.md) §3. Engine: [`src/dipm/NOTES.md`](../src/dipm/NOTES.md).*
+*Status: agreed 2026-11-16 (scope, layout, and style chosen by the user). **Iterations 1–3 built 2026-11-16** (iteration 3: §8). Iteration 1: see [`gui/README.md`](../gui/README.md) (build, run, develop) and `src/dipm/NOTES.md` DECISIONS #32–43; all §6 criteria verified headless (Playwright). Context: [`user-experience.md`](user-experience.md) §3. Engine: [`src/dipm/NOTES.md`](../src/dipm/NOTES.md).*
 
 ## 1. Goal
 
@@ -200,7 +200,9 @@ intents:
 - **Where parameters live:** they stay in the DSL for 2a (they're "true design parameters", architecture §8.1). Moving them to the intent file is a later question.
 - **How formal checks are in the file:** free text plus kind/source for now; an expression language later (architecture §10, open question 1).
 
-## 8. Iteration 3: honest status and real scale (spec agreed 2026-11-16)
+## 8. Iteration 3: honest status and real scale (spec agreed 2026-11-16; **built 2026-11-16**)
+
+*Built: all of 3E.1–3E.10 and features 1–15; decisions are `src/dipm/NOTES.md` DECISIONS #58–72 (all [REVIEW]), TODOs 13–18. Criteria 1–9a verified headless (Playwright, SwiftShader). Numbers in rule packs are placeholders (`packs.py`, #58). On the bracket: R.c1 and R.c4 fail, R.c2 has ample margin; orientation inferred as shelf face down.*
 
 *Drafted and agreed 2026-11-16, from decisions already made: [`review-response.md`](review-response.md) B1–B9, [`tolerance-uncertainty.md`](tolerance-uncertainty.md) §2–§4.2, and the iteration 2 review in `src/dipm/NOTES.md` (#44–57). Open questions resolved in §8.6.*
 
@@ -247,7 +249,7 @@ Two things a designer can trust at a glance:
 
 ### 8.4 Acceptance criteria (draft)
 
-1. The bracket's header never shows a bare PASS. With R.c1 implemented, it shows **1 failing** intent check, and the checks panel shows R.c1's margin bar as negative, with plain-language text.
+1. The bracket's header never shows a bare PASS. With R.c1 implemented, it shows **1 failing** intent check *(as built: **2 failing**, because R.c4 tool access, implemented in the same iteration, also fails honestly at worst case)*, and the checks panel shows R.c1's margin bar as negative, with plain-language text.
 2. Every model-made item (the A.3 reading, R.a1–a3, and the default context if used) is hatched; marking one reviewed makes it solid everywhere at once.
 3. A design with no stated context shows the "Assumed: PLA · FDM 0.2 mm" chip, hatched. Its render shows 0.2 mm layer lines when zoomed close, and they disappear when zoomed out.
 4. Margin heatmap: faces involved in R.c1 are red; faces in no check are grey.

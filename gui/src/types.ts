@@ -96,6 +96,8 @@ export interface AssumptionSpec {
   supports?: string[];
   sensitivity?: string;
   status?: string;
+  about?: string;
+  value?: string;
 }
 
 export interface IntentNodeJ {
@@ -117,6 +119,9 @@ export interface IntentNodeJ {
   in_file?: boolean;
   stale?: boolean;
   hash?: string;
+  check_state?: "" | "failing" | "thin" | "ample";
+  checks_not_run?: number;
+  review_state?: "" | "reviewed" | "unreviewed" | "stale" | "reviewed_failing";
 }
 
 export interface NodeContent {
@@ -170,7 +175,7 @@ export type IntentOp =
   | { op: "edit_check"; id: string; check_id: string; fields: Partial<CheckSpec> }
   | { op: "remove_check"; id: string; check_id: string }
   | { op: "edit_assumption"; id: string; assumption_id: string; fields: Partial<AssumptionSpec> }
-  | { op: "mark_reviewed"; ids: string[] };
+  | { op: "mark_reviewed"; ids: string[]; all?: boolean };
 
 export type ProposalStatus = "pending" | "evaluating" | "ready" | "failed" | "accepted" | "rejected" | "stale";
 
@@ -179,16 +184,21 @@ export interface FeedbackJ { at: string; kind: string; by: string; comment: stri
 export interface EvaluationJ {
   ok: boolean;
   error?: string;
+  failing_checks?: string[];
+  needs_override?: boolean;
   params?: Record<string, unknown>;
-  before?: { status: string; ok: boolean; stale_nodes: string[] };
-  after?: { status: string; ok: boolean; errors: ErrorJ[]; stale_nodes: string[] };
+  view_params?: Record<string, unknown>;
+  before?: { status: TieredStatus; kernel: string; ok: boolean; stale_nodes: string[] };
+  after?: { status: TieredStatus; kernel: string; ok: boolean; errors: ErrorJ[]; stale_nodes: string[];
+            intent_checks?: { id: string; node: string; state: string; plain: string }[] };
   sweep?: { points: number; failing: { params: Record<string, unknown>; errors: string[] }[] };
   semantic_diff?: {
     intent: { added: { id: string; statement: string; parent: string | null }[]; removed: { id: string; statement: string }[];
               moved: { id: string; from: string | null; to: string | null }[];
               changed: ({ id: string; statement?: { before: string; after: string } } & Record<string, unknown>)[] };
     features: { added: string[]; removed: string[]; changed: ({ id: string } & Record<string, { before: unknown; after: unknown } | string>)[] };
-    checks: { before: { status: string; errors: number }; after: { status: string; errors: number };
+    checks: { before: { status: string; kernel?: string; errors: number }; after: { status: string; kernel?: string; errors: number };
+              intent?: { id: string; before: string | null; after: string }[];
               features: { id: string; before: string | null; after: string; failed_checks: CheckJ[] }[];
               diagnostics_after: Diagnostics };
     interpretations: { added: { id: string; chosen: string }[]; removed: { id: string; chosen: string }[];
@@ -196,7 +206,7 @@ export interface EvaluationJ {
   };
   text_diff?: Record<string, string>;
   meshes?: { before?: string; after?: string };
-  changed_faces?: { before: number[]; after: number[] };
+  changed_faces?: { before: number[]; after: number[]; outline_before?: number[]; outline_after?: number[] };
   face_tags?: { before: string[]; after: string[] };
   ms?: number;
 }
@@ -215,7 +225,7 @@ export interface ProposalJ {
   status_detail: string;
   evaluation: EvaluationJ | null;
   feedback: FeedbackJ[];
-  accepted?: { at: string; written: string[]; reviewed: string[] };
+  accepted?: { at: string; written: string[]; reviewed: string[]; override?: { failing: string[]; reason: string } };
 }
 
 export interface RequestJ {
@@ -252,6 +262,7 @@ export interface FaceJ {
   failing: boolean; // created by a failing feature
   failing_touched: boolean; // created or modified by a failing feature
   text: string;
+  size?: string; // "Ø4.5 hole (#8) · 9.0 mm from edge" (size-on-hover callouts)
 }
 
 export interface EdgeJ {
@@ -294,6 +305,9 @@ export interface SlotJ {
   eliminated: EliminationJ[];
   used?: string | null;
   mismatch?: boolean;
+  feasible?: string[]; // B3: readings that pass every check
+  resolution?: "unconfirmed" | "confirmed" | "author";
+  confirmed_by?: string[];
 }
 
 export interface QuestionJ {
@@ -319,12 +333,115 @@ export interface Diagnostics {
   missing_in_file?: string[];
 }
 
+// ------------------------------------------------------------------ iteration 3 (docs/gui.md §8)
+
+export interface CheckTermJ {
+  name: string;
+  plain: string;
+  unit: string;
+  sense: "<=" | ">=";
+  nominal: number;
+  worst: number;
+  limit: number;
+  limit_worst: number;
+  margin: number;
+  margin_worst: number;
+  margin_rel: number | null;
+  state: "ample" | "thin" | "failing";
+  inputs: { name: string; nominal: number; lo: number; hi: number; unit: string; source: string; made_by: string;
+            label: string; placeholder: boolean }[];
+  method: string;
+  formula: string;
+}
+
+export interface IntentCheckJ {
+  id: string;
+  node: string;
+  statement: string;
+  plain: string;
+  kind: string;
+  rung: number;
+  state: "ample" | "thin" | "failing" | "not run";
+  reason: string;
+  governing: string;
+  terms: CheckTermJ[];
+  headline: CheckTermJ | null;
+  assumptions: { id: string; statement: string; made_by: string; reviewed: boolean; in_file?: boolean }[];
+  method_assumptions: string[];
+  features: string[];
+  faces: number[];
+  priority: string;
+  source: string;
+  reviewed: boolean;
+}
+
+export interface TieredStatus {
+  kernel: { state: "pass" | "fail"; failures: number; features: number };
+  intent: { total: number; run: number; not_run: number; failing: number; thin: number; ample: number;
+            failing_ids: string[]; thin_ids: string[]; ample_ids: string[]; not_run_ids: string[] };
+  headline: string;
+  text: string;
+  guesses?: number;
+}
+
+export interface ContextItem { value: string; made_by: string; status: string; reviewed: boolean; source: string }
+
+export interface OrientationCand {
+  up: number[]; overhang_mm2: number; support_mm3: number; bed_mm2: number; cost: number; down_face: string;
+}
+
+export interface OrientationJ {
+  up: number[];
+  label: string;
+  rationale?: string;
+  made_by: string;
+  reviewed: boolean;
+  status?: string;
+  source?: string;
+  chosen?: OrientationCand;
+  runner_up?: OrientationCand | null;
+  candidates?: OrientationCand[];
+  assumption_id?: string;
+}
+
+export interface AppearanceJ {
+  process: string;
+  layer_pitch: number;
+  extrusion_width: number;
+  nozzle: number;
+  top_line_angle_deg: number;
+  flags: Record<string, boolean>;
+  roughness: number;
+  material: string;
+  build_direction?: number[];
+  orientation_reviewed?: boolean;
+}
+
+export interface ProvenanceJ { made_by: string | null; reviewed: boolean; guess: boolean; label: string; value?: string;
+                               node?: string }
+
+export interface ReferencesJ {
+  screws: Record<string, { major: number; head: number; clearance: number; length: number }>;
+  card: { width: number; height: number; corner_radius: number; thickness: number };
+  fingertip: { breadth: number; length: number; placeholder: boolean };
+  hand: { length: number; breadth: number; placeholder: boolean };
+}
+
 export interface BuildJ {
   design: string;
   file?: string;
   params: Record<string, number | string>;
-  ok: boolean;
-  status: "PASS" | "FAIL";
+  ok: boolean; // kernel invariants only: never shown as a bare PASS (B1)
+  kernel_ok?: boolean;
+  status: TieredStatus;
+  intent_checks?: IntentCheckJ[];
+  context?: { items: Record<string, ContextItem>; summary: string; assumed: boolean };
+  orientation?: OrientationJ | null;
+  appearance?: AppearanceJ | null;
+  provenance?: Record<string, ProvenanceJ>;
+  guesses?: string[];
+  references?: ReferencesJ;
+  overrides?: Record<string, { failing: string[]; reason: string; at: string; proposal?: string }>;
   error_count: number;
   errors: ErrorJ[];
   ms: number;

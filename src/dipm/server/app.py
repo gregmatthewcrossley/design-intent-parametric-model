@@ -23,8 +23,24 @@ Iteration 2 (docs/gui.md §7):
     POST  /api/proposals/{id}/accept {comment?}    apply atomically, record reviews, rebuild
     POST  /api/proposals/{id}/reject {comment}     feedback for get_proposal_feedback
     GET   /api/requests, POST /api/requests {node, note}   "Ask Claude" requests
-    POST  /api/intent/rename {base_hash, design_hash, old, new}
-                                          rename an intent id in the file and the DSL (LibCST codemod)
+    POST  /api/intent/rename {base_hash, design_hash, old, new, rename_features?}
+                                          rename an intent id in the file and the DSL (LibCST codemod);
+                                          migrates saved preferences (#49)
+
+Iteration 3 (docs/gui.md §8):
+
+    GET   /api/display[?width&height&dpr&label&internal&left&top]
+                                          physical display sizes from the OS (display.py) and the
+                                          display the browser is on
+    POST  /api/context {base_hash, action: accept | set, values?}
+                                          write the assumed (or changed) context into the intent file
+    POST  /api/orientation {action: infer | accept, base_hash?}
+                                          re-infer the print orientation (resolution record) or
+                                          accept it into the intent file's root assumptions
+    POST  /api/review {action: all | one_by_one | accept_item, base_hash?, key?, value?}
+                                          first-open review prompt (#48); accept a model-made item
+    POST  /api/proposals/{id}/view {params}   before/after meshes at the GUI's parameters (#53)
+    POST  /api/proposals/{id}/accept {comment?, override_reason?}   "Accept anyway…" (#54)
 
 Bound to 127.0.0.1 only.  The design file, its lock and its preferences are watched; on a
 change the design module is re-imported fresh (cli.load_design never caches it) and rebuilt
@@ -101,6 +117,12 @@ class Session:
         self.last_build = None                # (design, Build, mesh_id, notes) for re-serializing
         self.intent_lock = threading.Lock()
         self.evaluating: set = set()
+        # iteration 3: the machine-written resolution record (assumed context, print orientation)
+        from ..resolution import ResolutionRecord, path_for as record_path_for
+        self.record_path = record_path_for(self.path)
+        self.record = ResolutionRecord.load(self.record_path)
+        self.key_build = None                 # the defaults build (orientation key / inference)
+        self.force_orientation = False
 
     # ------------------------------------------------------------------ files
     @property
@@ -132,7 +154,8 @@ class Session:
         return {os.path.realpath(x) for x in out if x}     # realpath: watchfiles reports resolved paths
 
     def intent_paths(self) -> set:
-        return {os.path.realpath(self.intent_path), os.path.realpath(self.files.review)}
+        return {os.path.realpath(self.intent_path), os.path.realpath(self.files.review),
+                os.path.realpath(self.record_path)}
 
     def proposal_dirs(self) -> set:
         return {os.path.realpath(self.files.proposals_dir), os.path.realpath(self.files.requests_dir)}
@@ -152,26 +175,42 @@ class Session:
                 self.intent_doc, self.intent_error = intent_store.load(path), None
             except intent_store.IntentSchemaError as e:
                 self.intent_error = e.errors
+        # no automatic baseline (NOTES #48 change): without a review record nothing is reviewed,
+        # and the GUI asks once (POST /api/review all | one_by_one)
         self.review = ReviewRecord.load(self.files.review)
-        if self.intent_doc is not None and not self.review.exists:
-            # first time this design's intent is served: its current content is the reviewed
-            # baseline, persisted so later edits (GUI, editor, Claude) show as stale everywhere
-            self.review.baseline(self.intent_doc.to_plain())
-            rp = os.path.realpath(self.files.review)
-            self.writing.add(rp)
-            try:
-                self.review.save()
-            except OSError:
-                pass
-            finally:
-                self.own_writes[rp] = _sha(rp)
-                self.writing.discard(rp)
+        from ..resolution import ResolutionRecord
+        self.record = ResolutionRecord.load(self.record_path)
 
     def intent_arg(self) -> dict | None:
         if self.intent_doc is None:
             return None
         plain = self.intent_doc.to_plain()
-        return {"plain": plain, "stale": self.review.stale(plain) if self.review else {}}
+        return {"plain": plain, "stale": self.review.stale(plain) if self.review else {}, "review": self.review}
+
+    def assessment(self, design, b):
+        """Context, orientation, intent checks, tiered status (assess.py).  Writes the resolution
+        record (machine-written, never the intent file) when its content changed."""
+        from ..assess import assess
+        ia = self.intent_arg()
+        plain = ia["plain"] if ia else None
+        reviewed = (set(self.review.reviewed) - set(ia["stale"])) if (ia and self.review) else set()
+        a = assess(design, b, plain, self.record, reviewed, key_build=self.key_build or b,
+                   force_orientation=self.force_orientation)
+        self.force_orientation = False
+        if a.record_changed:
+            rp = os.path.realpath(self.record_path)
+            self.writing.add(rp)
+            try:
+                self.record.save()
+            except OSError:
+                pass
+            finally:
+                self.own_writes[rp] = _sha(rp)
+                self.writing.discard(rp)
+        return a
+
+    def payload(self, design, b, mesh_id, notes) -> dict:
+        return build_payload(design, b, mesh_id, notes, intent=self.intent_arg(), assessment=self.assessment(design, b))
 
     def intent_info(self) -> dict:
         path = self.intent_path
@@ -210,9 +249,6 @@ class Session:
             results = intent_store.apply_ops(doc, file_ops, taken=self.dsl_ids()) if file_ops else []
             review = ReviewRecord.load(self.files.review)
             write_review = False
-            if not review.exists:                 # persist the baseline before the first change
-                review.baseline(before)
-                write_review = True
             mine = {os.path.realpath(path), os.path.realpath(self.files.review)}
             self.writing |= mine
             try:
@@ -222,6 +258,8 @@ class Session:
                 for o in ops:
                     if o.get("op") == "mark_reviewed":
                         ids = o.get("ids") or ([o["id"]] if o.get("id") else [])
+                        if o.get("all"):
+                            ids = [i for i in doc.node_ids()]
                         results.append({"reviewed": review.mark(plain, ids)})
                         write_review = True
                 if write_review:
@@ -233,11 +271,15 @@ class Session:
             self.load_intent()
         return {"results": results}
 
-    def rename_id(self, base_hash: str | None, design_hash: str | None, old: str, new: str) -> dict:
+    def rename_id(self, base_hash: str | None, design_hash: str | None, old: str, new: str,
+                  rename_features: bool = False) -> dict:
         """The explicit 'rename id' action (gui.md §7.4): the intent file, the DSL's intent-id
-        literals (codemod.rename_intent_id, LibCST) and the review record, written together."""
+        literals (codemod.rename_intent_id, LibCST), the review record and the saved preferences
+        (#49), written together.  `rename_features` also renames matching feature ids
+        (`A.3.cable` -> `A.C.cable`); off by default."""
         from ..codemod import rename_intent_id
         from ..fileio import atomic_write, read_text
+        from ..interpret import Preferences
         path = self.intent_path
         with self.intent_lock, self.build_lock:
             cur, dcur = file_sha256(path), file_sha256(self.path)
@@ -247,37 +289,106 @@ class Session:
                                                   cur if base_hash != cur else dcur)
             doc = intent_store.load(path)
             review = ReviewRecord.load(self.files.review)
-            if not review.exists:
-                review.baseline(doc.to_plain())
             was_stale = set(review.stale(doc.to_plain()))
             intent_store.rename_id_in_doc(doc, old, new)
             intent_text = intent_store.dumps(doc)
-            py_text, n = rename_intent_id(read_text(self.path), old, new)
+            py_text, n = rename_intent_id(read_text(self.path), old, new, rename_features=rename_features)
+            # saved preferences follow the intent node (#49): `<word>.<slot>@<design>:<old...>`
+            prefs_file = self.prefs_path() or self.default_prefs_path()
+            prefs = Preferences.load(prefs_file)
+            migrated = prefs.rename_node(self.design.name if self.design else "", old, new)
             # a rename is not an intent change: nodes that were reviewed stay reviewed under the new id
             ren = lambda k: new + k[len(old):] if k == old or k.startswith(old + ".") else k   # noqa: E731
             for k in [k for k in review.reviewed if ren(k) != k]:
                 review.reviewed.pop(k)
             renamed = [k for k in doc.node_ids() if k == new or k.startswith(new + ".")]
             review.mark(doc.to_plain(), [k for k in renamed if old + k[len(new):] not in was_stale])
-            mine = {os.path.realpath(p) for p in (path, self.path, self.files.review)}
+            mine = {os.path.realpath(p) for p in (path, self.path, self.files.review, prefs_file)}
             self.writing |= mine
             try:
                 atomic_write(path, intent_text)
                 atomic_write(self.path, py_text)
                 review.save()
+                if migrated:
+                    prefs.save()
             finally:
                 for p in mine:
                     self.own_writes[p] = _sha(p)
                 self.writing -= mine
         self.load()
-        return {"renamed_literals": n, "old": old, "new": new}
+        return {"renamed_literals": n, "old": old, "new": new, "migrated_preferences": migrated,
+                "renamed_features": rename_features}
+
+    # ------------------------------------------------------------------ iteration 3 actions
+    def _write_intent_ops(self, base_hash: str | None, ops: list) -> dict:
+        """Apply intent ops for an accept action (the designer's click), with the base-hash check."""
+        return self.patch_intent(base_hash if base_hash is not None else file_sha256(self.intent_path), ops)
+
+    def context_action(self, base_hash: str | None, action: str, values: dict | None) -> dict:
+        """accept: write the assumed context into the intent file; set: write changed values
+        (the picker).  Only ever on the designer's request (3E.6)."""
+        from ..resolution import CONTEXT_KEYS, accept_context_ops, context_items
+        if self.intent_doc is None:
+            raise intent_store.IntentOpError("this design has no intent file to write the context into")
+        items = context_items(self.intent_doc.to_plain().get("context"))
+        vals = {k: v for k, v in (values or {}).items() if k in CONTEXT_KEYS}
+        if action not in ("accept", "set"):
+            raise intent_store.IntentOpError(f"unknown context action {action!r}")
+        return self._write_intent_ops(base_hash, accept_context_ops(items, vals))
+
+    def orientation_action(self, base_hash: str | None, action: str) -> dict:
+        from ..resolution import accept_orientation_ops, accepted_orientation
+        if action == "infer":
+            if self.intent_doc is not None and accepted_orientation(self.intent_doc.to_plain()):
+                return {"note": "an accepted orientation is in the intent file; inference never replaces it"}
+            self.force_orientation = True
+            return {"note": "re-inferred"}
+        if action != "accept":
+            raise intent_store.IntentOpError(f"unknown orientation action {action!r}")
+        if self.intent_doc is None:
+            raise intent_store.IntentOpError("this design has no intent file to write the orientation into")
+        if accepted_orientation(self.intent_doc.to_plain()):
+            raise intent_store.IntentOpError("an orientation is already accepted in the intent file")
+        o = (self.record.data.get("orientation") if self.record else None)
+        if not o:
+            raise intent_store.IntentOpError("no inferred orientation to accept yet")
+        root = self.intent_doc.nodes()[0][0]
+        return self._write_intent_ops(base_hash, accept_orientation_ops(o, root))
+
+    def review_action(self, base_hash: str | None, action: str, key: str = "", value=None) -> dict:
+        """First-open prompt (#48): `all` marks every node reviewed; `one_by_one` writes an empty
+        record so the prompt does not return.  `accept_item`: a model-made item that does not live
+        in the intent file (an interpretation reading `slot:<id>`)."""
+        if action == "all":
+            return self.patch_intent(base_hash if base_hash is not None else file_sha256(self.intent_path),
+                                     [{"op": "mark_reviewed", "all": True}])
+        rp = os.path.realpath(self.files.review)
+        if action == "one_by_one":
+            rec = ReviewRecord.load(self.files.review)
+        elif action == "accept_item":
+            if not key.startswith("slot:"):
+                raise intent_store.IntentOpError("accept_item takes slot:<id>; assumptions, context and the "
+                                                 "orientation are accepted into the intent file")
+            rec = ReviewRecord.load(self.files.review)
+            rec.accept_item(key, value)
+        else:
+            raise intent_store.IntentOpError(f"unknown review action {action!r}")
+        self.writing.add(rp)
+        try:
+            rec.save()
+        finally:
+            self.own_writes[rp] = _sha(rp)
+            self.writing.discard(rp)
+        self.load_intent()
+        return {"ok": True}
 
     def refresh_payload(self) -> dict | None:
         """Re-serialize the last build with the current intent state (no rebuild)."""
         if self.last_build is None:
             return None
         design, b, mesh_id, notes = self.last_build
-        payload = build_payload(design, b, mesh_id, notes, intent=self.intent_arg())
+        with self.build_lock:
+            payload = self.payload(design, b, mesh_id, notes)
         return self._decorate(payload)
 
     def _decorate(self, payload: dict) -> dict:
@@ -320,6 +431,17 @@ class Session:
         self.design, self.design_error = design, None
         self.params = self._carry_params(self.params)
         self.load_intent()
+        self.key_build = self._defaults_build(design)
+
+    def _defaults_build(self, design):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            try:
+                if design.interpretation is None and design.lock is not None:
+                    return design.build(on_fail="record", interpretations={}, prefs=design.prefs)
+                return design.build(on_fail="record")
+            except Exception:   # noqa: BLE001 - only the orientation key depends on it
+                return None
 
     def _carry_params(self, old: dict) -> dict:
         """Keep the current parameter values that are still declared and valid."""
@@ -370,7 +492,7 @@ class Session:
             if b.ok and mesh_id:
                 self.last_good_mesh = mesh_id
             self.last_build = (design, b, mesh_id, notes)
-            payload = build_payload(design, b, mesh_id, notes, intent=self.intent_arg())
+            payload = self.payload(design, b, mesh_id, notes)
             return self._decorate(payload)
 
     def resolve_now(self) -> None:
@@ -386,6 +508,9 @@ class Session:
         design._interp_source = (f"lock {os.path.basename(design.lock.lock)}" if fresh else
                                  "resolved in memory (lock stale; run `dipm interpret` to update it)")
         self.needs_resolve = False
+        kb = self._defaults_build(design)
+        if gen == self.generation:
+            self.key_build = kb
 
     def resolve_in_background(self) -> None:
         if not self.needs_resolve or self.resolving:
@@ -593,7 +718,8 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
             return err("body must be a JSON object")
         old, new = str(body.get("old") or ""), str(body.get("new") or "").strip()
         try:
-            res = await asyncio.to_thread(session.rename_id, body.get("base_hash"), body.get("design_hash"), old, new)
+            res = await asyncio.to_thread(session.rename_id, body.get("base_hash"), body.get("design_hash"), old, new,
+                                          bool(body.get("rename_features")))
         except intent_store.IntentConflict as e:
             return err(str(e), 409, conflict=True, current=session.intent_info())
         except (intent_store.IntentOpError, intent_store.IntentSchemaError) as e:
@@ -618,7 +744,7 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
 
         def run():
             try:
-                session.store.evaluate(pid)
+                session.store.evaluate(pid, view_params=dict(session.params))
             finally:
                 session.evaluating.discard(pid)
                 session.publish({"type": "proposals-changed", "id": pid})
@@ -628,8 +754,10 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
     async def api_proposals(request: Request):
         if request.method == "GET":
             ps = await asyncio.to_thread(session.store.list)
-            return JSONResponse({"proposals": [strip(p) for p in ps],
-                                 "requests": await asyncio.to_thread(session.store.requests)})
+            rs = await asyncio.to_thread(session.store.requests)
+            return JSONResponse({"proposals": [strip(p) for p in ps], "requests": rs,
+                                 "waiting": sum(1 for r in rs if r.get("status") == "open"),
+                                 "prompt": session.store.claude_prompt()})
         try:
             body = await body_json(request)
             p = await asyncio.to_thread(session.store.create, body.get("summary", ""), body.get("rationale", ""),
@@ -661,11 +789,11 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
         with open(path, "rb") as fh:
             return Response(fh.read(), media_type="application/octet-stream", headers={"Cache-Control": "no-cache"})
 
-    def accept_and_reload(pid: str, comment: str) -> tuple:
+    def accept_and_reload(pid: str, comment: str, override_reason: str | None = None) -> tuple:
         mine = session.design_paths() | session.intent_paths()
         session.writing |= mine
         try:
-            p = session.store.accept(pid, comment)
+            p = session.store.accept(pid, comment, override_reason)
         finally:
             for x in mine:
                 session.own_writes[x] = _sha(x)
@@ -683,7 +811,7 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
         comment = str(body.get("comment") or "")
         try:
             if action == "accept":
-                p, payload = await asyncio.to_thread(accept_and_reload, pid, comment)
+                p, payload = await asyncio.to_thread(accept_and_reload, pid, comment, body.get("override_reason"))
                 session.publish({"type": "design-changed", "design": design_info(session.design, session.path),
                                  "changed": list(p.get("accepted", {}).get("written", []))})
                 session.publish({"type": "rebuilt", "reason": "proposal-accepted", "build": payload})
@@ -698,6 +826,10 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
             if action == "evaluate":
                 evaluate_bg(pid)
                 return JSONResponse({"ok": True})
+            if action == "view":
+                params = body.get("params") or session.params
+                p = await asyncio.to_thread(session.store.view, pid, params)
+                return JSONResponse(strip(p))
         except ProposalError as e:
             p = None
             try:
@@ -709,7 +841,9 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
 
     async def api_requests(request: Request):
         if request.method == "GET":
-            return JSONResponse({"requests": await asyncio.to_thread(session.store.requests)})
+            rs = await asyncio.to_thread(session.store.requests)
+            return JSONResponse({"requests": rs, "waiting": sum(1 for r in rs if r.get("status") == "open"),
+                                 "prompt": session.store.claude_prompt()})
         try:
             body = await body_json(request)
         except json.JSONDecodeError:
@@ -722,6 +856,48 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
         r = await asyncio.to_thread(session.store.create_request, node, str(body.get("note") or ""), jsonable(change))
         session.publish({"type": "proposals-changed"})
         return JSONResponse(r, status_code=201)
+
+    async def api_display(request: Request):
+        from .. import display
+        info = await asyncio.to_thread(display.displays)
+        q = request.query_params
+        if q.get("width"):
+            scr = {"width": q.get("width"), "height": q.get("height"), "dpr": q.get("dpr"),
+                   "label": q.get("label") or "", "left": q.get("left"), "top": q.get("top"),
+                   "internal": (q.get("internal") == "true") if q.get("internal") in ("true", "false") else None}
+            info["match"] = display.match(info, scr)
+        return JSONResponse(info)
+
+    async def intent_action(request: Request, fn):
+        try:
+            body = await body_json(request)
+        except json.JSONDecodeError:
+            return err("body must be a JSON object")
+        try:
+            res = await asyncio.to_thread(fn, body)
+        except intent_store.IntentConflict as e:
+            await asyncio.to_thread(session.load_intent)
+            return err(str(e), 409, conflict=True, current=session.intent_info())
+        except (intent_store.IntentOpError, intent_store.IntentSchemaError) as e:
+            return err(str(e))
+        payload = await asyncio.to_thread(session.refresh_payload)
+        info = session.intent_info()
+        session.publish({"type": "intent-changed", "intent": info, "changed": []})
+        if payload is not None:
+            session.publish({"type": "rebuilt", "reason": "review", "build": payload})
+        return JSONResponse({"intent": info, "build": payload, **(res if isinstance(res, dict) else {})})
+
+    async def api_context(request: Request):
+        return await intent_action(request, lambda b: session.context_action(b.get("base_hash"), b.get("action", "accept"),
+                                                                             b.get("values")))
+
+    async def api_orientation(request: Request):
+        return await intent_action(request, lambda b: session.orientation_action(b.get("base_hash"),
+                                                                                 b.get("action", "accept")))
+
+    async def api_review(request: Request):
+        return await intent_action(request, lambda b: session.review_action(b.get("base_hash"), b.get("action", ""),
+                                                                            str(b.get("key") or ""), b.get("value")))
 
     async def events(ws: WebSocket):
         await ws.accept()
@@ -760,6 +936,10 @@ def create_app(design_path: str, prefs: str | None = None, lock: str | None = No
               Route("/api/proposals/{id}/mesh/{which}", api_proposal_mesh),
               Route("/api/proposals/{id}/{action}", api_proposal_action, methods=["POST"]),
               Route("/api/requests", api_requests, methods=["GET", "POST"]),
+              Route("/api/display", api_display),
+              Route("/api/context", api_context, methods=["POST"]),
+              Route("/api/orientation", api_orientation, methods=["POST"]),
+              Route("/api/review", api_review, methods=["POST"]),
               WebSocketRoute("/api/events", events), Route("/", index)]
     if os.path.isdir(os.path.join(static_dir, "assets")):
         routes.append(Mount("/assets", StaticFiles(directory=os.path.join(static_dir, "assets")), name="assets"))

@@ -2,9 +2,14 @@
   "dipm_interpretations": 1,
   "design": "shelf_bracket",
   "key": {
-    "design_source_sha256": "5d916d755c31dac7217e12b4867c9a0d0d85db61d672002a143f2ef3b92d62b0",
+    "design_source_sha256": "6ec9e3fd61bb7afb5825044efa21ee6e7aa04cd32b0dda34044bdb692a82eb8a",
     "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
+    "code_sha256": "e43874da57a56b683f4eacc8779476c89cc82900b50ead0335dd27d6ae1d76a3",
+    "packages": {
+      "cadquery-ocp-novtk": "8.0.1.1.0",
+      "build123d": "0.13.0"
+    },
     "dipm": "0.0.1"
   },
   "prefs": null,
@@ -55,8 +60,8 @@
       "made_by": "pack default",
       "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
       "status": "proposed",
-      "sensitivity": "none",
-      "sensitivity_detail": "survivors identical at every sample point",
+      "sensitivity": "insensitive",
+      "sensitivity_detail": "insensitive: the surviving readings give identical geometry at every sample point",
       "readings": [
         "through_plate",
         "through_all",
@@ -69,7 +74,13 @@
       "eliminated": [],
       "supports": [
         "A.P.holes"
-      ]
+      ],
+      "feasible": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "resolution": "unconfirmed"
     },
     {
       "id": "A.3.cable/centered_on.point",
@@ -82,8 +93,8 @@
       "made_by": "model",
       "rationale": "package default 'face_centroid' eliminated; next by prior/simplicity: the middle of the face's exposed region: the longest material chord through its bounding centre, bridging holes but stopped by material attached to the face",
       "status": "proposed",
-      "sensitivity": "none",
-      "sensitivity_detail": "package default eliminated (no extra interaction); only one reading survives",
+      "sensitivity": "forced",
+      "sensitivity_detail": "package default eliminated (no extra interaction); forced: only one reading survives the checks",
       "readings": [
         "face_centroid",
         "exposed_region_midpoint"
@@ -102,7 +113,11 @@
       ],
       "supports": [
         "A.3.cable"
-      ]
+      ],
+      "feasible": [
+        "exposed_region_midpoint"
+      ],
+      "resolution": "unconfirmed"
     },
     {
       "id": "A.3.cable/hole.extent",
@@ -115,8 +130,8 @@
       "made_by": "pack default",
       "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
       "status": "proposed",
-      "sensitivity": "none",
-      "sensitivity_detail": "survivors identical at every sample point",
+      "sensitivity": "insensitive",
+      "sensitivity_detail": "insensitive: the surviving readings give identical geometry at every sample point",
       "readings": [
         "through_plate",
         "through_all",
@@ -129,7 +144,13 @@
       "eliminated": [],
       "supports": [
         "A.3.cable"
-      ]
+      ],
+      "feasible": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "resolution": "unconfirmed"
     },
     {
       "id": "B.1.screw/hole.extent",
@@ -142,8 +163,8 @@
       "made_by": "pack default",
       "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
       "status": "proposed",
-      "sensitivity": "none",
-      "sensitivity_detail": "survivors identical at every sample point",
+      "sensitivity": "insensitive",
+      "sensitivity_detail": "insensitive: the surviving readings give identical geometry at every sample point",
       "readings": [
         "through_plate",
         "through_all",
@@ -156,7 +177,13 @@
       "eliminated": [],
       "supports": [
         "B.1.screw"
-      ]
+      ],
+      "feasible": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "resolution": "unconfirmed"
     }
   ],
   "questions": [],

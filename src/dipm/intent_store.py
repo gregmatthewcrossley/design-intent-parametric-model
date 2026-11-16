@@ -55,7 +55,7 @@ CHECK_KINDS = ("relation", "rule", "analysis", "learned score", "live judgment")
 PRIORITIES = ("must", "should", "nice to have")
 MADE_BY = ("model", "user", "pack default", "author")                               # architecture §4.8
 ASSUMPTION_STATUS = ("proposed", "accepted", "challenged", "replaced")
-SENSITIVITY = ("high", "medium", "low", "none", "unknown")
+SENSITIVITY = ("high", "medium", "low", "insensitive", "forced", "none", "unknown")
 
 ID_RE = re.compile(r"^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)*$")
 
@@ -71,7 +71,9 @@ SCHEMA = {
               "grounded_as": (False, "str", None), "origin": (False, "map[str]", None), "expr": (False, "str", None)},
     "assumption": {"id": (True, "id", None), "statement": (True, "str", None), "made_by": (False, "str", MADE_BY),
                    "rationale": (False, "str", None), "supports": (False, "list[str]", None),
-                   "sensitivity": (False, "str", SENSITIVITY), "status": (False, "str", ASSUMPTION_STATUS)},
+                   "sensitivity": (False, "str", SENSITIVITY), "status": (False, "str", ASSUMPTION_STATUS),
+                   # iteration 3: a machine-readable assumption (e.g. about: print_orientation, value: "0,0,-1")
+                   "about": (False, "str", None), "value": (False, "str", None)},
 }
 KEY_ORDER = {k: list(v) for k, v in SCHEMA.items()}
 
@@ -428,8 +430,21 @@ def apply_op(doc: IntentDoc, op: dict, taken=()) -> dict:
     ops: edit_statement {id, statement} · add_child {parent, statement?, id?} · delete {id} ·
     move {id, parent, index?} · add_check {id, check} · edit_check {id, check_id, fields} ·
     remove_check {id, check_id} · edit_assumption {id, assumption_id, fields} ·
-    add_assumption {id, assumption}"""
+    add_assumption {id, assumption} · set_context {fields}"""
     kind = op.get("op")
+    if kind == "set_context":
+        fields = {str(k): str(v) for k, v in (op.get("fields") or {}).items() if v not in (None, "")}
+        if not fields:
+            raise IntentOpError("set_context needs at least one field")
+        ctx = doc.data.get("context")
+        if ctx is None:
+            ctx = CommentedMap()
+            ctx.fa.set_flow_style()
+            # context goes right after `design:` (KEY_ORDER top: design, context, intents)
+            doc.data.insert(1 if "design" in doc.data else 0, "context", ctx)
+        for k, v in fields.items():
+            ctx[k] = _like(ctx.get(k), v)
+        return {"context": dict(ctx)}
     if kind == "edit_statement":
         n, *_ = doc.find(op["id"])
         st = str(op.get("statement", "")).strip()

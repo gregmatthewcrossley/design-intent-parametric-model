@@ -665,7 +665,8 @@ class Hole(Feature):
                      "a hole must not split the part")
         return StepOut(shape, exp.override(self.expect), op="cut", lowered_from=f"hole({spec.kind}, {label})",
                        instance_tags=inst_tags,
-                       detail={"diameter": spec.diameter, "head": spec.head,
+                       detail={"diameter": spec.diameter, "head": spec.head, "kind": spec.kind,
+                               "screw": spec.screw, "normal": n, "on": str(self.on),
                                "extent": label if self.extent is None else str(self.extent),
                                "depths": depths, "centres": [p for p in pts], "tools": len(tools)})
 

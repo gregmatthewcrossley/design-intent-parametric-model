@@ -32,12 +32,21 @@ export const api = {
   intent: () => call<IntentInfo>("/api/intent"),
   patchIntent: (base_hash: string | null, ops: IntentOp[]) =>
     call<{ intent: IntentInfo; build: BuildJ | null; results: unknown[] }>("/api/intent", "PATCH", { base_hash, ops }),
-  rename: (base_hash: string | null, design_hash: string | null, old: string, new_: string) =>
-    call<{ intent: IntentInfo; build: BuildJ; renamed_literals: number }>("/api/intent/rename", "POST",
-                                                                          { base_hash, design_hash, old, new: new_ }),
-  proposals: () => call<{ proposals: ProposalJ[]; requests: RequestJ[] }>("/api/proposals"),
-  accept: (id: string, comment = "") =>
-    call<{ proposal: ProposalJ; build: BuildJ }>(`/api/proposals/${id}/accept`, "POST", { comment }),
+  rename: (base_hash: string | null, design_hash: string | null, old: string, new_: string, rename_features = false) =>
+    call<{ intent: IntentInfo; build: BuildJ; renamed_literals: number; migrated_preferences?: number }>(
+      "/api/intent/rename", "POST", { base_hash, design_hash, old, new: new_, rename_features }),
+  proposals: () => call<{ proposals: ProposalJ[]; requests: RequestJ[]; waiting?: number; prompt?: string }>("/api/proposals"),
+  accept: (id: string, comment = "", override_reason?: string) =>
+    call<{ proposal: ProposalJ; build: BuildJ }>(`/api/proposals/${id}/accept`, "POST",
+                                                 override_reason ? { comment, override_reason } : { comment }),
+  view: (id: string, params: Record<string, unknown>) => call<ProposalJ>(`/api/proposals/${id}/view`, "POST", { params }),
+  // iteration 3 (docs/gui.md §8): accepting model-made items, the first-open review prompt
+  context: (base_hash: string | null, action: "accept" | "set", values?: Record<string, string>) =>
+    call<{ intent: IntentInfo; build: BuildJ | null }>("/api/context", "POST", { base_hash, action, values }),
+  orientation: (base_hash: string | null, action: "accept" | "infer") =>
+    call<{ intent: IntentInfo; build: BuildJ | null; note?: string }>("/api/orientation", "POST", { base_hash, action }),
+  review: (base_hash: string | null, action: "all" | "one_by_one" | "accept_item", key?: string, value?: unknown) =>
+    call<{ intent: IntentInfo; build: BuildJ | null }>("/api/review", "POST", { base_hash, action, key, value }),
   reject: (id: string, comment: string) => call<{ proposal: ProposalJ }>(`/api/proposals/${id}/reject`, "POST", { comment }),
   ask: (node: string, note: string) => call<RequestJ>("/api/requests", "POST", { node, note }),
   proposalMesh: (id: string, which: "before" | "after") =>

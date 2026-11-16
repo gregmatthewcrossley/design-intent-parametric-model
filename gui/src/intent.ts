@@ -4,7 +4,7 @@
 import { signal } from "@preact/signals";
 import { api, HttpError } from "./api";
 import { applyBuild, buildError } from "./store";
-import type { IntentInfo, IntentOp, ProposalJ, RequestJ } from "./types";
+import type { BuildJ, IntentInfo, IntentOp, ProposalJ, RequestJ } from "./types";
 
 export const intentInfo = signal<IntentInfo | null>(null);
 export const intentBusy = signal(false);
@@ -84,13 +84,14 @@ export async function reapplyAfterConflict(): Promise<void> {
 
 export const markReviewed = (ids: string[]) => patchIntent([{ op: "mark_reviewed", ids }]);
 
-/** Rename an intent id in the intent file and the DSL (server-side LibCST codemod). */
-export async function renameId(old: string, next: string): Promise<boolean> {
+/** Rename an intent id in the intent file and the DSL (server-side LibCST codemod); saved
+ *  preferences move with it (#49), and `renameFeatures` also renames matching feature ids. */
+export async function renameId(old: string, next: string, renameFeatures = false): Promise<boolean> {
   const info = intentInfo.value;
   intentBusy.value = true;
   intentError.value = null;
   try {
-    const r = await api.rename(info?.hash ?? null, info?.design_hash ?? null, old, next);
+    const r = await api.rename(info?.hash ?? null, info?.design_hash ?? null, old, next, renameFeatures);
     intentInfo.value = r.intent;
     applyBuild(r.build);
     return true;
@@ -112,6 +113,8 @@ export async function renameId(old: string, next: string): Promise<boolean> {
 
 export const proposals = signal<ProposalJ[]>([]);
 export const requests = signal<RequestJ[]>([]);
+/** "Queue for Claude" (#55): open requests waiting and the prompt to paste into Claude Code. */
+export const claudePrompt = signal<string>("");
 export const selectedProposal = signal<string | null>(null);
 /** Geometry comparison shown in the viewport (null: the live build). */
 export const compare = signal<{ id: string; mode: "before" | "after" | "overlay" } | null>(null);
@@ -124,6 +127,7 @@ export async function loadProposals(): Promise<void> {
     const r = await api.proposals();
     proposals.value = r.proposals;
     requests.value = r.requests;
+    claudePrompt.value = r.prompt ?? "";
     if (compare.value && !r.proposals.some((p) => p.id === compare.value!.id && p.evaluation?.meshes)) compare.value = null;
   } catch {
     /* server gone: keep the list */
@@ -135,10 +139,10 @@ export function reloadProposalsSoon(): void {
   reloadTimer = setTimeout(() => void loadProposals(), 120);
 }
 
-export async function acceptProposal(id: string): Promise<void> {
+export async function acceptProposal(id: string, overrideReason?: string): Promise<void> {
   proposalBusy.value = id;
   try {
-    const r = await api.accept(id);
+    const r = await api.accept(id, "", overrideReason);
     applyBuild(r.build);
     compare.value = null;
     await Promise.all([loadProposals(), loadIntent()]);
@@ -173,3 +177,61 @@ export async function askClaude(node: string, note: string): Promise<RequestJ | 
     return null;
   }
 }
+
+/** Before/after at the GUI's current parameters (NOTES #53 change). */
+export async function viewProposalAt(id: string, params: Record<string, unknown>): Promise<void> {
+  try {
+    const p = await api.view(id, params);
+    proposals.value = proposals.value.map((x) => (x.id === id ? p : x));
+  } catch {
+    /* keep the verdict geometry */
+  }
+}
+
+// ------------------------------------------------------------------ iteration 3: confirming guesses
+
+async function intentAction(fn: (base: string | null) => Promise<{ intent: IntentInfo; build: BuildJ | null }>): Promise<boolean> {
+  intentBusy.value = true;
+  intentError.value = null;
+  try {
+    const r = await fn(intentInfo.value?.hash ?? null);
+    intentInfo.value = r.intent;
+    if (r.build) applyBuild(r.build);
+    return true;
+  } catch (e) {
+    if (e instanceof HttpError && e.status === 409) {
+      const current = (e.body.current as IntentInfo | undefined) ?? null;
+      if (current) intentInfo.value = current;
+      conflict.value = { ops: [], message: String(e.body.error ?? "conflict"), current };
+    } else {
+      intentError.value = (e as Error).message;
+    }
+    return false;
+  } finally {
+    intentBusy.value = false;
+  }
+}
+
+/** Accept a model-made item.  Keys are the payload's provenance keys (B5): readings go to the
+ *  review record; assumptions, context and the orientation go into the intent file. */
+export async function acceptGuess(key: string, b: BuildJ | null): Promise<boolean> {
+  const pv = b?.provenance?.[key];
+  if (key.startsWith("slot:")) return intentAction((h) => api.review(h, "accept_item", key, pv?.value));
+  if (key.startsWith("assumption:")) {
+    const id = key.slice("assumption:".length);
+    if (!pv?.node) return false;
+    return patchIntent([{ op: "edit_assumption", id: pv.node, assumption_id: id, fields: { status: "accepted" } }]);
+  }
+  if (key.startsWith("context:")) return intentAction((h) => api.context(h, "accept"));
+  if (key === "orientation") return intentAction((h) => api.orientation(h, "accept"));
+  if (key.startsWith("check:")) {
+    if (!pv?.node) return false;
+    return markReviewed([pv.node]);
+  }
+  return false;
+}
+
+export const setContext = (values: Record<string, string>) => intentAction((h) => api.context(h, "set", values));
+export const reinferOrientation = () => intentAction((h) => api.orientation(h, "infer"));
+export const reviewAll = () => intentAction((h) => api.review(h, "all"));
+export const reviewOneByOne = () => intentAction((h) => api.review(h, "one_by_one"));

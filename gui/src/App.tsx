@@ -13,6 +13,7 @@ import { RightPanel, Inspector, Checks, Interpretations } from "./components/Rig
 import { ProposalsPanel } from "./components/Proposals";
 import { Viewport, useViewKeys } from "./components/Viewport";
 import { IntentBanners } from "./components/IntentEditor";
+import { FirstOpen } from "./components/FirstOpen";
 import { intentInfo, loadIntent, loadProposals, reloadProposalsSoon } from "./intent";
 import {
   applyBuild, build, design, designError, expanded, lastEvent, params, persist, requestBuild, tab, theme, wsUp,
@@ -164,6 +165,7 @@ export function App() {
         )}
       </main>
       <ParamBar />
+      <FirstOpen />
     </div>
   );
 }

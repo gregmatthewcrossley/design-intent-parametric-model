@@ -46,7 +46,10 @@ test.describe("shelf bracket", () => {
     const ids = await page.locator(".row-node .row-id").allInnerTexts();
     expect(ids.map((s) => s.trim())).toEqual(["R", "A", "A.P", "A.P.1", "A.P.2", "A.3", "B", "B.1", "C"]);
     expect(await page.locator(".row-node .row-id .dot-ok").count()).toBe(9);
-    await expect(page.getByTestId("build-status")).toHaveText("PASS");
+    // iteration 3 (B1): no bare PASS; the kernel tier is green, the intent tier says what ran and what fails
+    await expect(page.getByTestId("tier-kernel")).toHaveText("Kernel ✓");
+    await expect(page.getByTestId("build-status")).toContainText("Intent checks 3 of 11 run");
+    await expect(page.getByTestId("build-status")).not.toContainText("PASS");
   });
 
   test("2: shelf_depth 200 -> 300 rebuilds; holes re-spread; cable stays mid-plate", async ({ page }) => {
@@ -72,7 +75,8 @@ test.describe("shelf bracket", () => {
     await ready(page);
     await clickFace(page, "A.P.holes.countersink(1)");
     await expect(page.getByTestId("why-summary").first())
-      .toHaveText("A.P.holes.countersink(1) · hole@A.P.2 · pattern@A.P (wall screw pattern)");
+      .toHaveText("A.P.holes.countersink(1) · hole@A.P.2 (Upper wall screw hole) · pattern@A.P (Wall screw pattern) · " +
+                  "wall_mount@A (Wall mounting)");      // NOTES #45 change: wording from the intent file's statements
     await expect(page.locator('[data-row="node:A.P.2"]')).toHaveClass(/primary/);
   });
 
@@ -141,7 +145,10 @@ test.describe("shelf bracket", () => {
     await ready(page);
     await expect(page.locator(".tabs")).toBeVisible();
     await page.getByRole("tab", { name: "Checks" }).click();
+    await expect(page.getByTestId("tier-kernel-group")).toBeVisible();   // plain-language tiers (engine terms behind Details)
+    await page.getByTestId("details-toggle").check();
     await expect(page.locator(".checks-table")).toBeVisible();
+    await page.getByTestId("details-toggle").uncheck();
   });
 });
 
@@ -175,7 +182,7 @@ test("7: a failing parameter shows in checks, tree and tinted faces; the last go
     const field = page.getByLabel("hole_u value");
     await field.fill("0.75");
     await field.press("Enter");
-    await expect(page.getByTestId("build-status")).toHaveText("FAIL · 1");
+    await expect(page.getByTestId("tier-kernel")).toHaveText("Kernel ✗ 1");
     await expect(page.locator('[data-check-row="H.hole"] td.fail')).toHaveCount(1);
     await expect(page.getByTestId("check-error")).toContainText("delta_H");
     await expect(page.locator('[data-row="node:H"] .row-id .dot-fail')).toHaveCount(1);

@@ -4,6 +4,7 @@
 # Edited by hand, by `dipm serve` (WHY view and inspector) and through accepted Claude
 # proposals.  Always saved in canonical form: comments and key order are preserved, so diffs
 # stay minimal.  Hierarchy is the nesting; ids are stable labels and never change on a move.
+# A comment belongs to the item above it: it moves and is deleted together with that item.
 design: shelf_bracket
 context: {process: fdm_printing, material: PETG, install: drywall with anchors, style: minimal_industrial}
 intents:

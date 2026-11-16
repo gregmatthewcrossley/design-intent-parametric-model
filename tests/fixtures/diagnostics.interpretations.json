@@ -5,6 +5,11 @@
     "design_source_sha256": "dde0e8829f832e0ba599e4b106e4c047521deac0f8479a12e53b59d90cd8caa9",
     "prefs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "readings_sha256": "4780ca6b2f6859b5bc6538bb609732034946f7272c7eabfb260129dfe332c7ae",
+    "code_sha256": "e43874da57a56b683f4eacc8779476c89cc82900b50ead0335dd27d6ae1d76a3",
+    "packages": {
+      "cadquery-ocp-novtk": "8.0.1.1.0",
+      "build123d": "0.13.0"
+    },
     "dipm": "0.0.1"
   },
   "prefs": null,
@@ -34,8 +39,8 @@
       "made_by": "pack default",
       "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
       "status": "proposed",
-      "sensitivity": "none",
-      "sensitivity_detail": "survivors identical at every sample point",
+      "sensitivity": "insensitive",
+      "sensitivity_detail": "insensitive: the surviving readings give identical geometry at every sample point",
       "readings": [
         "through_plate",
         "through_all",
@@ -48,7 +53,13 @@
       "eliminated": [],
       "supports": [
         "A.1.shared"
-      ]
+      ],
+      "feasible": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "resolution": "unconfirmed"
     },
     {
       "id": "X.untagged/hole.extent",
@@ -61,8 +72,8 @@
       "made_by": "pack default",
       "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
       "status": "proposed",
-      "sensitivity": "none",
-      "sensitivity_detail": "survivors identical at every sample point",
+      "sensitivity": "insensitive",
+      "sensitivity_detail": "insensitive: the surviving readings give identical geometry at every sample point",
       "readings": [
         "through_plate",
         "through_all",
@@ -75,7 +86,13 @@
       "eliminated": [],
       "supports": [
         "X.untagged"
-      ]
+      ],
+      "feasible": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "resolution": "unconfirmed"
     },
     {
       "id": "D.1.drain/hole.extent",
@@ -88,8 +105,8 @@
       "made_by": "pack default",
       "rationale": "package default: through the plate the face belongs to: the face and its nearest opposing parallel face; turns blind (caught by ΔH) if more material backs the plate",
       "status": "proposed",
-      "sensitivity": "none",
-      "sensitivity_detail": "survivors identical at every sample point",
+      "sensitivity": "insensitive",
+      "sensitivity_detail": "insensitive: the surviving readings give identical geometry at every sample point",
       "readings": [
         "through_plate",
         "through_all",
@@ -102,7 +119,13 @@
       "eliminated": [],
       "supports": [
         "D.1.drain"
-      ]
+      ],
+      "feasible": [
+        "through_plate",
+        "through_all",
+        "up_to_next"
+      ],
+      "resolution": "unconfirmed"
     }
   ],
   "questions": [],

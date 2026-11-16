@@ -3,12 +3,16 @@
   python -m dipm build FILE [--param name=value ...] [--out out/] [--step] [--faces]
                             [--prefs P] [--lock L] [--reinterpret]
   python -m dipm stability FILE
-  python -m dipm interpret FILE [--prefs P] [--lock L] [--no-write]
+  python -m dipm interpret FILE [--prefs P] [--lock L] [--no-write] [--reinfer]
+  python -m dipm infer FILE                                        (re-infer context / print orientation)
   python -m dipm answer FILE ASSUMPTION_ID READING --prefs P [--scope node|design|house] [--note TEXT]
   python -m dipm serve FILE [--port N] [--no-open] [--prefs P]     (web GUI on 127.0.0.1; docs/gui.md)
   python -m dipm mcp FILE                                          (stdio MCP server: proposals; gui.md §7.3)
 
 The design file must define a module-level `design` (a `dipm.Design`) or a `make_design()`.
+Exit codes of `build`: 0 kernel invariants pass and no intent check fails; 1 an invariant or
+reference fails; 2 bad parameters; 3 kernel passes but an intent check fails (B1, B2).
+
 Interpretations (architecture §10 item 2): `build` reads `<FILE stem>.interpretations.json`
 (the lock) unless the design attached its own; a missing or stale lock is re-resolved in
 memory.  `interpret` re-resolves and writes the lock; `answer` remembers a choice in a
@@ -80,6 +84,26 @@ def _interpret_and_write(design: Design, path: str, write: bool) -> int:
     return 1 if any(n.kind == "no_survivor" for n in interp.notices) else 0
 
 
+def _write_resolution_record(design: Design, path: str, write: bool, force: bool = False) -> int:
+    """Assumed context and the inferred print orientation -> `<design>.resolution.json` (3E.6,
+    3E.10).  Never writes the intent file: accepting happens in the GUI."""
+    from .assess import assess_file
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        b = design.build(on_fail="record")
+        a, rec = assess_file(design, b, path, write_record=write, force_orientation=force)
+    o = a.orientation
+    print(f"\nContext: {a.context_summary}"
+          + ("" if all(v["reviewed"] for v in a.context.values()) else "  (partly assumed, unreviewed)"))
+    if o is not None:
+        print(f"Print orientation: {o.get('label')}  [{'accepted' if o.get('reviewed') else 'unreviewed'}]")
+        if o.get("rationale"):
+            print(f"  why: {o['rationale']}")
+    if write and rec.path:
+        print(f"resolution record: {os.path.relpath(rec.path)}")
+    return 0
+
+
 class AnswerError(ValueError):
     """Bad assumption id or reading for `answer` (CLI exit code 2, HTTP 400)."""
 
@@ -133,6 +157,9 @@ def main(argv=None) -> int:
     i.add_argument("--prefs", help="preferences JSON (remembered answers)")
     i.add_argument("--lock", help="lock file to write (default <file stem>.interpretations.json)")
     i.add_argument("--no-write", action="store_true", help="print only; do not write the lock")
+    i.add_argument("--reinfer", action="store_true", help="re-infer the print orientation even if its inputs did not change")
+    inf = sub.add_parser("infer", help="re-infer assumed context and print orientation (resolution record)")
+    inf.add_argument("file")
     an = sub.add_parser("answer", help="remember the answer to an interpretation question")
     an.add_argument("file")
     an.add_argument("assumption_id", help="e.g. A.3.cable/centered_on.point")
@@ -173,14 +200,18 @@ def main(argv=None) -> int:
         for w in caught:
             print(f"warning: {w.message}", file=sys.stderr)
         bld = design.build(params, on_fail="record")
-        print(build_report(bld, show_faces=a.faces))
+        from .assess import assess_file
+        asm = assess_file(design, bld, a.file)[0]
+        print(build_report(bld, show_faces=a.faces, assessment=asm))
         if a.out and bld.shape is not None:
             os.makedirs(a.out, exist_ok=True)
             suffix = "".join(f"_{k}-{v}" for k, v in sorted(_params(a.param).items()))
             stem = os.path.join(a.out, design.name + suffix.replace("#", ""))
             for p in bld.write(stem, brep=True, step=a.step):
                 print(f"wrote {p}")
-        return 0 if bld.ok else 1
+        if not bld.ok:
+            return 1
+        return 3 if asm.status["intent"]["failing"] else 0
     if a.cmd == "stability":
         from .stability import run
         _attach_lock(design, a.file, None, None)
@@ -189,7 +220,12 @@ def main(argv=None) -> int:
         return 0 if rep.ok else 1
     if a.cmd == "interpret":
         _attach_lock(design, a.file, a.lock, a.prefs)
-        return _interpret_and_write(design, a.file, not a.no_write)
+        rc = _interpret_and_write(design, a.file, not a.no_write)
+        _write_resolution_record(design, a.file, not a.no_write, a.reinfer)
+        return rc
+    if a.cmd == "infer":
+        _attach_lock(design, a.file, None, None)
+        return _write_resolution_record(design, a.file, True, True)
     if a.cmd == "answer":
         try:
             key, warn = record_answer(design, a.file, a.assumption_id, a.reading, a.prefs, a.scope, a.note, a.lock)

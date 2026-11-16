@@ -37,9 +37,10 @@ DSL core (from the repo root):
 .venv/bin/python -m dipm stability examples/shelf_bracket.py              # sweep declared parameter ranges
 .venv/bin/python -m dipm interpret examples/shelf_bracket.py              # re-resolve ambiguous readings → <design>.interpretations.json lock
 .venv/bin/python -m dipm answer examples/shelf_bracket.py <assumption-id> <reading> --prefs prefs.json   # record a designer answer
+.venv/bin/python -m dipm infer examples/shelf_bracket.py                  # re-infer assumed context + print orientation → <design>.resolution.json
 ```
 
-The CLI exits 0 on PASS, 1 on an invariant or reference failure, and 2 on bad parameters.
+The CLI exits 0 when the kernel invariants pass and no intent check fails, 1 on an invariant or reference failure, 2 on bad parameters, and 3 when the kernel passes but an intent check fails (the bracket currently exits 3: R.c1 load and R.c4 tool access fail honestly). There is no bare PASS: status is tiered (kernel · intent checks run/not run/failing · margins).
 
 Web GUI (needs Node ≥ 20; toolchain pinned to what runs on 20.12, see NOTES #40):
 
@@ -84,6 +85,7 @@ No linter or build system is configured yet.
 - **Connections:** `connections.py` (intent tree derivation, per-feature *uses* and parameter dependencies, diagnostics).
 - **Server:** `server/` (Starlette API, deterministic mesh, file watching). Frontend source is in `gui/` (Preact + three.js); see `gui/README.md`.
 - **Intent file and review:** `intent_store.py` is the only module that knows the `<design>.intent.yaml` format (ruamel round-trip, canonical, base-hash conflicts). `review.py` handles staleness (`<design>.review.json`). The MCP server and proposals live under `server/`, with proposals stored in a gitignored `.dipm/`.
+- **Checks with margins (iteration 3):** `quantity.py` (values with ranges, worst-case propagation), `checks.py` (executable intent checks: R.c1 load hand calc, R.c2 overhang, R.c4 tool access; nominal/worst/limit/margin), `assess.py` (tiered status), `packs.py` (process/material/anchor data; **numbers are placeholders**, NOTES #58), `resolution.py` (`<design>.resolution.json`: machine-written assumed context and inferred print orientation; accepting writes the intent file via `intent_store`, nothing else does), `display.py` (CoreGraphics physical display size for `/api/display`; macOS only).
 - **Interpretations:** `interpret.py`. Ambiguous intent-word slots (hole extent, `centered_on`) list readings. Readings are eliminated by checks across sample points, then sensitivity is graded and a ranked default chosen. Results go to a lock file next to the design; preferences are kept in JSON. Spec: architecture §10 item 2.
 
 Designs are pure functions of declared parameters, so tests re-build with new values instead of mutating state. Every feature carries intent tags (intent-tree node ids); keep them flowing through any new op so `Build.why()` can explain every face.
