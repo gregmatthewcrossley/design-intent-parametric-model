@@ -1,0 +1,430 @@
+{
+ "cases": [
+  {
+   "case": "box",
+   "V": 8,
+   "E": 12,
+   "F": 6,
+   "R": 0,
+   "S": 1,
+   "H": 0.0,
+   "E_all": 12,
+   "E_degen": 0,
+   "E_seam": 0,
+   "valid": true,
+   "expected_H": 0,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 0.0,
+    "include_degenerated": 0.0,
+    "orientation_sensitive": 2.0,
+    "tshape_only": 0.0,
+    "raw_explorer": -14.0
+   }
+  },
+  {
+   "case": "cylinder",
+   "V": 2,
+   "E": 3,
+   "F": 3,
+   "R": 0,
+   "S": 1,
+   "H": 0.0,
+   "E_all": 3,
+   "E_degen": 0,
+   "E_seam": 1,
+   "valid": true,
+   "expected_H": 0,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 0.0,
+    "include_degenerated": 0.0,
+    "orientation_sensitive": 0.5,
+    "tshape_only": 0.0,
+    "raw_explorer": -3.5
+   }
+  },
+  {
+   "case": "cone (apex)",
+   "V": 2,
+   "E": 2,
+   "F": 2,
+   "R": 0,
+   "S": 1,
+   "H": 0.0,
+   "E_all": 3,
+   "E_degen": 1,
+   "E_seam": 1,
+   "valid": true,
+   "expected_H": 0,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 0.0,
+    "include_degenerated": 0.5,
+    "orientation_sensitive": 0.0,
+    "tshape_only": 0.0,
+    "raw_explorer": -3.0
+   }
+  },
+  {
+   "case": "cone frustum",
+   "V": 2,
+   "E": 3,
+   "F": 3,
+   "R": 0,
+   "S": 1,
+   "H": 0.0,
+   "E_all": 3,
+   "E_degen": 0,
+   "E_seam": 1,
+   "valid": true,
+   "expected_H": 0,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 0.0,
+    "include_degenerated": 0.0,
+    "orientation_sensitive": 0.5,
+    "tshape_only": 0.0,
+    "raw_explorer": -3.5
+   }
+  },
+  {
+   "case": "sphere",
+   "V": 2,
+   "E": 1,
+   "F": 1,
+   "R": 0,
+   "S": 1,
+   "H": 0.0,
+   "E_all": 3,
+   "E_degen": 2,
+   "E_seam": 1,
+   "valid": true,
+   "expected_H": 0,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 0.0,
+    "include_degenerated": 1.0,
+    "orientation_sensitive": -0.5,
+    "tshape_only": 0.0,
+    "raw_explorer": -2.5
+   }
+  },
+  {
+   "case": "torus",
+   "V": 1,
+   "E": 2,
+   "F": 1,
+   "R": 0,
+   "S": 1,
+   "H": 1.0,
+   "E_all": 2,
+   "E_degen": 0,
+   "E_seam": 2,
+   "valid": true,
+   "expected_H": 1,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 1.0,
+    "include_degenerated": 1.0,
+    "orientation_sensitive": 1.5,
+    "tshape_only": 1.0,
+    "raw_explorer": -1.5
+   }
+  },
+  {
+   "case": "box + 1 through-hole",
+   "V": 10,
+   "E": 15,
+   "F": 7,
+   "R": 2,
+   "S": 1,
+   "H": 1.0,
+   "E_all": 15,
+   "E_degen": 0,
+   "E_seam": 1,
+   "valid": true,
+   "expected_H": 1,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 1.0,
+    "include_degenerated": 1.0,
+    "orientation_sensitive": 3.5,
+    "tshape_only": 1.0,
+    "raw_explorer": -16.5
+   }
+  },
+  {
+   "case": "box + 2 through-holes",
+   "V": 12,
+   "E": 18,
+   "F": 8,
+   "R": 4,
+   "S": 1,
+   "H": 2.0,
+   "E_all": 18,
+   "E_degen": 0,
+   "E_seam": 2,
+   "valid": true,
+   "expected_H": 2,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 2.0,
+    "include_degenerated": 2.0,
+    "orientation_sensitive": 5.0,
+    "tshape_only": 2.0,
+    "raw_explorer": -19.0
+   }
+  },
+  {
+   "case": "box + blind hole",
+   "V": 10,
+   "E": 15,
+   "F": 8,
+   "R": 1,
+   "S": 1,
+   "H": 0.0,
+   "E_all": 15,
+   "E_degen": 0,
+   "E_seam": 1,
+   "valid": true,
+   "expected_H": 0,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 0.0,
+    "include_degenerated": 0.0,
+    "orientation_sensitive": 2.5,
+    "tshape_only": 0.0,
+    "raw_explorer": -17.5
+   }
+  },
+  {
+   "case": "filleted box (all 12 edges)",
+   "V": 24,
+   "E": 48,
+   "F": 26,
+   "R": 0,
+   "S": 1,
+   "H": 0.0,
+   "E_all": 56,
+   "E_degen": 8,
+   "E_seam": 0,
+   "valid": true,
+   "expected_H": 0,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 0.0,
+    "include_degenerated": 4.0,
+    "orientation_sensitive": 12.0,
+    "tshape_only": 0.0,
+    "raw_explorer": -68.0
+   }
+  },
+  {
+   "case": "shelled box (top removed)",
+   "V": 16,
+   "E": 24,
+   "F": 11,
+   "R": 1,
+   "S": 1,
+   "H": 0.0,
+   "E_all": 24,
+   "E_degen": 0,
+   "E_seam": 0,
+   "valid": true,
+   "expected_H": 0,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 0.0,
+    "include_degenerated": 0.0,
+    "orientation_sensitive": 4.0,
+    "tshape_only": 0.0,
+    "raw_explorer": -28.0
+   }
+  },
+  {
+   "case": "hollow box (internal void)",
+   "V": 16,
+   "E": 24,
+   "F": 12,
+   "R": 0,
+   "S": 2,
+   "H": 0.0,
+   "E_all": 24,
+   "E_degen": 0,
+   "E_seam": 0,
+   "valid": true,
+   "expected_H": 0,
+   "expected_S": 2,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 0.0,
+    "include_degenerated": 0.0,
+    "orientation_sensitive": 4.0,
+    "tshape_only": 0.0,
+    "raw_explorer": -28.0
+   }
+  },
+  {
+   "case": "sphere with through-hole",
+   "V": 2,
+   "E": 4,
+   "F": 2,
+   "R": 0,
+   "S": 1,
+   "H": 1.0,
+   "E_all": 4,
+   "E_degen": 0,
+   "E_seam": 2,
+   "valid": true,
+   "expected_H": 1,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 1.0,
+    "include_degenerated": 1.0,
+    "orientation_sensitive": 2.0,
+    "tshape_only": 1.0,
+    "raw_explorer": -4.0
+   }
+  },
+  {
+   "case": "shelf bracket (default)",
+   "V": 34,
+   "E": 51,
+   "F": 19,
+   "R": 8,
+   "S": 1,
+   "H": 4.0,
+   "E_all": 51,
+   "E_degen": 0,
+   "E_seam": 6,
+   "valid": true,
+   "expected_H": 4,
+   "expected_S": 1,
+   "pass": true,
+   "H_by_mode": {
+    "recommended": 4.0,
+    "include_degenerated": 4.0,
+    "orientation_sensitive": 12.5,
+    "tshape_only": 5.0,
+    "raw_explorer": -55.5
+   }
+  }
+ ],
+ "deltas": [
+  {
+   "feature": "through-hole in plate",
+   "expected_dH": 1,
+   "measured_dH": 1,
+   "pass": true
+  },
+  {
+   "feature": "blind hole (depth 3 of 5)",
+   "expected_dH": 0,
+   "measured_dH": 0,
+   "pass": true
+  },
+  {
+   "feature": "'blind' pocket too deep (6 > 5) -- intended blind",
+   "expected_dH": 0,
+   "measured_dH": 1,
+   "pass": false
+  },
+  {
+   "feature": "2 through-holes, one feature",
+   "expected_dH": 2,
+   "measured_dH": 2,
+   "pass": true
+  },
+  {
+   "feature": "countersink on an existing hole",
+   "expected_dH": 0,
+   "measured_dH": 0,
+   "pass": true
+  },
+  {
+   "feature": "2nd through-hole CROSSING the 1st (naive +1)",
+   "expected_dH": 1,
+   "measured_dH": 2,
+   "pass": false
+  },
+  {
+   "feature": "2nd through-hole NOT crossing the 1st",
+   "expected_dH": 1,
+   "measured_dH": 1,
+   "pass": true
+  },
+  {
+   "feature": "fillet all edges of holed plate",
+   "expected_dH": 0,
+   "measured_dH": 0,
+   "pass": true
+  },
+  {
+   "feature": "slot that splits the plate in two",
+   "expected_dH": 0,
+   "measured_dH": 0,
+   "pass": true,
+   "note": "solids 1->2, shells 1->2"
+  }
+ ],
+ "shared_tshape_compound": [
+  {
+   "mode": "recommended",
+   "V": 16,
+   "E": 24,
+   "F": 12,
+   "S": 2,
+   "H": 0.0
+  },
+  {
+   "mode": "include_degenerated",
+   "V": 16,
+   "E": 24,
+   "F": 12,
+   "S": 2,
+   "H": 0.0
+  },
+  {
+   "mode": "orientation_sensitive",
+   "V": 32,
+   "E": 48,
+   "F": 12,
+   "S": 2,
+   "H": 4.0
+  },
+  {
+   "mode": "tshape_only",
+   "V": 8,
+   "E": 12,
+   "F": 6,
+   "S": 2,
+   "H": 1.0
+  },
+  {
+   "mode": "raw_explorer",
+   "V": 96,
+   "E": 48,
+   "F": 12,
+   "S": 2,
+   "H": -28.0
+  }
+ ],
+ "shared_tshape_boolean": {
+  "faces_by_map": 8,
+  "faces_by_tshape": 8,
+  "H": 2.0
+ }
+}

@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Generated geometry (rebuilt deterministically from source)
+*.brep
+*.step
+*.stp
+*.stl
+*.3mf
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

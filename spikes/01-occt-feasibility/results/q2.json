@@ -1,0 +1,1404 @@
+{
+ "capability_probes": [
+  {
+   "api": "MakePrism.FirstShape/LastShape",
+   "role": "E.cap(START|END)",
+   "result": "Plane/Plane",
+   "ok": true
+  },
+  {
+   "api": "MakePrism.Generated(sketch edge)",
+   "role": "E.side(from=edge)",
+   "result": "faces per edge [1]",
+   "ok": true
+  },
+  {
+   "api": "MakePrism.Generated(sketch vertex)",
+   "role": "E.lateral_edge(from=vertex)",
+   "result": "1 edge per vertex",
+   "ok": true
+  },
+  {
+   "api": "BRepAlgoAPI_Cut.Modified(tool face)",
+   "role": "H.wall",
+   "result": "1 face(s), Cylinder",
+   "ok": true
+  },
+  {
+   "api": "BRepAlgoAPI_Cut.IsDeleted(tool cap)",
+   "role": "(tool caps vanish)",
+   "result": "True",
+   "ok": true
+  },
+  {
+   "api": "BRepAlgoAPI_Cut.Generated(face)",
+   "role": "H.rim(on=face X) section edges",
+   "result": "2 edges (Circle, Circle) + vertices",
+   "ok": true
+  },
+  {
+   "api": "BRepFilletAPI_MakeFillet.Generated(edge)",
+   "role": "F.blend(from=edge) / F.created()",
+   "result": "1 Cylinder",
+   "ok": true
+  },
+  {
+   "api": "BRepFilletAPI_MakeFillet.IsDeleted(untouched edge)",
+   "role": "(ledger propagation)",
+   "result": "IsDeleted=True but edge present=True",
+   "ok": false
+  }
+ ],
+ "build123d_probe": [
+  {
+   "op": "extrude boss",
+   "faces(LAST)": 2,
+   "faces(NEW)": 0,
+   "note": "cap and side not distinguished"
+  },
+  {
+   "op": "Hole",
+   "faces(LAST)": 1,
+   "faces(NEW)": 0,
+   "note": "hole wall = LAST"
+  },
+  {
+   "op": "fillet 4 vertical edges",
+   "faces(LAST)": 4,
+   "faces(NEW)": 4,
+   "note": "blend faces = NEW (no per-edge source)"
+  }
+ ],
+ "baseline_refs": {
+  "E.cap(START)": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "E",
+    "cap",
+    "START"
+   ],
+   "events": [
+    [
+     [
+      "F",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Plane n=(-1.0,0.0,0.0)"
+   ]
+  },
+  "E.cap(END)": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "E",
+    "cap",
+    "END"
+   ],
+   "events": [
+    [
+     [
+      "F",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Plane n=(1.0,0.0,0.0)"
+   ]
+  },
+  "E.side(wall)": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "E",
+    "side",
+    "wall"
+   ],
+   "events": [
+    [
+     [
+      "W1",
+      "modified"
+     ],
+     [
+      "W2",
+      "modified"
+     ],
+     [
+      "C",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Plane n=(0.0,-1.0,0.0)"
+   ]
+  },
+  "E.side(mount)": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "E",
+    "side",
+    "mount"
+   ],
+   "events": [
+    [
+     [
+      "G",
+      "modified"
+     ],
+     [
+      "W1",
+      "modified"
+     ],
+     [
+      "K1",
+      "modified"
+     ],
+     [
+      "W2",
+      "modified"
+     ],
+     [
+      "K2",
+      "modified"
+     ],
+     [
+      "C",
+      "modified"
+     ],
+     [
+      "F",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Plane n=(0.0,1.0,0.0)"
+   ]
+  },
+  "E.side(shelf)": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "E",
+    "side",
+    "shelf"
+   ],
+   "events": [
+    [
+     [
+      "S",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Plane n=(0.0,0.0,1.0)"
+   ]
+  },
+  "E.side(arm_under)": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "E",
+    "side",
+    "arm_under"
+   ],
+   "events": [
+    [
+     [
+      "G",
+      "modified"
+     ],
+     [
+      "S",
+      "modified"
+     ],
+     [
+      "F",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Plane n=(0.0,0.0,-1.0)"
+   ]
+  },
+  "E.side(arm_tip)": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "E",
+    "side",
+    "arm_tip"
+   ],
+   "events": [
+    []
+   ],
+   "geom": [
+    "Plane n=(0.0,1.0,0.0)"
+   ]
+  },
+  "E.side(leg_end)": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "E",
+    "side",
+    "leg_end"
+   ],
+   "events": [
+    []
+   ],
+   "geom": [
+    "Plane n=(0.0,0.0,-1.0)"
+   ]
+  },
+  "G.side(hypotenuse)": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "G",
+    "side",
+    "hypotenuse"
+   ],
+   "events": [
+    []
+   ],
+   "geom": [
+    "Plane n=(0.0,0.707,-0.707)"
+   ]
+  },
+  "G.cap(START)": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "G",
+    "cap",
+    "START"
+   ],
+   "events": [
+    [
+     [
+      "F",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Plane n=(-1.0,0.0,0.0)"
+   ]
+  },
+  "G.cap(END)": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "G",
+    "cap",
+    "END"
+   ],
+   "events": [
+    [
+     [
+      "F",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Plane n=(1.0,0.0,0.0)"
+   ]
+  },
+  "W1.wall": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "W1",
+    "wall",
+    null
+   ],
+   "events": [
+    [
+     [
+      "W1",
+      "modified"
+     ],
+     [
+      "K1",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Cylinder axis=(0.0,1.0,0.0)"
+   ]
+  },
+  "W2.wall": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "W2",
+    "wall",
+    null
+   ],
+   "events": [
+    [
+     [
+      "W2",
+      "modified"
+     ],
+     [
+      "K2",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Cylinder axis=(0.0,1.0,0.0)"
+   ]
+  },
+  "K1.countersink": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "K1",
+    "countersink",
+    null
+   ],
+   "events": [
+    [
+     [
+      "K1",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Cone axis=(0.0,1.0,0.0)"
+   ]
+  },
+  "K2.countersink": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "K2",
+    "countersink",
+    null
+   ],
+   "events": [
+    [
+     [
+      "K2",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Cone axis=(0.0,1.0,0.0)"
+   ]
+  },
+  "C.wall": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "C",
+    "wall",
+    null
+   ],
+   "events": [
+    [
+     [
+      "C",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Cylinder axis=(0.0,1.0,0.0)"
+   ]
+  },
+  "S.wall": {
+   "n": 1,
+   "ok": true,
+   "tag_gen": [
+    "S",
+    "wall",
+    null
+   ],
+   "events": [
+    [
+     [
+      "S",
+      "modified"
+     ]
+    ]
+   ],
+   "geom": [
+    "Cylinder axis=(0.0,0.0,1.0)"
+   ]
+  },
+  "F.blend(E.lateral_edge(inner))": {
+   "n": 2,
+   "ok": true,
+   "tag_gen": [
+    "F",
+    "blend",
+    "E.lateral_edge(inner)"
+   ],
+   "events": [
+    []
+   ],
+   "geom": [
+    "Cylinder axis=(1.0,0.0,0.0)",
+    "Cylinder axis=(1.0,0.0,0.0)"
+   ]
+  }
+ },
+ "sweep": [
+  {
+   "shelf_depth": 150,
+   "t": 4,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 150,
+   "t": 5,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 150,
+   "t": 6,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 150,
+   "t": 8,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 175,
+   "t": 4,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 175,
+   "t": 5,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 175,
+   "t": 6,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 175,
+   "t": 8,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 200,
+   "t": 4,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 200,
+   "t": 5,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 200,
+   "t": 6,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 200,
+   "t": 8,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 250,
+   "t": 4,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 250,
+   "t": 5,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 250,
+   "t": 6,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 250,
+   "t": 8,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 300,
+   "t": 4,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 300,
+   "t": 5,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 300,
+   "t": 6,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  },
+  {
+   "shelf_depth": 300,
+   "t": 8,
+   "build": "ok",
+   "cardinality_ok": true,
+   "geom_descriptor_ok": true,
+   "dH_ok": true,
+   "valid": true,
+   "VEFRSH": [
+    34,
+    51,
+    19,
+    8,
+    1,
+    4
+   ],
+   "adj_topo": "6dbbca6a7ca1",
+   "event_genealogy_changed": [],
+   "event_detail": {}
+  }
+ ],
+ "negative_controls": [
+  {
+   "edit": "shelf_hole_u 0.75->0.4 (shelf hole now lands on the gusset)",
+   "build": "ok",
+   "dH_failures": [
+    {
+     "feature": "S",
+     "H_before": 3,
+     "H_after": 3,
+     "expected_dH": 1,
+     "ok": false,
+     "valid": true
+    }
+   ],
+   "cardinality_failures": [],
+   "geom_changed": []
+  },
+  {
+   "edit": "t=4, countersink_d 9->14 (countersink swallows the screw bore)",
+   "build": "ok",
+   "dH_failures": [],
+   "cardinality_failures": [
+    "W1.wall(None): expected exactly 1, got 0",
+    "W2.wall(None): expected exactly 1, got 0"
+   ],
+   "geom_changed": [
+    "W1.wall",
+    "W2.wall"
+   ]
+  },
+  {
+   "edit": "shelf_depth 120 (no room for wall pattern)",
+   "build": "refused: AssertionError: no room for the pattern"
+  }
+ ],
+ "split_order": [
+  {
+   "plate_rotation_deg": 0,
+   "grooves_at_local_x": [
+    5
+   ],
+   "fragments": 2,
+   "Modified_order_local_x": [
+    2.5,
+    28.5
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "plate_rotation_deg": 0,
+   "grooves_at_local_x": [
+    30
+   ],
+   "fragments": 2,
+   "Modified_order_local_x": [
+    15.0,
+    41.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "plate_rotation_deg": 0,
+   "grooves_at_local_x": [
+    45
+   ],
+   "fragments": 2,
+   "Modified_order_local_x": [
+    22.5,
+    48.5
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "plate_rotation_deg": 0,
+   "grooves_at_local_x": [
+    12,
+    30
+   ],
+   "fragments": 3,
+   "Modified_order_local_x": [
+    6.0,
+    22.0,
+    41.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "plate_rotation_deg": 0,
+   "grooves_at_local_x": [
+    30,
+    12
+   ],
+   "fragments": 3,
+   "Modified_order_local_x": [
+    6.0,
+    22.0,
+    41.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "plate_rotation_deg": 0,
+   "grooves_at_local_x": [
+    8,
+    25,
+    40
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    4.0,
+    17.5,
+    33.5,
+    46.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "plate_rotation_deg": 0,
+   "grooves_at_local_x": [
+    40,
+    8,
+    25
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    4.0,
+    17.5,
+    33.5,
+    46.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "plate_rotation_deg": 90,
+   "grooves_at_local_x": [
+    12,
+    30
+   ],
+   "fragments": 3,
+   "Modified_order_local_x": [
+    6.0,
+    22.0,
+    41.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "plate_rotation_deg": 180,
+   "grooves_at_local_x": [
+    12,
+    30
+   ],
+   "fragments": 3,
+   "Modified_order_local_x": [
+    6.0,
+    22.0,
+    41.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "plate_rotation_deg": 180,
+   "grooves_at_local_x": [
+    8,
+    25,
+    40
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    4.0,
+    17.5,
+    33.5,
+    46.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "plate_rotation_deg": 270,
+   "grooves_at_local_x": [
+    8,
+    25,
+    40
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    4.0,
+    17.5,
+    33.5,
+    46.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "sketch_winding": "ccw",
+   "sketch_start_vertex": 0,
+   "grooves_at_local_x": [
+    8,
+    25,
+    40
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    4.0,
+    17.5,
+    33.5,
+    46.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "sketch_winding": "ccw",
+   "sketch_start_vertex": 1,
+   "grooves_at_local_x": [
+    8,
+    25,
+    40
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    46.0,
+    33.5,
+    17.5,
+    4.0
+   ],
+   "ascending_local_x": false
+  },
+  {
+   "sketch_winding": "ccw",
+   "sketch_start_vertex": 2,
+   "grooves_at_local_x": [
+    8,
+    25,
+    40
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    46.0,
+    33.5,
+    17.5,
+    4.0
+   ],
+   "ascending_local_x": false
+  },
+  {
+   "sketch_winding": "ccw",
+   "sketch_start_vertex": 3,
+   "grooves_at_local_x": [
+    8,
+    25,
+    40
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    4.0,
+    17.5,
+    33.5,
+    46.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "sketch_winding": "cw",
+   "sketch_start_vertex": 0,
+   "grooves_at_local_x": [
+    8,
+    25,
+    40
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    4.0,
+    17.5,
+    33.5,
+    46.0
+   ],
+   "ascending_local_x": true
+  },
+  {
+   "sketch_winding": "cw",
+   "sketch_start_vertex": 1,
+   "grooves_at_local_x": [
+    8,
+    25,
+    40
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    46.0,
+    33.5,
+    17.5,
+    4.0
+   ],
+   "ascending_local_x": false
+  },
+  {
+   "sketch_winding": "cw",
+   "sketch_start_vertex": 2,
+   "grooves_at_local_x": [
+    8,
+    25,
+    40
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    46.0,
+    33.5,
+    17.5,
+    4.0
+   ],
+   "ascending_local_x": false
+  },
+  {
+   "sketch_winding": "cw",
+   "sketch_start_vertex": 3,
+   "grooves_at_local_x": [
+    8,
+    25,
+    40
+   ],
+   "fragments": 4,
+   "Modified_order_local_x": [
+    4.0,
+    17.5,
+    33.5,
+    46.0
+   ],
+   "ascending_local_x": true
+  }
+ ],
+ "corner_edge_split_order": [
+  {
+   "shelf_depth": 150,
+   "t": 4,
+   "fragment_x_in_ledger_order": [
+    -7.0,
+    7.0
+   ]
+  },
+  {
+   "shelf_depth": 150,
+   "t": 5,
+   "fragment_x_in_ledger_order": [
+    -8.75,
+    8.75
+   ]
+  },
+  {
+   "shelf_depth": 150,
+   "t": 6,
+   "fragment_x_in_ledger_order": [
+    -10.5,
+    10.5
+   ]
+  },
+  {
+   "shelf_depth": 150,
+   "t": 8,
+   "fragment_x_in_ledger_order": [
+    -14.0,
+    14.0
+   ]
+  },
+  {
+   "shelf_depth": 175,
+   "t": 4,
+   "fragment_x_in_ledger_order": [
+    -7.0,
+    7.0
+   ]
+  },
+  {
+   "shelf_depth": 175,
+   "t": 5,
+   "fragment_x_in_ledger_order": [
+    -8.75,
+    8.75
+   ]
+  },
+  {
+   "shelf_depth": 175,
+   "t": 6,
+   "fragment_x_in_ledger_order": [
+    -10.5,
+    10.5
+   ]
+  },
+  {
+   "shelf_depth": 175,
+   "t": 8,
+   "fragment_x_in_ledger_order": [
+    -14.0,
+    14.0
+   ]
+  },
+  {
+   "shelf_depth": 200,
+   "t": 4,
+   "fragment_x_in_ledger_order": [
+    -7.0,
+    7.0
+   ]
+  },
+  {
+   "shelf_depth": 200,
+   "t": 5,
+   "fragment_x_in_ledger_order": [
+    -8.75,
+    8.75
+   ]
+  },
+  {
+   "shelf_depth": 200,
+   "t": 6,
+   "fragment_x_in_ledger_order": [
+    -10.5,
+    10.5
+   ]
+  },
+  {
+   "shelf_depth": 200,
+   "t": 8,
+   "fragment_x_in_ledger_order": [
+    -14.0,
+    14.0
+   ]
+  },
+  {
+   "shelf_depth": 250,
+   "t": 4,
+   "fragment_x_in_ledger_order": [
+    -7.0,
+    7.0
+   ]
+  },
+  {
+   "shelf_depth": 250,
+   "t": 5,
+   "fragment_x_in_ledger_order": [
+    -8.75,
+    8.75
+   ]
+  },
+  {
+   "shelf_depth": 250,
+   "t": 6,
+   "fragment_x_in_ledger_order": [
+    -10.5,
+    10.5
+   ]
+  },
+  {
+   "shelf_depth": 250,
+   "t": 8,
+   "fragment_x_in_ledger_order": [
+    -14.0,
+    14.0
+   ]
+  },
+  {
+   "shelf_depth": 300,
+   "t": 4,
+   "fragment_x_in_ledger_order": [
+    -7.0,
+    7.0
+   ]
+  },
+  {
+   "shelf_depth": 300,
+   "t": 5,
+   "fragment_x_in_ledger_order": [
+    -8.75,
+    8.75
+   ]
+  },
+  {
+   "shelf_depth": 300,
+   "t": 6,
+   "fragment_x_in_ledger_order": [
+    -10.5,
+    10.5
+   ]
+  },
+  {
+   "shelf_depth": 300,
+   "t": 8,
+   "fragment_x_in_ledger_order": [
+    -14.0,
+    14.0
+   ]
+  }
+ ],
+ "code_size": {
+  "refs.py (ledger + resolve + cardinality)": 84,
+  "bracket.py (whole model incl. tagging)": 176
+ },
+ "isdeleted_disagreements_default_build": [
+  [
+   "E.lateral_edge(wall_bot)",
+   "F",
+   false,
+   true
+  ],
+  [
+   "E.lateral_edge(leg_bot)",
+   "F",
+   false,
+   true
+  ],
+  [
+   "E.lateral_edge(arm_under_tip)",
+   "F",
+   false,
+   true
+  ],
+  [
+   "E.lateral_edge(arm_top_tip)",
+   "F",
+   false,
+   true
+  ],
+  [
+   "E.lateral_edge(wall_top)",
+   "F",
+   false,
+   true
+  ],
+  [
+   "G.lateral_edge(down)",
+   "F",
+   false,
+   true
+  ],
+  [
+   "G.lateral_edge(out)",
+   "F",
+   false,
+   true
+  ]
+ ]
+}

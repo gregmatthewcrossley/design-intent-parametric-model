@@ -1,0 +1,211 @@
+python 3.12.9 on macOS-26.6.2-arm64-arm-64bit (arm64)
+build123d 0.13.0, OCP 8.0.1.1, OCCT lib: ['libTKernel.8.0.1.dylib']
+
+## Q1 raw counts (recommended convention)
+| case | V | E | F | R | S | H | E incl. degen | degen | seam | valid | pass |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| box | 8 | 12 | 6 | 0 | 1 | 0 | 12 | 0 | 0 | True | PASS |
+| cylinder | 2 | 3 | 3 | 0 | 1 | 0 | 3 | 0 | 1 | True | PASS |
+| cone (apex) | 2 | 2 | 2 | 0 | 1 | 0 | 3 | 1 | 1 | True | PASS |
+| cone frustum | 2 | 3 | 3 | 0 | 1 | 0 | 3 | 0 | 1 | True | PASS |
+| sphere | 2 | 1 | 1 | 0 | 1 | 0 | 3 | 2 | 1 | True | PASS |
+| torus | 1 | 2 | 1 | 0 | 1 | 1 | 2 | 0 | 2 | True | PASS |
+| box + 1 through-hole | 10 | 15 | 7 | 2 | 1 | 1 | 15 | 0 | 1 | True | PASS |
+| box + 2 through-holes | 12 | 18 | 8 | 4 | 1 | 2 | 18 | 0 | 2 | True | PASS |
+| box + blind hole | 10 | 15 | 8 | 1 | 1 | 0 | 15 | 0 | 1 | True | PASS |
+| filleted box (all 12 edges) | 24 | 48 | 26 | 0 | 1 | 0 | 56 | 8 | 0 | True | PASS |
+| shelled box (top removed) | 16 | 24 | 11 | 1 | 1 | 0 | 24 | 0 | 0 | True | PASS |
+| hollow box (internal void) | 16 | 24 | 12 | 0 | 2 | 0 | 24 | 0 | 0 | True | PASS |
+| sphere with through-hole | 2 | 4 | 2 | 0 | 1 | 1 | 4 | 0 | 2 | True | PASS |
+| shelf bracket (default) | 34 | 51 | 19 | 8 | 1 | 4 | 51 | 0 | 6 | True | PASS |
+
+## Q1 solved H under alternative conventions
+| case | recommended | include_degenerated | orientation_sensitive | tshape_only | raw_explorer |
+|---|---|---|---|---|---|
+| box | 0 | 0 | 2 | 0 | -14 |
+| cylinder | 0 | 0 | 0.5 | 0 | -3.5 |
+| cone (apex) | 0 | 0.5 | 0 | 0 | -3 |
+| cone frustum | 0 | 0 | 0.5 | 0 | -3.5 |
+| sphere | 0 | 1 | -0.5 | 0 | -2.5 |
+| torus | 1 | 1 | 1.5 | 1 | -1.5 |
+| box + 1 through-hole | 1 | 1 | 3.5 | 1 | -16.5 |
+| box + 2 through-holes | 2 | 2 | 5 | 2 | -19 |
+| box + blind hole | 0 | 0 | 2.5 | 0 | -17.5 |
+| filleted box (all 12 edges) | 0 | 4 | 12 | 0 | -68 |
+| shelled box (top removed) | 0 | 0 | 4 | 0 | -28 |
+| hollow box (internal void) | 0 | 0 | 4 | 0 | -28 |
+| sphere with through-hole | 1 | 1 | 2 | 1 | -4 |
+| shelf bracket (default) | 4 | 4 | 12.5 | 5 | -55.5 |
+
+## Q1 genus deltas
+| through-hole in plate | +1 | +1 | PASS |  |
+| blind hole (depth 3 of 5) | +0 | +0 | PASS |  |
+| 'blind' pocket too deep (6 > 5) -- intended blind | +0 | +1 | FAIL |  |
+| 2 through-holes, one feature | +2 | +2 | PASS |  |
+| countersink on an existing hole | +0 | +0 | PASS |  |
+| 2nd through-hole CROSSING the 1st (naive +1) | +1 | +2 | FAIL |  |
+| 2nd through-hole NOT crossing the 1st | +1 | +1 | PASS |  |
+| fillet all edges of holed plate | +0 | +0 | PASS |  |
+| slot that splits the plate in two | +0 | +0 | PASS | solids 1->2, shells 1->2 |
+
+## Q1 shared TShape compound (box + moved copy)
+{'mode': 'recommended', 'V': 16, 'E': 24, 'F': 12, 'S': 2, 'H': 0.0}
+{'mode': 'include_degenerated', 'V': 16, 'E': 24, 'F': 12, 'S': 2, 'H': 0.0}
+{'mode': 'orientation_sensitive', 'V': 32, 'E': 48, 'F': 12, 'S': 2, 'H': 4.0}
+{'mode': 'tshape_only', 'V': 8, 'E': 12, 'F': 6, 'S': 2, 'H': 1.0}
+{'mode': 'raw_explorer', 'V': 96, 'E': 48, 'F': 12, 'S': 2, 'H': -28.0}
+boolean with patterned tool: {'faces_by_map': 8, 'faces_by_tshape': 8, 'H': 2.0}
+
+[q1_euler finished in 0.1s]
+
+## Q2 capability probes
+| MakePrism.FirstShape/LastShape | E.cap(START|END) | Plane/Plane | PASS |
+| MakePrism.Generated(sketch edge) | E.side(from=edge) | faces per edge [1] | PASS |
+| MakePrism.Generated(sketch vertex) | E.lateral_edge(from=vertex) | 1 edge per vertex | PASS |
+| BRepAlgoAPI_Cut.Modified(tool face) | H.wall | 1 face(s), Cylinder | PASS |
+| BRepAlgoAPI_Cut.IsDeleted(tool cap) | (tool caps vanish) | True | PASS |
+| BRepAlgoAPI_Cut.Generated(face) | H.rim(on=face X) section edges | 2 edges (Circle, Circle) + vertices | PASS |
+| BRepFilletAPI_MakeFillet.Generated(edge) | F.blend(from=edge) / F.created() | 1 Cylinder | PASS |
+| BRepFilletAPI_MakeFillet.IsDeleted(untouched edge) | (ledger propagation) | IsDeleted=True but edge present=True | FAIL |
+
+## Q2 build123d probe
+{'op': 'extrude boss', 'faces(LAST)': 2, 'faces(NEW)': 0, 'note': 'cap and side not distinguished'}
+{'op': 'Hole', 'faces(LAST)': 1, 'faces(NEW)': 0, 'note': 'hole wall = LAST'}
+{'op': 'fillet 4 vertical edges', 'faces(LAST)': 4, 'faces(NEW)': 4, 'note': 'blend faces = NEW (no per-edge source)'}
+
+## Q2 baseline references (shelf_depth=200, t=5)
+| E.cap(START) | 1 | ['Plane n=(-1.0,0.0,0.0)'] | [[['F', 'modified']]] |
+| E.cap(END) | 1 | ['Plane n=(1.0,0.0,0.0)'] | [[['F', 'modified']]] |
+| E.side(wall) | 1 | ['Plane n=(0.0,-1.0,0.0)'] | [[['W1', 'modified'], ['W2', 'modified'], ['C', 'modified']]] |
+| E.side(mount) | 1 | ['Plane n=(0.0,1.0,0.0)'] | [[['G', 'modified'], ['W1', 'modified'], ['K1', 'modified'], ['W2', 'modified'], ['K2', 'modified'], ['C', 'modified'], ['F', 'modified']]] |
+| E.side(shelf) | 1 | ['Plane n=(0.0,0.0,1.0)'] | [[['S', 'modified']]] |
+| E.side(arm_under) | 1 | ['Plane n=(0.0,0.0,-1.0)'] | [[['G', 'modified'], ['S', 'modified'], ['F', 'modified']]] |
+| E.side(arm_tip) | 1 | ['Plane n=(0.0,1.0,0.0)'] | [[]] |
+| E.side(leg_end) | 1 | ['Plane n=(0.0,0.0,-1.0)'] | [[]] |
+| G.side(hypotenuse) | 1 | ['Plane n=(0.0,0.707,-0.707)'] | [[]] |
+| G.cap(START) | 1 | ['Plane n=(-1.0,0.0,0.0)'] | [[['F', 'modified']]] |
+| G.cap(END) | 1 | ['Plane n=(1.0,0.0,0.0)'] | [[['F', 'modified']]] |
+| W1.wall | 1 | ['Cylinder axis=(0.0,1.0,0.0)'] | [[['W1', 'modified'], ['K1', 'modified']]] |
+| W2.wall | 1 | ['Cylinder axis=(0.0,1.0,0.0)'] | [[['W2', 'modified'], ['K2', 'modified']]] |
+| K1.countersink | 1 | ['Cone axis=(0.0,1.0,0.0)'] | [[['K1', 'modified']]] |
+| K2.countersink | 1 | ['Cone axis=(0.0,1.0,0.0)'] | [[['K2', 'modified']]] |
+| C.wall | 1 | ['Cylinder axis=(0.0,1.0,0.0)'] | [[['C', 'modified']]] |
+| S.wall | 1 | ['Cylinder axis=(0.0,0.0,1.0)'] | [[['S', 'modified']]] |
+| F.blend(E.lateral_edge(inner)) | 2 | ['Cylinder axis=(1.0,0.0,0.0)', 'Cylinder axis=(1.0,0.0,0.0)'] | [[]] |
+
+## Q2 edit-stability sweep
+{'shelf_depth': 150, 't': 4, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 150, 't': 5, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 150, 't': 6, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 150, 't': 8, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 175, 't': 4, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 175, 't': 5, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 175, 't': 6, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 175, 't': 8, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 200, 't': 4, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 200, 't': 5, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 200, 't': 6, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 200, 't': 8, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 250, 't': 4, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 250, 't': 5, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 250, 't': 6, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 250, 't': 8, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 300, 't': 4, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 300, 't': 5, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 300, 't': 6, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+{'shelf_depth': 300, 't': 8, 'build': 'ok', 'cardinality_ok': True, 'geom_descriptor_ok': True, 'dH_ok': True, 'valid': True, 'VEFRSH': (34, 51, 19, 8, 1, 4), 'adj_topo': '6dbbca6a7ca1', 'event_genealogy_changed': []}
+
+## Q2 negative controls
+{'edit': 'shelf_hole_u 0.75->0.4 (shelf hole now lands on the gusset)', 'build': 'ok', 'dH_failures': [{'feature': 'S', 'H_before': 3, 'H_after': 3, 'expected_dH': 1, 'ok': False, 'valid': True}], 'cardinality_failures': [], 'geom_changed': []}
+{'edit': 't=4, countersink_d 9->14 (countersink swallows the screw bore)', 'build': 'ok', 'dH_failures': [], 'cardinality_failures': ['W1.wall(None): expected exactly 1, got 0', 'W2.wall(None): expected exactly 1, got 0'], 'geom_changed': ['W1.wall', 'W2.wall']}
+{'edit': 'shelf_depth 120 (no room for wall pattern)', 'build': 'refused: AssertionError: no room for the pattern'}
+
+## Q2 split ordering
+{'plate_rotation_deg': 0, 'grooves_at_local_x': [5], 'fragments': 2, 'Modified_order_local_x': [2.5, 28.5], 'ascending_local_x': True}
+{'plate_rotation_deg': 0, 'grooves_at_local_x': [30], 'fragments': 2, 'Modified_order_local_x': [15.0, 41.0], 'ascending_local_x': True}
+{'plate_rotation_deg': 0, 'grooves_at_local_x': [45], 'fragments': 2, 'Modified_order_local_x': [22.5, 48.5], 'ascending_local_x': True}
+{'plate_rotation_deg': 0, 'grooves_at_local_x': [12, 30], 'fragments': 3, 'Modified_order_local_x': [6.0, 22.0, 41.0], 'ascending_local_x': True}
+{'plate_rotation_deg': 0, 'grooves_at_local_x': [30, 12], 'fragments': 3, 'Modified_order_local_x': [6.0, 22.0, 41.0], 'ascending_local_x': True}
+{'plate_rotation_deg': 0, 'grooves_at_local_x': [8, 25, 40], 'fragments': 4, 'Modified_order_local_x': [4.0, 17.5, 33.5, 46.0], 'ascending_local_x': True}
+{'plate_rotation_deg': 0, 'grooves_at_local_x': [40, 8, 25], 'fragments': 4, 'Modified_order_local_x': [4.0, 17.5, 33.5, 46.0], 'ascending_local_x': True}
+{'plate_rotation_deg': 90, 'grooves_at_local_x': [12, 30], 'fragments': 3, 'Modified_order_local_x': [6.0, 22.0, 41.0], 'ascending_local_x': True}
+{'plate_rotation_deg': 180, 'grooves_at_local_x': [12, 30], 'fragments': 3, 'Modified_order_local_x': [6.0, 22.0, 41.0], 'ascending_local_x': True}
+{'plate_rotation_deg': 180, 'grooves_at_local_x': [8, 25, 40], 'fragments': 4, 'Modified_order_local_x': [4.0, 17.5, 33.5, 46.0], 'ascending_local_x': True}
+{'plate_rotation_deg': 270, 'grooves_at_local_x': [8, 25, 40], 'fragments': 4, 'Modified_order_local_x': [4.0, 17.5, 33.5, 46.0], 'ascending_local_x': True}
+{'sketch_winding': 'ccw', 'sketch_start_vertex': 0, 'grooves_at_local_x': [8, 25, 40], 'fragments': 4, 'Modified_order_local_x': [4.0, 17.5, 33.5, 46.0], 'ascending_local_x': True}
+{'sketch_winding': 'ccw', 'sketch_start_vertex': 1, 'grooves_at_local_x': [8, 25, 40], 'fragments': 4, 'Modified_order_local_x': [46.0, 33.5, 17.5, 4.0], 'ascending_local_x': False}
+{'sketch_winding': 'ccw', 'sketch_start_vertex': 2, 'grooves_at_local_x': [8, 25, 40], 'fragments': 4, 'Modified_order_local_x': [46.0, 33.5, 17.5, 4.0], 'ascending_local_x': False}
+{'sketch_winding': 'ccw', 'sketch_start_vertex': 3, 'grooves_at_local_x': [8, 25, 40], 'fragments': 4, 'Modified_order_local_x': [4.0, 17.5, 33.5, 46.0], 'ascending_local_x': True}
+{'sketch_winding': 'cw', 'sketch_start_vertex': 0, 'grooves_at_local_x': [8, 25, 40], 'fragments': 4, 'Modified_order_local_x': [4.0, 17.5, 33.5, 46.0], 'ascending_local_x': True}
+{'sketch_winding': 'cw', 'sketch_start_vertex': 1, 'grooves_at_local_x': [8, 25, 40], 'fragments': 4, 'Modified_order_local_x': [46.0, 33.5, 17.5, 4.0], 'ascending_local_x': False}
+{'sketch_winding': 'cw', 'sketch_start_vertex': 2, 'grooves_at_local_x': [8, 25, 40], 'fragments': 4, 'Modified_order_local_x': [46.0, 33.5, 17.5, 4.0], 'ascending_local_x': False}
+{'sketch_winding': 'cw', 'sketch_start_vertex': 3, 'grooves_at_local_x': [8, 25, 40], 'fragments': 4, 'Modified_order_local_x': [4.0, 17.5, 33.5, 46.0], 'ascending_local_x': True}
+{'shelf_depth': 150, 't': 4, 'fragment_x_in_ledger_order': [-7.0, 7.0]}
+{'shelf_depth': 150, 't': 5, 'fragment_x_in_ledger_order': [-8.75, 8.75]}
+{'shelf_depth': 150, 't': 6, 'fragment_x_in_ledger_order': [-10.5, 10.5]}
+{'shelf_depth': 150, 't': 8, 'fragment_x_in_ledger_order': [-14.0, 14.0]}
+{'shelf_depth': 175, 't': 4, 'fragment_x_in_ledger_order': [-7.0, 7.0]}
+{'shelf_depth': 175, 't': 5, 'fragment_x_in_ledger_order': [-8.75, 8.75]}
+{'shelf_depth': 175, 't': 6, 'fragment_x_in_ledger_order': [-10.5, 10.5]}
+{'shelf_depth': 175, 't': 8, 'fragment_x_in_ledger_order': [-14.0, 14.0]}
+{'shelf_depth': 200, 't': 4, 'fragment_x_in_ledger_order': [-7.0, 7.0]}
+{'shelf_depth': 200, 't': 5, 'fragment_x_in_ledger_order': [-8.75, 8.75]}
+{'shelf_depth': 200, 't': 6, 'fragment_x_in_ledger_order': [-10.5, 10.5]}
+{'shelf_depth': 200, 't': 8, 'fragment_x_in_ledger_order': [-14.0, 14.0]}
+{'shelf_depth': 250, 't': 4, 'fragment_x_in_ledger_order': [-7.0, 7.0]}
+{'shelf_depth': 250, 't': 5, 'fragment_x_in_ledger_order': [-8.75, 8.75]}
+{'shelf_depth': 250, 't': 6, 'fragment_x_in_ledger_order': [-10.5, 10.5]}
+{'shelf_depth': 250, 't': 8, 'fragment_x_in_ledger_order': [-14.0, 14.0]}
+{'shelf_depth': 300, 't': 4, 'fragment_x_in_ledger_order': [-7.0, 7.0]}
+{'shelf_depth': 300, 't': 5, 'fragment_x_in_ledger_order': [-8.75, 8.75]}
+{'shelf_depth': 300, 't': 6, 'fragment_x_in_ledger_order': [-10.5, 10.5]}
+{'shelf_depth': 300, 't': 8, 'fragment_x_in_ledger_order': [-14.0, 14.0]}
+
+code size: {'refs.py (ledger + resolve + cardinality)': 84, 'bracket.py (whole model incl. tagging)': 176}
+IsDeleted disagreements: [('E.lateral_edge(wall_bot)', 'F', False, True), ('E.lateral_edge(leg_bot)', 'F', False, True), ('E.lateral_edge(arm_under_tip)', 'F', False, True), ('E.lateral_edge(arm_top_tip)', 'F', False, True), ('E.lateral_edge(wall_top)', 'F', False, True), ('G.lateral_edge(down)', 'F', False, True), ('G.lateral_edge(out)', 'F', False, True)]
+
+[q2_history finished in 1.1s]
+
+## Q3 in_process
+| model | parallel | n | VEFRSH | adj | adj_topo | brep | step_stripped | step_canonical | step_b123d | step_raw | volume | mean build ms |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| box+hole | False | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 1.1 |
+| box+hole | True | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 1.2 |
+| bracket(200,5) | False | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 31.1 |
+| bracket(200,5) | True | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 33.6 |
+| bracket(300,8) | False | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 31.3 |
+| bracket(300,8) | True | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 33.7 |
+| filleted box | False | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 3.3 |
+| filleted box | True | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 3.2 |
+| plate 10x10 holes | False | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 62.5 |
+| plate 10x10 holes | True | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 46.0 |
+| sphere+hole | False | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 1.0 |
+| sphere+hole | True | 20 | 1 | 1 | 1 | 1 | 20 | 1 | 1 | 20 | 1 | 1.2 |
+
+## Q3 cross_process
+| model | parallel | n | VEFRSH | adj | adj_topo | brep | step_stripped | step_canonical | step_b123d | step_raw | volume | mean build ms |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| box+hole | False | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 1.2 |
+| box+hole | True | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 1.2 |
+| bracket(200,5) | False | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 32.3 |
+| bracket(200,5) | True | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 36.3 |
+| bracket(300,8) | False | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 31.0 |
+| bracket(300,8) | True | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 34.1 |
+| filleted box | False | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 3.2 |
+| filleted box | True | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 3.3 |
+| plate 10x10 holes | False | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 63.2 |
+| plate 10x10 holes | True | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 46.3 |
+| sphere+hole | False | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 1.1 |
+| sphere+hole | True | 12 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 12 | 1 | 1.2 |
+
+## Q3 pooled_all
+| model | parallel | n | VEFRSH | adj | adj_topo | brep | step_stripped | step_canonical | step_b123d | step_raw | volume | mean build ms |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| box+hole | any | 64 | 1 | 1 | 1 | 1 | 42 | 1 | 1 | 64 | 1 | 1.2 |
+| bracket(200,5) | any | 64 | 1 | 1 | 1 | 1 | 40 | 1 | 1 | 64 | 1 | 33.1 |
+| bracket(300,8) | any | 64 | 1 | 1 | 1 | 1 | 42 | 1 | 1 | 64 | 1 | 32.5 |
+| filleted box | any | 64 | 1 | 1 | 1 | 1 | 42 | 1 | 1 | 64 | 1 | 3.3 |
+| plate 10x10 holes | any | 64 | 1 | 1 | 1 | 1 | 42 | 1 | 1 | 64 | 1 | 54.4 |
+| sphere+hole | any | 64 | 1 | 1 | 1 | 1 | 42 | 1 | 1 | 64 | 1 | 1.1 |
+
+[q3_determinism finished in 44.3s]
