@@ -1,0 +1,5633 @@
+[
+ {
+  "model": "revolve.partial",
+  "op": "revolve",
+  "variant": "partial",
+  "params": {
+   "angle": 180,
+   "r_in": 5.0,
+   "r_out": 10.0,
+   "h": 4.0,
+   "top_slant": 0.0
+  },
+  "before": null,
+  "after": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 471.2389
+  },
+  "dH": 0,
+  "dS": 1,
+  "expected_dH": 0,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "side(bottom)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "side(outer)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "side(top)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "side(inner)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "circle_edge(ib)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Circle"
+    ]
+   },
+   "circle_edge(ob)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Circle"
+    ]
+   },
+   "circle_edge(ot)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Circle"
+    ]
+   },
+   "circle_edge(it)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Circle"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {},
+  "base_ok": true,
+  "coverage": {
+   "faces": 6,
+   "named": 6,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 9,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 0,
+   "deleted_kernel": 0,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": null
+ },
+ {
+  "model": "revolve.full",
+  "op": "revolve",
+  "variant": "full",
+  "params": {
+   "angle": 360,
+   "r_in": 5.0,
+   "r_out": 10.0,
+   "h": 4.0,
+   "top_slant": 0.0
+  },
+  "before": null,
+  "after": {
+   "VEFRSH": [
+    4,
+    6,
+    4,
+    2,
+    1,
+    1
+   ],
+   "H": 1.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 2,
+   "solids": 1,
+   "volume": 942.4778
+  },
+  "dH": 1,
+  "dS": 1,
+  "expected_dH": 1,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "side(bottom)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "side(outer)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "side(top)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "side(inner)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "circle_edge(ib)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Circle"
+    ]
+   },
+   "circle_edge(ob)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Circle"
+    ]
+   },
+   "circle_edge(ot)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Circle"
+    ]
+   },
+   "circle_edge(it)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Circle"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {},
+  "base_ok": true,
+  "coverage": {
+   "faces": 4,
+   "named": 4,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 9,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 3,
+   "deleted_kernel": 3,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [
+   "Generated() empty in result for ['bottom', 'top']; resolved via MakeRevol.Revol().Shape(edge)"
+  ],
+  "ledger_isdeleted_disagreements": null
+ },
+ {
+  "model": "revolve.full_on_axis",
+  "op": "revolve",
+  "variant": "full",
+  "params": {
+   "angle": 360,
+   "r_in": 0.0,
+   "r_out": 10.0,
+   "h": 4.0,
+   "top_slant": 0.0
+  },
+  "before": null,
+  "after": {
+   "VEFRSH": [
+    2,
+    3,
+    3,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 1,
+   "solids": 1,
+   "volume": 1256.6371
+  },
+  "dH": 0,
+  "dS": 1,
+  "expected_dH": 0,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "side(bottom)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "side(outer)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "side(top)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "side(inner)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "desc": []
+   },
+   "circle_edge(ib)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "desc": []
+   },
+   "circle_edge(ob)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Circle"
+    ]
+   },
+   "circle_edge(ot)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Circle"
+    ]
+   },
+   "circle_edge(it)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "desc": []
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {},
+  "base_ok": true,
+  "coverage": {
+   "faces": 3,
+   "named": 3,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 9,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 6,
+   "deleted_kernel": 6,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [
+   "Generated() empty in result for ['bottom', 'top']; resolved via MakeRevol.Revol().Shape(edge)"
+  ],
+  "ledger_isdeleted_disagreements": null
+ },
+ {
+  "model": "chamfer.two_edges",
+  "op": "chamfer",
+  "variant": "lat_a+top_ab",
+  "params": {
+   "d": 3.0,
+   "which": "lat_a+top_ab",
+   "d2": null
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    11,
+    17,
+    8,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 23739.0
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "face(from=E.lateral_edge(a))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-0.71,-0.71,0.0)"
+    ]
+   },
+   "face(from=edge(E.side(a-b),E.cap(END)))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-0.71,0.71)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   },
+   "E.lateral_edge(b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.lateral_edge(c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 8,
+   "named": 8,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 26,
+   "isdeleted_disagree": 10,
+   "false_deleted": 10,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 5,
+   "deleted_kernel": 15,
+   "disagree_examples": [
+    {
+     "input": "base",
+     "kind": "edge",
+     "class": "false_deleted",
+     "present": true,
+     "mods_in_result": 0,
+     "kernel_deleted": true
+    },
+    {
+     "input": "base",
+     "kind": "edge",
+     "class": "false_deleted",
+     "present": true,
+     "mods_in_result": 0,
+     "kernel_deleted": true
+    },
+    {
+     "input": "base",
+     "kind": "edge",
+     "class": "false_deleted",
+     "present": true,
+     "mods_in_result": 0,
+     "kernel_deleted": true
+    },
+    {
+     "input": "base",
+     "kind": "edge",
+     "class": "false_deleted",
+     "present": true,
+     "mods_in_result": 0,
+     "kernel_deleted": true
+    }
+   ],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 2
+ },
+ {
+  "model": "chamfer.all12",
+  "op": "chamfer",
+  "variant": "all12",
+  "params": {
+   "d": 2.0,
+   "which": "all12",
+   "d2": null
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    24,
+    48,
+    26,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 23322.6667
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "face(from=e0)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-0.71,-0.71,0.0)"
+    ]
+   },
+   "face(from=e1)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.71,-0.71,0.0)"
+    ]
+   },
+   "face(from=e2)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-0.71,-0.71)"
+    ]
+   },
+   "face(from=e3)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-0.71,0.71)"
+    ]
+   },
+   "face(from=e4)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.71,0.71,0.0)"
+    ]
+   },
+   "face(from=e5)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.71,0.0,-0.71)"
+    ]
+   },
+   "face(from=e6)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.71,0.0,0.71)"
+    ]
+   },
+   "face(from=e7)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-0.71,0.71,0.0)"
+    ]
+   },
+   "face(from=e8)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.71,-0.71)"
+    ]
+   },
+   "face(from=e9)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.71,0.71)"
+    ]
+   },
+   "face(from=e10)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-0.71,0.0,-0.71)"
+    ]
+   },
+   "face(from=e11)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-0.71,0.0,0.71)"
+    ]
+   },
+   "corner(at=V(0.0,0.0,0.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-0.58,-0.58,-0.58)"
+    ]
+   },
+   "corner(at=V(0.0,0.0,20.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-0.58,-0.58,0.58)"
+    ]
+   },
+   "corner(at=V(40.0,0.0,0.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.58,-0.58,-0.58)"
+    ]
+   },
+   "corner(at=V(40.0,0.0,20.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.58,-0.58,0.58)"
+    ]
+   },
+   "corner(at=V(40.0,30.0,0.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.58,0.58,-0.58)"
+    ]
+   },
+   "corner(at=V(40.0,30.0,20.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.58,0.58,0.58)"
+    ]
+   },
+   "corner(at=V(0.0,30.0,0.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-0.58,0.58,-0.58)"
+    ]
+   },
+   "corner(at=V(0.0,30.0,20.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-0.58,0.58,0.58)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   },
+   "E.lateral_edge(b)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   },
+   "E.lateral_edge(c)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   },
+   "E.lateral_edge(d)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 26,
+   "named": 26,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 26,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 20,
+   "deleted_kernel": 20,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "chamfer.two_distances",
+  "op": "chamfer",
+  "variant": "lat_a+top_ab",
+  "params": {
+   "d": 3.0,
+   "which": "lat_a+top_ab",
+   "d2": 1.0
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    11,
+    17,
+    8,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 23913.0
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "face(from=E.lateral_edge(a))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-0.32,-0.95,0.0)"
+    ]
+   },
+   "face(from=edge(E.side(a-b),E.cap(END)))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-0.95,0.32)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   },
+   "E.lateral_edge(b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.lateral_edge(c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 8,
+   "named": 8,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 26,
+   "isdeleted_disagree": 10,
+   "false_deleted": 10,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 5,
+   "deleted_kernel": 15,
+   "disagree_examples": [
+    {
+     "input": "base",
+     "kind": "edge",
+     "class": "false_deleted",
+     "present": true,
+     "mods_in_result": 0,
+     "kernel_deleted": true
+    },
+    {
+     "input": "base",
+     "kind": "edge",
+     "class": "false_deleted",
+     "present": true,
+     "mods_in_result": 0,
+     "kernel_deleted": true
+    },
+    {
+     "input": "base",
+     "kind": "edge",
+     "class": "false_deleted",
+     "present": true,
+     "mods_in_result": 0,
+     "kernel_deleted": true
+    },
+    {
+     "input": "base",
+     "kind": "edge",
+     "class": "false_deleted",
+     "present": true,
+     "mods_in_result": 0,
+     "kernel_deleted": true
+    }
+   ],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 2
+ },
+ {
+  "model": "shell.open_top",
+  "op": "shell",
+  "variant": "block:cap(END)",
+  "params": {
+   "t": -2.0,
+   "openings": [
+    "cap(END)"
+   ],
+   "body": "block"
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    16,
+    24,
+    11,
+    1,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 7152.0
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "offset(from=cap(START))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "rim(opening=cap(END))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "offset(from=side(a-b))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "offset(from=side(b-c))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   },
+   "offset(from=side(c-d))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "offset(from=side(d-a))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 11,
+   "named": 11,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 26,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 0,
+   "deleted_kernel": 0,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [
+   {
+    "derived_lateral_edges": {
+     "a": 1,
+     "b": 1,
+     "c": 1,
+     "d": 1
+    }
+   }
+  ],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "shell.open_top_outward",
+  "op": "shell",
+  "variant": "block:cap(END)",
+  "params": {
+   "t": 2.0,
+   "openings": [
+    "cap(END)"
+   ],
+   "body": "block"
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    28,
+    48,
+    23,
+    1,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 8707.9055
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "offset(from=cap(START))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "rim(opening=cap(END))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "offset(from=side(a-b))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "offset(from=side(b-c))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   },
+   "offset(from=side(c-d))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "offset(from=side(d-a))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   },
+   "join(from=edge(side(a-b),side(d-a)))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "join(from=edge(side(a-b),side(b-c)))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "join(from=edge(cap(START),side(a-b)))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(1.0,0.0,0.0)"
+    ]
+   },
+   "join(from=edge(side(b-c),side(c-d)))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "join(from=edge(cap(START),side(b-c)))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)"
+    ]
+   },
+   "join(from=edge(side(c-d),side(d-a)))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "join(from=edge(cap(START),side(c-d)))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(1.0,0.0,0.0)"
+    ]
+   },
+   "join(from=edge(cap(START),side(d-a)))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)"
+    ]
+   },
+   "join(at=V(0.0,0.0,0.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Sphere"
+    ]
+   },
+   "join(at=V(40.0,0.0,0.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Sphere"
+    ]
+   },
+   "join(at=V(40.0,30.0,0.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Sphere"
+    ]
+   },
+   "join(at=V(0.0,30.0,0.0))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Sphere"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 23,
+   "named": 23,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 26,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 0,
+   "deleted_kernel": 0,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [
+   {
+    "derived_lateral_edges": {
+     "a": 1,
+     "b": 1,
+     "c": 1,
+     "d": 1
+    }
+   }
+  ],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "shell.two_openings",
+  "op": "shell",
+  "variant": "block:cap(END)+side(a-b)",
+  "params": {
+   "t": -2.0,
+   "openings": [
+    "cap(END)",
+    "side(a-b)"
+   ],
+   "body": "block"
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    16,
+    24,
+    10,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 5856.0
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "offset(from=cap(START))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "rim(opening=cap(END))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "rim(opening=side(a-b))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "offset(from=side(b-c))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   },
+   "offset(from=side(c-d))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "offset(from=side(d-a))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 10,
+   "named": 10,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 26,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 1,
+   "deleted_kernel": 1,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [
+   {
+    "derived_lateral_edges": {
+     "a": 1,
+     "b": 1,
+     "c": 1,
+     "d": 1
+    }
+   }
+  ],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "shell.no_openings",
+  "op": "shell",
+  "variant": "block:no_openings",
+  "params": {
+   "t": -2.0,
+   "openings": [],
+   "body": "block"
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 14976.0
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "offset(from=cap(START))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "offset(from=cap(END))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "offset(from=side(a-b))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "offset(from=side(b-c))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   },
+   "offset(from=side(c-d))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "offset(from=side(d-a))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "regenerated"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "regenerated"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "regenerated"
+     ]
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "regenerated"
+     ]
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "regenerated"
+     ]
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "regenerated"
+     ]
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 0,
+    "expected": 1,
+    "ok": false,
+    "events": []
+   },
+   "E.lateral_edge(b)": {
+    "n": 0,
+    "expected": 1,
+    "ok": false,
+    "events": []
+   },
+   "E.lateral_edge(c)": {
+    "n": 0,
+    "expected": 1,
+    "ok": false,
+    "events": []
+   },
+   "E.lateral_edge(d)": {
+    "n": 0,
+    "expected": 1,
+    "ok": false,
+    "events": []
+   }
+  },
+  "base_ok": false,
+  "coverage": {
+   "faces": 6,
+   "named": 6,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 26,
+   "isdeleted_disagree": 6,
+   "false_deleted": 0,
+   "consumed": 6,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 26,
+   "deleted_kernel": 20,
+   "disagree_examples": [
+    {
+     "input": "base",
+     "kind": "face",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "base",
+     "kind": "face",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "base",
+     "kind": "face",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "base",
+     "kind": "face",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    }
+   ],
+   "dangling_generated_examples": []
+  },
+  "notes": [
+   {
+    "derived_lateral_edges": {
+     "a": 1,
+     "b": 1,
+     "c": 1,
+     "d": 1
+    }
+   }
+  ],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "shell.closed_void",
+  "op": "shell",
+  "variant": "block:closed_void(offset+cut)",
+  "params": {
+   "t": 2.0
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    16,
+    24,
+    12,
+    0,
+    2,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 9024.0
+  },
+  "dH": 0,
+  "dS": 1,
+  "expected_dH": 0,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "void(from=E.cap(START))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "void(from=E.cap(END))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "void(from=E.side(a-b))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "void(from=E.side(b-c))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   },
+   "void(from=E.side(c-d))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "void(from=E.side(d-a))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 12,
+   "named": 12,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 52,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 0,
+   "deleted_kernel": 0,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "shell.cylinder_cup",
+  "op": "shell",
+  "variant": "cylinder:cap(END)",
+  "params": {
+   "t": -2.0,
+   "openings": [
+    "cap(END)"
+   ],
+   "body": "cylinder"
+  },
+  "before": {
+   "VEFRSH": [
+    2,
+    3,
+    3,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 1,
+   "solids": 1,
+   "volume": 14137.1669
+  },
+  "after": {
+   "VEFRSH": [
+    4,
+    6,
+    5,
+    1,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 2,
+   "solids": 1,
+   "volume": 4580.4421
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "offset(from=cap(START))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "rim(opening=cap(END))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "offset(from=side(circle))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(circle)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 5,
+   "named": 5,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 8,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 0,
+   "deleted_kernel": 0,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "loft.2sec",
+  "op": "loft",
+  "variant": "2sec",
+  "params": {
+   "s1": 16.0,
+   "z1": 15.0,
+   "ruled": false,
+   "third": "none",
+   "twist": 0.0
+  },
+  "before": null,
+  "after": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 4880.0
+  },
+  "dH": 0,
+  "dS": 1,
+  "expected_dH": 0,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "side(from=s0.a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s0.b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s0.c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s0.d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {},
+  "base_ok": true,
+  "coverage": {
+   "faces": 6,
+   "named": 6,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 16,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 0,
+   "deleted_kernel": 0,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": null
+ },
+ {
+  "model": "loft.3sec_ruled",
+  "op": "loft",
+  "variant": "3sec-ruled-square",
+  "params": {
+   "s1": 16.0,
+   "z1": 15.0,
+   "ruled": true,
+   "third": "square",
+   "twist": 0.0
+  },
+  "before": null,
+  "after": {
+   "VEFRSH": [
+    12,
+    20,
+    10,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 7840.0
+  },
+  "dH": 0,
+  "dS": 1,
+  "expected_dH": 0,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "side(from=s0.a-b)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s0.b-c)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s0.c-d)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s0.d-a)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.a-b)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.b-c)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.c-d)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.d-a)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s2.a-b)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s2.b-c)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s2.c-d)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s2.d-a)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {},
+  "base_ok": true,
+  "coverage": {
+   "faces": 10,
+   "named": 10,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 24,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 0,
+   "deleted_kernel": 0,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": null
+ },
+ {
+  "model": "loft.square_to_circle",
+  "op": "loft",
+  "variant": "3sec-circle",
+  "params": {
+   "s1": 16.0,
+   "z1": 15.0,
+   "ruled": false,
+   "third": "circle",
+   "twist": 0.0
+  },
+  "before": null,
+  "after": {
+   "VEFRSH": [
+    10,
+    15,
+    7,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 7687.5108
+  },
+  "dH": 0,
+  "dS": 1,
+  "expected_dH": 0,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "side(from=s0.a-b)": {
+    "n": 1,
+    "expected": null,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s0.b-c)": {
+    "n": 2,
+    "expected": null,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s0.c-d)": {
+    "n": 1,
+    "expected": null,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s0.d-a)": {
+    "n": 1,
+    "expected": null,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.a-b)": {
+    "n": 1,
+    "expected": null,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.b-c)": {
+    "n": 2,
+    "expected": null,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.c-d)": {
+    "n": 1,
+    "expected": null,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s1.d-a)": {
+    "n": 1,
+    "expected": null,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   },
+   "side(from=s2.circle)": {
+    "n": 5,
+    "expected": null,
+    "ok": true,
+    "desc": [
+     "BSplineSurface"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {},
+  "base_ok": true,
+  "coverage": {
+   "faces": 7,
+   "named": 7,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 18,
+   "isdeleted_disagree": 13,
+   "false_deleted": 0,
+   "consumed": 13,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 13,
+   "deleted_kernel": 0,
+   "disagree_examples": [
+    {
+     "input": "s0",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "s0",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "s0",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "s0",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    }
+   ],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": null
+ },
+ {
+  "model": "sweep.pipe_open",
+  "op": "sweep",
+  "variant": "pipe:open:rect",
+  "params": {
+   "spine": "open",
+   "length": 40.0,
+   "bend_r": 20.0,
+   "pw": 6.0,
+   "ph": 4.0,
+   "profile": "rect",
+   "builder": "pipe"
+  },
+  "before": null,
+  "after": {
+   "VEFRSH": [
+    12,
+    20,
+    10,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 1713.9822
+  },
+  "dH": 0,
+  "dS": 1,
+  "expected_dH": 0,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   },
+   "side(from=a-b)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "side(from=a-b, along=spine0)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "side(from=a-b, along=spine1)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "side(from=b-c)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)",
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   },
+   "side(from=b-c, along=spine0)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   },
+   "side(from=b-c, along=spine1)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)"
+    ]
+   },
+   "side(from=c-d)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "side(from=c-d, along=spine0)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "side(from=c-d, along=spine1)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "side(from=d-a)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)",
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   },
+   "side(from=d-a, along=spine0)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   },
+   "side(from=d-a, along=spine1)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {},
+  "base_ok": true,
+  "coverage": {
+   "faces": 10,
+   "named": 10,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 8,
+   "isdeleted_disagree": 8,
+   "false_deleted": 0,
+   "consumed": 8,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 8,
+   "deleted_kernel": 0,
+   "disagree_examples": [
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    }
+   ],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": null
+ },
+ {
+  "model": "sweep.pipeshell_open",
+  "op": "sweep",
+  "variant": "pipeshell:open:rect",
+  "params": {
+   "spine": "open",
+   "length": 40.0,
+   "bend_r": 20.0,
+   "pw": 6.0,
+   "ph": 4.0,
+   "profile": "rect",
+   "builder": "pipeshell"
+  },
+  "before": null,
+  "after": {
+   "VEFRSH": [
+    12,
+    20,
+    10,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 1713.9822
+  },
+  "dH": 0,
+  "dS": 1,
+  "expected_dH": 0,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   },
+   "side(from=a-b)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "side(from=b-c)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)",
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   },
+   "side(from=c-d)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "side(from=d-a)": {
+    "n": 2,
+    "expected": 2,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)",
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {},
+  "base_ok": true,
+  "coverage": {
+   "faces": 10,
+   "named": 10,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 8,
+   "isdeleted_disagree": 8,
+   "false_deleted": 0,
+   "consumed": 8,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 8,
+   "deleted_kernel": 0,
+   "disagree_examples": [
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    }
+   ],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": null
+ },
+ {
+  "model": "sweep.pipe_closed",
+  "op": "sweep",
+  "variant": "pipe:closed:rect",
+  "params": {
+   "spine": "closed",
+   "length": 40.0,
+   "bend_r": 20.0,
+   "pw": 6.0,
+   "ph": 4.0,
+   "profile": "rect",
+   "builder": "pipe"
+  },
+  "before": null,
+  "after": {
+   "VEFRSH": [
+    4,
+    8,
+    4,
+    0,
+    1,
+    1
+   ],
+   "H": 1.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 4,
+   "solids": 1,
+   "volume": 4523.8934
+  },
+  "dH": 1,
+  "dS": 1,
+  "expected_dH": 1,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "side(from=a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "SurfaceOfRevolution"
+    ]
+   },
+   "side(from=a-b, along=spine0)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "SurfaceOfRevolution"
+    ]
+   },
+   "side(from=b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)"
+    ]
+   },
+   "side(from=b-c, along=spine0)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)"
+    ]
+   },
+   "side(from=c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "SurfaceOfRevolution"
+    ]
+   },
+   "side(from=c-d, along=spine0)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "SurfaceOfRevolution"
+    ]
+   },
+   "side(from=d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)"
+    ]
+   },
+   "side(from=d-a, along=spine0)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,1.0,0.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {},
+  "base_ok": true,
+  "coverage": {
+   "faces": 4,
+   "named": 4,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 8,
+   "isdeleted_disagree": 8,
+   "false_deleted": 0,
+   "consumed": 8,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 8,
+   "deleted_kernel": 0,
+   "disagree_examples": [
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    }
+   ],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": null
+ },
+ {
+  "model": "sweep.pipe_closed_circle",
+  "op": "sweep",
+  "variant": "pipe:closed:circle",
+  "params": {
+   "spine": "closed",
+   "length": 40.0,
+   "bend_r": 20.0,
+   "pw": 6.0,
+   "ph": 4.0,
+   "profile": "circle",
+   "builder": "pipe"
+  },
+  "before": null,
+  "after": {
+   "VEFRSH": [
+    1,
+    2,
+    1,
+    0,
+    1,
+    1
+   ],
+   "H": 1.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 2,
+   "solids": 1,
+   "volume": 5329.5864
+  },
+  "dH": 1,
+  "dS": 1,
+  "expected_dH": 1,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "side(from=circle)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Torus"
+    ]
+   },
+   "side(from=circle, along=spine0)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Torus"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {},
+  "base_ok": true,
+  "coverage": {
+   "faces": 1,
+   "named": 1,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 2,
+   "isdeleted_disagree": 2,
+   "false_deleted": 0,
+   "consumed": 2,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 2,
+   "deleted_kernel": 0,
+   "disagree_examples": [
+    {
+     "input": "profile",
+     "kind": "edge",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "profile",
+     "kind": "vertex",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    }
+   ],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": null
+ },
+ {
+  "model": "draft.4sides",
+  "op": "draft",
+  "variant": "4sides",
+  "params": {
+   "angle": 5.0,
+   "faces": [
+    "a-b",
+    "b-c",
+    "c-d",
+    "d-a"
+   ]
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 21631.9629
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "drafted(from=E.side(a-b))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.09)"
+    ]
+   },
+   "drafted(from=E.side(b-c))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.09)"
+    ]
+   },
+   "drafted(from=E.side(c-d))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.09)"
+    ]
+   },
+   "drafted(from=E.side(d-a))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-1.0,0.0,0.09)"
+    ]
+   },
+   "modified(E.side(a-b))": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "desc": []
+   },
+   "modified(E.side(b-c))": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "desc": []
+   },
+   "modified(E.side(c-d))": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "desc": []
+   },
+   "modified(E.side(d-a))": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "desc": []
+   },
+   "derived lateral_edge(a) = edges_between(E.side(d-a), E.side(a-b))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Line"
+    ]
+   },
+   "derived lateral_edge(b) = edges_between(E.side(a-b), E.side(b-c))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Line"
+    ]
+   },
+   "derived lateral_edge(c) = edges_between(E.side(b-c), E.side(c-d))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Line"
+    ]
+   },
+   "derived lateral_edge(d) = edges_between(E.side(c-d), E.side(d-a))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Line"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "regenerated"
+     ]
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "regenerated"
+     ]
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "regenerated"
+     ]
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "regenerated"
+     ]
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   },
+   "E.lateral_edge(b)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   },
+   "E.lateral_edge(c)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   },
+   "E.lateral_edge(d)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 6,
+   "named": 6,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 26,
+   "isdeleted_disagree": 24,
+   "false_deleted": 0,
+   "consumed": 4,
+   "missed_delete": 20,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 24,
+   "deleted_kernel": 0,
+   "disagree_examples": [
+    {
+     "input": "base",
+     "kind": "face",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "base",
+     "kind": "face",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "base",
+     "kind": "face",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    },
+    {
+     "input": "base",
+     "kind": "face",
+     "class": "consumed",
+     "present": false,
+     "mods_in_result": 0,
+     "kernel_deleted": false
+    }
+   ],
+   "dangling_generated_examples": []
+  },
+  "notes": [
+   {
+    "spike01_ledger_counts": {
+     "E.cap(START)": 1,
+     "E.cap(END)": 1,
+     "E.side(a-b)": 0,
+     "E.side(b-c)": 0,
+     "E.side(c-d)": 0,
+     "E.side(d-a)": 0,
+     "E.lateral_edge(a)": 0,
+     "E.lateral_edge(b)": 0,
+     "E.lateral_edge(c)": 0,
+     "E.lateral_edge(d)": 0
+    }
+   },
+   {
+    "derived_lateral_edges": {
+     "a": 1,
+     "b": 1,
+     "c": 1,
+     "d": 1
+    }
+   }
+  ],
+  "ledger_isdeleted_disagreements": 4
+ },
+ {
+  "model": "pattern.linear_holes",
+  "op": "pattern",
+  "variant": "linear-holes:tool_list",
+  "params": {
+   "kind": "linear",
+   "n": 3,
+   "pitch": 12.0,
+   "d": 6.0,
+   "radius": 10.0,
+   "combine": "tool_list"
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    14,
+    21,
+    9,
+    6,
+    1,
+    3
+   ],
+   "H": 3.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 3,
+   "solids": 1,
+   "volume": 22303.54
+  },
+  "dH": 3,
+  "dS": 0,
+  "expected_dH": 3,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "instance(0).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(1).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(2).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 9,
+   "named": 9,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 50,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 18,
+   "deleted_kernel": 18,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "pattern.circular_holes",
+  "op": "pattern",
+  "variant": "circular-holes:tool_list",
+  "params": {
+   "kind": "circular",
+   "n": 6,
+   "pitch": 12.0,
+   "d": 6.0,
+   "radius": 10.0,
+   "combine": "tool_list"
+  },
+  "before": {
+   "VEFRSH": [
+    2,
+    3,
+    3,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 1,
+   "solids": 1,
+   "volume": 6283.1853
+  },
+  "after": {
+   "VEFRSH": [
+    14,
+    21,
+    9,
+    12,
+    1,
+    6
+   ],
+   "H": 6.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 7,
+   "solids": 1,
+   "volume": 5434.9553
+  },
+  "dH": 6,
+  "dS": 0,
+  "expected_dH": 6,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "instance(0).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(1).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(2).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(3).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(4).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(5).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(circle)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 9,
+   "named": 9,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 56,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 36,
+   "deleted_kernel": 36,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "pattern.linear_holes_seq",
+  "op": "pattern",
+  "variant": "linear-holes:sequential",
+  "params": {
+   "kind": "linear",
+   "n": 3,
+   "pitch": 12.0,
+   "d": 6.0,
+   "radius": 10.0,
+   "combine": "sequential"
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    14,
+    21,
+    9,
+    6,
+    1,
+    3
+   ],
+   "H": 3.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 3,
+   "solids": 1,
+   "volume": 22303.54
+  },
+  "dH": 3,
+  "dS": 0,
+  "expected_dH": 3,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "instance(0).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(1).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(2).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified",
+      "modified",
+      "modified"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified",
+      "modified",
+      "modified"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 9,
+   "named": 9,
+   "unnamed": []
+  },
+  "audit": null,
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "pattern.linear_bosses",
+  "op": "pattern",
+  "variant": "linear-bosses:tool_list",
+  "params": {
+   "n": 3,
+   "pitch": 12.0,
+   "d": 6.0,
+   "combine": "tool_list"
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    14,
+    21,
+    12,
+    3,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 3,
+   "solids": 1,
+   "volume": 24424.115
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "instance(0).side": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(0).top": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(1).side": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(1).top": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(2).side": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(2).top": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 12,
+   "named": 12,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 50,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 3,
+   "deleted_inferred": 3,
+   "deleted_kernel": 3,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "pattern.overlap_tool_list",
+  "op": "pattern",
+  "variant": "linear-holes:tool_list",
+  "params": {
+   "kind": "linear",
+   "n": 2,
+   "pitch": 5,
+   "d": 6.0,
+   "radius": 10.0,
+   "combine": "tool_list"
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    14,
+    21,
+    9,
+    2,
+    1,
+    1
+   ],
+   "H": 1.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 1,
+   "solids": 1,
+   "volume": 22914.0422
+  },
+  "dH": 1,
+  "dS": 0,
+  "expected_dH": 2,
+  "expected_dS": 0,
+  "dH_ok": false,
+  "dS_ok": true,
+  "roles": {
+   "instance(0).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(1).wall": {
+    "n": 2,
+    "expected": 1,
+    "ok": false,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   }
+  },
+  "roles_ok": false,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 9,
+   "named": 9,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 42,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 13,
+   "deleted_kernel": 13,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "pattern.overlap_compound(neg)",
+  "op": "pattern",
+  "variant": "linear-holes:compound",
+  "params": {
+   "kind": "linear",
+   "n": 2,
+   "pitch": 5,
+   "d": 6.0,
+   "radius": 10.0,
+   "combine": "compound"
+  },
+  "before": {
+   "VEFRSH": [
+    8,
+    12,
+    6,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 24000.0
+  },
+  "after": {
+   "VEFRSH": [
+    16,
+    26,
+    14,
+    2,
+    3,
+    2
+   ],
+   "H": 2.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 2,
+   "solids": 2,
+   "volume": 24000.0
+  },
+  "dH": 2,
+  "dS": 2,
+  "expected_dH": 2,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": false,
+  "roles": {
+   "instance(0).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   },
+   "instance(1).wall": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Cylinder axis=(0.0,0.0,1.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 4,
+    "expected": 1,
+    "ok": false,
+    "events": [
+     [
+      "split4"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 4,
+    "expected": 1,
+    "ok": false,
+    "events": [
+     [
+      "split4"
+     ]
+    ]
+   },
+   "E.side(a-b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(b-c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(c-d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(d-a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(a)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(b)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(c)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.lateral_edge(d)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": false,
+  "coverage": {
+   "faces": 14,
+   "named": 14,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 42,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 12,
+   "deleted_kernel": 12,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "mirror.fuse",
+  "op": "mirror",
+  "variant": "fuse",
+  "params": {
+   "gap": 0.0,
+   "join": true,
+   "clean": false
+  },
+  "before": {
+   "VEFRSH": [
+    12,
+    18,
+    8,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 3760.0
+  },
+  "after": {
+   "VEFRSH": [
+    20,
+    32,
+    14,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 7520.0
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "image(of=E.cap(START))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "image(of=E.cap(END))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "image(of=E.side(o-p))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "image(of=E.side(p-q))": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "desc": []
+   },
+   "image(of=E.side(q-r))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "image(of=E.side(r-s))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   },
+   "image(of=E.side(s-t))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "image(of=E.side(t-o))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(o-p)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(q-r)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(r-s)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(s-t)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(t-o)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(p-q)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 14,
+   "named": 14,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 76,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 2,
+   "deleted_kernel": 2,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "mirror.disjoint",
+  "op": "mirror",
+  "variant": "fuse",
+  "params": {
+   "gap": 5.0,
+   "join": true,
+   "clean": false
+  },
+  "before": {
+   "VEFRSH": [
+    12,
+    18,
+    8,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 3760.0
+  },
+  "after": {
+   "VEFRSH": [
+    24,
+    36,
+    16,
+    0,
+    2,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 2,
+   "volume": 7520.0
+  },
+  "dH": 0,
+  "dS": 1,
+  "expected_dH": 0,
+  "expected_dS": 1,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "image(of=E.cap(START))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "image(of=E.cap(END))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "image(of=E.side(o-p))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "image(of=E.side(p-q))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   },
+   "image(of=E.side(q-r))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "image(of=E.side(r-s))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   },
+   "image(of=E.side(s-t))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "image(of=E.side(t-o))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(o-p)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(p-q)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(q-r)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(r-s)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(s-t)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(t-o)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 16,
+   "named": 16,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 76,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 0,
+   "deleted_kernel": 0,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ },
+ {
+  "model": "mirror.fuse_clean",
+  "op": "mirror",
+  "variant": "fuse+clean",
+  "params": {
+   "gap": 0.0,
+   "join": true,
+   "clean": true
+  },
+  "before": {
+   "VEFRSH": [
+    12,
+    18,
+    8,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 3760.0
+  },
+  "after": {
+   "VEFRSH": [
+    16,
+    24,
+    10,
+    0,
+    1,
+    0
+   ],
+   "H": 0.0,
+   "euler_ok": true,
+   "valid": true,
+   "E_degen": 0,
+   "E_seam": 0,
+   "solids": 1,
+   "volume": 7520.0
+  },
+  "dH": 0,
+  "dS": 0,
+  "expected_dH": 0,
+  "expected_dS": 0,
+  "dH_ok": true,
+  "dS_ok": true,
+  "roles": {
+   "image(of=E.cap(START))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,-1.0)"
+    ]
+   },
+   "image(of=E.cap(END))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,0.0,1.0)"
+    ]
+   },
+   "image(of=E.side(o-p))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,-1.0,0.0)"
+    ]
+   },
+   "image(of=E.side(p-q))": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "desc": []
+   },
+   "image(of=E.side(q-r))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "image(of=E.side(r-s))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(-1.0,0.0,0.0)"
+    ]
+   },
+   "image(of=E.side(s-t))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(0.0,1.0,0.0)"
+    ]
+   },
+   "image(of=E.side(t-o))": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "desc": [
+     "Plane n=(1.0,0.0,0.0)"
+    ]
+   }
+  },
+  "roles_ok": true,
+  "base_refs": {
+   "E.cap(START)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified",
+      "modified",
+      "merged"
+     ]
+    ]
+   },
+   "E.cap(END)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified",
+      "modified",
+      "merged"
+     ]
+    ]
+   },
+   "E.side(o-p)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified",
+      "modified",
+      "merged"
+     ]
+    ]
+   },
+   "E.side(q-r)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified",
+      "modified",
+      "merged"
+     ]
+    ]
+   },
+   "E.side(r-s)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(s-t)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     []
+    ]
+   },
+   "E.side(t-o)": {
+    "n": 1,
+    "expected": 1,
+    "ok": true,
+    "events": [
+     [
+      "modified"
+     ]
+    ]
+   },
+   "E.side(p-q)": {
+    "n": 0,
+    "expected": 0,
+    "ok": true,
+    "events": []
+   }
+  },
+  "base_ok": true,
+  "coverage": {
+   "faces": 10,
+   "named": 10,
+   "unnamed": []
+  },
+  "audit": {
+   "n": 66,
+   "isdeleted_disagree": 0,
+   "false_deleted": 0,
+   "consumed": 0,
+   "missed_delete": 0,
+   "modified_not_in_result": 0,
+   "generated_not_in_result": 0,
+   "present_and_modified": 0,
+   "deleted_inferred": 8,
+   "deleted_kernel": 8,
+   "disagree_examples": [],
+   "dangling_generated_examples": []
+  },
+  "notes": [],
+  "ledger_isdeleted_disagreements": 0
+ }
+]

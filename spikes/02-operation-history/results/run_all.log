@@ -1,0 +1,609 @@
+python 3.12.9 on macOS-26.6.2-arm64-arm-64bit (arm64)
+build123d 0.13.0, OCP 8.0.1.1, OCCT lib: ['libTKernel.8.0.1.dylib']
+
+## Q1 summary: invariants and history per model
+| model | V,E,F,R,S,H | Euler | valid | dH (exp) | dS (exp) | roles ok | base refs ok | unnamed faces | IsDeleted false+ | consumed | missed |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| revolve.partial | [8, 12, 6, 0, 1, 0] | True | True | 0 (0) | 1 (1) | True | True | 0/6 | 0 | 0 | 0 |
+| revolve.full | [4, 6, 4, 2, 1, 1] | True | True | 1 (1) | 1 (1) | True | True | 0/4 | 0 | 0 | 0 |
+| revolve.full_on_axis | [2, 3, 3, 0, 1, 0] | True | True | 0 (0) | 1 (1) | True | True | 0/3 | 0 | 0 | 0 |
+| chamfer.two_edges | [11, 17, 8, 0, 1, 0] | True | True | 0 (0) | 0 (0) | True | True | 0/8 | 10 | 0 | 0 |
+| chamfer.all12 | [24, 48, 26, 0, 1, 0] | True | True | 0 (0) | 0 (0) | True | True | 0/26 | 0 | 0 | 0 |
+| chamfer.two_distances | [11, 17, 8, 0, 1, 0] | True | True | 0 (0) | 0 (0) | True | True | 0/8 | 10 | 0 | 0 |
+| shell.open_top | [16, 24, 11, 1, 1, 0] | True | True | 0 (0) | 0 (0) | True | True | 0/11 | 0 | 0 | 0 |
+| shell.open_top_outward | [28, 48, 23, 1, 1, 0] | True | True | 0 (0) | 0 (0) | True | True | 0/23 | 0 | 0 | 0 |
+| shell.two_openings | [16, 24, 10, 0, 1, 0] | True | True | 0 (0) | 0 (0) | True | True | 0/10 | 0 | 0 | 0 |
+| shell.no_openings | [8, 12, 6, 0, 1, 0] | True | True | 0 (0) | 0 (0) | True | False | 0/6 | 0 | 6 | 0 |
+| shell.closed_void | [16, 24, 12, 0, 2, 0] | True | True | 0 (0) | 1 (1) | True | True | 0/12 | 0 | 0 | 0 |
+| shell.cylinder_cup | [4, 6, 5, 1, 1, 0] | True | True | 0 (0) | 0 (0) | True | True | 0/5 | 0 | 0 | 0 |
+| loft.2sec | [8, 12, 6, 0, 1, 0] | True | True | 0 (0) | 1 (1) | True | True | 0/6 | 0 | 0 | 0 |
+| loft.3sec_ruled | [12, 20, 10, 0, 1, 0] | True | True | 0 (0) | 1 (1) | True | True | 0/10 | 0 | 0 | 0 |
+| loft.square_to_circle | [10, 15, 7, 0, 1, 0] | True | True | 0 (0) | 1 (1) | True | True | 0/7 | 0 | 13 | 0 |
+| sweep.pipe_open | [12, 20, 10, 0, 1, 0] | True | True | 0 (0) | 1 (1) | True | True | 0/10 | 0 | 8 | 0 |
+| sweep.pipeshell_open | [12, 20, 10, 0, 1, 0] | True | True | 0 (0) | 1 (1) | True | True | 0/10 | 0 | 8 | 0 |
+| sweep.pipe_closed | [4, 8, 4, 0, 1, 1] | True | True | 1 (1) | 1 (1) | True | True | 0/4 | 0 | 8 | 0 |
+| sweep.pipe_closed_circle | [1, 2, 1, 0, 1, 1] | True | True | 1 (1) | 1 (1) | True | True | 0/1 | 0 | 2 | 0 |
+| draft.4sides | [8, 12, 6, 0, 1, 0] | True | True | 0 (0) | 0 (0) | True | True | 0/6 | 0 | 4 | 20 |
+| pattern.linear_holes | [14, 21, 9, 6, 1, 3] | True | True | 3 (3) | 0 (0) | True | True | 0/9 | 0 | 0 | 0 |
+| pattern.circular_holes | [14, 21, 9, 12, 1, 6] | True | True | 6 (6) | 0 (0) | True | True | 0/9 | 0 | 0 | 0 |
+| pattern.linear_holes_seq | [14, 21, 9, 6, 1, 3] | True | True | 3 (3) | 0 (0) | True | True | 0/9 | - | - | - |
+| pattern.linear_bosses | [14, 21, 12, 3, 1, 0] | True | True | 0 (0) | 0 (0) | True | True | 0/12 | 0 | 0 | 0 |
+| pattern.overlap_tool_list | [14, 21, 9, 2, 1, 1] | True | True | 1 (2) | 0 (0) | False | True | 0/9 | 0 | 0 | 0 |
+| pattern.overlap_compound(neg) | [16, 26, 14, 2, 3, 2] | True | True | 2 (2) | 2 (0) | True | False | 0/14 | 0 | 0 | 0 |
+| mirror.fuse | [20, 32, 14, 0, 1, 0] | True | True | 0 (0) | 0 (0) | True | True | 0/14 | 0 | 0 | 0 |
+| mirror.disjoint | [24, 36, 16, 0, 2, 0] | True | True | 0 (0) | 1 (1) | True | True | 0/16 | 0 | 0 | 0 |
+| mirror.fuse_clean | [16, 24, 10, 0, 1, 0] | True | True | 0 (0) | 0 (0) | True | True | 0/10 | 0 | 0 | 0 |
+
+## Q1 role tables
+
+### revolve.partial  ({'angle': 180, 'r_in': 5.0, 'r_out': 10.0, 'h': 4.0, 'top_slant': 0.0})
+  cap(START)                                       n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  cap(END)                                         n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  side(bottom)                                     n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  side(outer)                                      n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  side(top)                                        n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  side(inner)                                      n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  circle_edge(ib)                                  n=1 (exp 1)  ['Circle']
+  circle_edge(ob)                                  n=1 (exp 1)  ['Circle']
+  circle_edge(ot)                                  n=1 (exp 1)  ['Circle']
+  circle_edge(it)                                  n=1 (exp 1)  ['Circle']
+
+### revolve.full  ({'angle': 360, 'r_in': 5.0, 'r_out': 10.0, 'h': 4.0, 'top_slant': 0.0})
+  side(bottom)                                     n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  side(outer)                                      n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  side(top)                                        n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  side(inner)                                      n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  circle_edge(ib)                                  n=1 (exp 1)  ['Circle']
+  circle_edge(ob)                                  n=1 (exp 1)  ['Circle']
+  circle_edge(ot)                                  n=1 (exp 1)  ['Circle']
+  circle_edge(it)                                  n=1 (exp 1)  ['Circle']
+  notes: ["Generated() empty in result for ['bottom', 'top']; resolved via MakeRevol.Revol().Shape(edge)"]
+
+### revolve.full_on_axis  ({'angle': 360, 'r_in': 0.0, 'r_out': 10.0, 'h': 4.0, 'top_slant': 0.0})
+  side(bottom)                                     n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  side(outer)                                      n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  side(top)                                        n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  side(inner)                                      n=0 (exp 0)  []
+  circle_edge(ib)                                  n=0 (exp 0)  []
+  circle_edge(ob)                                  n=1 (exp 1)  ['Circle']
+  circle_edge(ot)                                  n=1 (exp 1)  ['Circle']
+  circle_edge(it)                                  n=0 (exp 0)  []
+  notes: ["Generated() empty in result for ['bottom', 'top']; resolved via MakeRevol.Revol().Shape(edge)"]
+
+### chamfer.two_edges  ({'d': 3.0, 'which': 'lat_a+top_ab', 'd2': None})
+  face(from=E.lateral_edge(a))                     n=1 (exp 1)  ['Plane n=(-0.71,-0.71,0.0)']
+  face(from=edge(E.side(a-b),E.cap(END)))          n=1 (exp 1)  ['Plane n=(0.0,-0.71,0.71)']
+  [base] E.cap(START)                              n=1 (exp 1)  events=[('modified',)]
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(a-b)                               n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(b-c)                               n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(d-a)                               n=1 (exp 1)  events=[('modified',)]
+  [base] E.lateral_edge(b)                         n=1 (exp 1)  events=[('modified',)]
+  audit: {'false_deleted': 10, 'consumed': 0, 'missed_delete': 0}
+
+### chamfer.all12  ({'d': 2.0, 'which': 'all12', 'd2': None})
+  face(from=e0)                                    n=1 (exp 1)  ['Plane n=(-0.71,-0.71,0.0)']
+  face(from=e1)                                    n=1 (exp 1)  ['Plane n=(0.71,-0.71,0.0)']
+  face(from=e2)                                    n=1 (exp 1)  ['Plane n=(0.0,-0.71,-0.71)']
+  face(from=e3)                                    n=1 (exp 1)  ['Plane n=(0.0,-0.71,0.71)']
+  face(from=e4)                                    n=1 (exp 1)  ['Plane n=(0.71,0.71,0.0)']
+  face(from=e5)                                    n=1 (exp 1)  ['Plane n=(0.71,0.0,-0.71)']
+  face(from=e6)                                    n=1 (exp 1)  ['Plane n=(0.71,0.0,0.71)']
+  face(from=e7)                                    n=1 (exp 1)  ['Plane n=(-0.71,0.71,0.0)']
+  face(from=e8)                                    n=1 (exp 1)  ['Plane n=(0.0,0.71,-0.71)']
+  face(from=e9)                                    n=1 (exp 1)  ['Plane n=(0.0,0.71,0.71)']
+  face(from=e10)                                   n=1 (exp 1)  ['Plane n=(-0.71,0.0,-0.71)']
+  face(from=e11)                                   n=1 (exp 1)  ['Plane n=(-0.71,0.0,0.71)']
+  corner(at=V(0.0,0.0,0.0))                        n=1 (exp 1)  ['Plane n=(-0.58,-0.58,-0.58)']
+  corner(at=V(0.0,0.0,20.0))                       n=1 (exp 1)  ['Plane n=(-0.58,-0.58,0.58)']
+  corner(at=V(40.0,0.0,0.0))                       n=1 (exp 1)  ['Plane n=(0.58,-0.58,-0.58)']
+  corner(at=V(40.0,0.0,20.0))                      n=1 (exp 1)  ['Plane n=(0.58,-0.58,0.58)']
+  corner(at=V(40.0,30.0,0.0))                      n=1 (exp 1)  ['Plane n=(0.58,0.58,-0.58)']
+  corner(at=V(40.0,30.0,20.0))                     n=1 (exp 1)  ['Plane n=(0.58,0.58,0.58)']
+  corner(at=V(0.0,30.0,0.0))                       n=1 (exp 1)  ['Plane n=(-0.58,0.58,-0.58)']
+  corner(at=V(0.0,30.0,20.0))                      n=1 (exp 1)  ['Plane n=(-0.58,0.58,0.58)']
+  [base] E.cap(START)                              n=1 (exp 1)  events=[('modified',)]
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(a-b)                               n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(b-c)                               n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(c-d)                               n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(d-a)                               n=1 (exp 1)  events=[('modified',)]
+
+### chamfer.two_distances  ({'d': 3.0, 'which': 'lat_a+top_ab', 'd2': 1.0})
+  face(from=E.lateral_edge(a))                     n=1 (exp 1)  ['Plane n=(-0.32,-0.95,0.0)']
+  face(from=edge(E.side(a-b),E.cap(END)))          n=1 (exp 1)  ['Plane n=(0.0,-0.95,0.32)']
+  [base] E.cap(START)                              n=1 (exp 1)  events=[('modified',)]
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(a-b)                               n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(b-c)                               n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(d-a)                               n=1 (exp 1)  events=[('modified',)]
+  [base] E.lateral_edge(b)                         n=1 (exp 1)  events=[('modified',)]
+  audit: {'false_deleted': 10, 'consumed': 0, 'missed_delete': 0}
+
+### shell.open_top  ({'t': -2.0, 'openings': ['cap(END)'], 'body': 'block'})
+  offset(from=cap(START))                          n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  rim(opening=cap(END))                            n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  offset(from=side(a-b))                           n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  offset(from=side(b-c))                           n=1 (exp 1)  ['Plane n=(-1.0,0.0,0.0)']
+  offset(from=side(c-d))                           n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  offset(from=side(d-a))                           n=1 (exp 1)  ['Plane n=(1.0,0.0,0.0)']
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+  notes: [{'derived_lateral_edges': {'a': 1, 'b': 1, 'c': 1, 'd': 1}}]
+
+### shell.open_top_outward  ({'t': 2.0, 'openings': ['cap(END)'], 'body': 'block'})
+  offset(from=cap(START))                          n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  rim(opening=cap(END))                            n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  offset(from=side(a-b))                           n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  offset(from=side(b-c))                           n=1 (exp 1)  ['Plane n=(1.0,0.0,0.0)']
+  offset(from=side(c-d))                           n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  offset(from=side(d-a))                           n=1 (exp 1)  ['Plane n=(-1.0,0.0,0.0)']
+  join(from=edge(side(a-b),side(d-a)))             n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  join(from=edge(side(a-b),side(b-c)))             n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  join(from=edge(cap(START),side(a-b)))            n=1 (exp 1)  ['Cylinder axis=(1.0,0.0,0.0)']
+  join(from=edge(side(b-c),side(c-d)))             n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  join(from=edge(cap(START),side(b-c)))            n=1 (exp 1)  ['Cylinder axis=(0.0,1.0,0.0)']
+  join(from=edge(side(c-d),side(d-a)))             n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  join(from=edge(cap(START),side(c-d)))            n=1 (exp 1)  ['Cylinder axis=(1.0,0.0,0.0)']
+  join(from=edge(cap(START),side(d-a)))            n=1 (exp 1)  ['Cylinder axis=(0.0,1.0,0.0)']
+  join(at=V(0.0,0.0,0.0))                          n=1 (exp 1)  ['Sphere']
+  join(at=V(40.0,0.0,0.0))                         n=1 (exp 1)  ['Sphere']
+  join(at=V(40.0,30.0,0.0))                        n=1 (exp 1)  ['Sphere']
+  join(at=V(0.0,30.0,0.0))                         n=1 (exp 1)  ['Sphere']
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+  notes: [{'derived_lateral_edges': {'a': 1, 'b': 1, 'c': 1, 'd': 1}}]
+
+### shell.two_openings  ({'t': -2.0, 'openings': ['cap(END)', 'side(a-b)'], 'body': 'block'})
+  offset(from=cap(START))                          n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  rim(opening=cap(END))                            n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  rim(opening=side(a-b))                           n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  offset(from=side(b-c))                           n=1 (exp 1)  ['Plane n=(-1.0,0.0,0.0)']
+  offset(from=side(c-d))                           n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  offset(from=side(d-a))                           n=1 (exp 1)  ['Plane n=(1.0,0.0,0.0)']
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(a-b)                               n=1 (exp 1)  events=[('modified',)]
+  notes: [{'derived_lateral_edges': {'a': 1, 'b': 1, 'c': 1, 'd': 1}}]
+
+### shell.no_openings  ({'t': -2.0, 'openings': [], 'body': 'block'})
+  offset(from=cap(START))                          n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  offset(from=cap(END))                            n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  offset(from=side(a-b))                           n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  offset(from=side(b-c))                           n=1 (exp 1)  ['Plane n=(1.0,0.0,0.0)']
+  offset(from=side(c-d))                           n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  offset(from=side(d-a))                           n=1 (exp 1)  ['Plane n=(-1.0,0.0,0.0)']
+  [base] E.cap(START)                              n=1 (exp 1)  events=[('regenerated',)]
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('regenerated',)]
+  [base] E.side(a-b)                               n=1 (exp 1)  events=[('regenerated',)]
+  [base] E.side(b-c)                               n=1 (exp 1)  events=[('regenerated',)]
+  [base] E.side(c-d)                               n=1 (exp 1)  events=[('regenerated',)]
+  [base] E.side(d-a)                               n=1 (exp 1)  events=[('regenerated',)]
+  [base] E.lateral_edge(a)                         n=0 (exp 1)  events=[]   <-- MISMATCH
+  [base] E.lateral_edge(b)                         n=0 (exp 1)  events=[]   <-- MISMATCH
+  [base] E.lateral_edge(c)                         n=0 (exp 1)  events=[]   <-- MISMATCH
+  [base] E.lateral_edge(d)                         n=0 (exp 1)  events=[]   <-- MISMATCH
+  notes: [{'derived_lateral_edges': {'a': 1, 'b': 1, 'c': 1, 'd': 1}}]
+  audit: {'false_deleted': 0, 'consumed': 6, 'missed_delete': 0}
+
+### shell.closed_void  ({'t': 2.0})
+  void(from=E.cap(START))                          n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  void(from=E.cap(END))                            n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  void(from=E.side(a-b))                           n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  void(from=E.side(b-c))                           n=1 (exp 1)  ['Plane n=(-1.0,0.0,0.0)']
+  void(from=E.side(c-d))                           n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  void(from=E.side(d-a))                           n=1 (exp 1)  ['Plane n=(1.0,0.0,0.0)']
+
+### shell.cylinder_cup  ({'t': -2.0, 'openings': ['cap(END)'], 'body': 'cylinder'})
+  offset(from=cap(START))                          n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  rim(opening=cap(END))                            n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  offset(from=side(circle))                        n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+
+### loft.2sec  ({'s1': 16.0, 'z1': 15.0, 'ruled': False, 'third': 'none', 'twist': 0.0})
+  cap(START)                                       n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  cap(END)                                         n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  side(from=s0.a-b)                                n=1 (exp 1)  ['BSplineSurface']
+  side(from=s0.b-c)                                n=1 (exp 1)  ['BSplineSurface']
+  side(from=s0.c-d)                                n=1 (exp 1)  ['BSplineSurface']
+  side(from=s0.d-a)                                n=1 (exp 1)  ['BSplineSurface']
+  side(from=s1.a-b)                                n=1 (exp 1)  ['BSplineSurface']
+  side(from=s1.b-c)                                n=1 (exp 1)  ['BSplineSurface']
+  side(from=s1.c-d)                                n=1 (exp 1)  ['BSplineSurface']
+  side(from=s1.d-a)                                n=1 (exp 1)  ['BSplineSurface']
+
+### loft.3sec_ruled  ({'s1': 16.0, 'z1': 15.0, 'ruled': True, 'third': 'square', 'twist': 0.0})
+  cap(START)                                       n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  cap(END)                                         n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  side(from=s0.a-b)                                n=2 (exp 2)  ['BSplineSurface']
+  side(from=s0.b-c)                                n=2 (exp 2)  ['BSplineSurface']
+  side(from=s0.c-d)                                n=2 (exp 2)  ['BSplineSurface']
+  side(from=s0.d-a)                                n=2 (exp 2)  ['BSplineSurface']
+  side(from=s1.a-b)                                n=2 (exp 2)  ['BSplineSurface']
+  side(from=s1.b-c)                                n=2 (exp 2)  ['BSplineSurface']
+  side(from=s1.c-d)                                n=2 (exp 2)  ['BSplineSurface']
+  side(from=s1.d-a)                                n=2 (exp 2)  ['BSplineSurface']
+  side(from=s2.a-b)                                n=2 (exp 2)  ['BSplineSurface']
+  side(from=s2.b-c)                                n=2 (exp 2)  ['BSplineSurface']
+  side(from=s2.c-d)                                n=2 (exp 2)  ['BSplineSurface']
+  side(from=s2.d-a)                                n=2 (exp 2)  ['BSplineSurface']
+
+### loft.square_to_circle  ({'s1': 16.0, 'z1': 15.0, 'ruled': False, 'third': 'circle', 'twist': 0.0})
+  cap(START)                                       n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  cap(END)                                         n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  side(from=s0.a-b)                                n=1 (exp None)  ['BSplineSurface']
+  side(from=s0.b-c)                                n=2 (exp None)  ['BSplineSurface']
+  side(from=s0.c-d)                                n=1 (exp None)  ['BSplineSurface']
+  side(from=s0.d-a)                                n=1 (exp None)  ['BSplineSurface']
+  side(from=s1.a-b)                                n=1 (exp None)  ['BSplineSurface']
+  side(from=s1.b-c)                                n=2 (exp None)  ['BSplineSurface']
+  side(from=s1.c-d)                                n=1 (exp None)  ['BSplineSurface']
+  side(from=s1.d-a)                                n=1 (exp None)  ['BSplineSurface']
+  side(from=s2.circle)                             n=5 (exp None)  ['BSplineSurface']
+  audit: {'false_deleted': 0, 'consumed': 13, 'missed_delete': 0}
+
+### sweep.pipe_open  ({'spine': 'open', 'length': 40.0, 'bend_r': 20.0, 'pw': 6.0, 'ph': 4.0, 'profile': 'rect', 'builder': 'pipe'})
+  cap(START)                                       n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  cap(END)                                         n=1 (exp 1)  ['Plane n=(1.0,0.0,0.0)']
+  side(from=a-b)                                   n=2 (exp 2)  ['Plane n=(0.0,-1.0,0.0)']
+  side(from=a-b, along=spine0)                     n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  side(from=a-b, along=spine1)                     n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  side(from=b-c)                                   n=2 (exp 2)  ['Cylinder axis=(0.0,1.0,0.0)', 'Plane n=(1.0,0.0,0.0)']
+  side(from=b-c, along=spine0)                     n=1 (exp 1)  ['Plane n=(1.0,0.0,0.0)']
+  side(from=b-c, along=spine1)                     n=1 (exp 1)  ['Cylinder axis=(0.0,1.0,0.0)']
+  side(from=c-d)                                   n=2 (exp 2)  ['Plane n=(0.0,1.0,0.0)']
+  side(from=c-d, along=spine0)                     n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  side(from=c-d, along=spine1)                     n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  side(from=d-a)                                   n=2 (exp 2)  ['Cylinder axis=(0.0,1.0,0.0)', 'Plane n=(-1.0,0.0,0.0)']
+  side(from=d-a, along=spine0)                     n=1 (exp 1)  ['Plane n=(-1.0,0.0,0.0)']
+  side(from=d-a, along=spine1)                     n=1 (exp 1)  ['Cylinder axis=(0.0,1.0,0.0)']
+  audit: {'false_deleted': 0, 'consumed': 8, 'missed_delete': 0}
+
+### sweep.pipeshell_open  ({'spine': 'open', 'length': 40.0, 'bend_r': 20.0, 'pw': 6.0, 'ph': 4.0, 'profile': 'rect', 'builder': 'pipeshell'})
+  cap(START)                                       n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  cap(END)                                         n=1 (exp 1)  ['Plane n=(1.0,0.0,0.0)']
+  side(from=a-b)                                   n=2 (exp 2)  ['Plane n=(0.0,-1.0,0.0)']
+  side(from=b-c)                                   n=2 (exp 2)  ['Cylinder axis=(0.0,1.0,0.0)', 'Plane n=(1.0,0.0,0.0)']
+  side(from=c-d)                                   n=2 (exp 2)  ['Plane n=(0.0,1.0,0.0)']
+  side(from=d-a)                                   n=2 (exp 2)  ['Cylinder axis=(0.0,1.0,0.0)', 'Plane n=(-1.0,0.0,0.0)']
+  audit: {'false_deleted': 0, 'consumed': 8, 'missed_delete': 0}
+
+### sweep.pipe_closed  ({'spine': 'closed', 'length': 40.0, 'bend_r': 20.0, 'pw': 6.0, 'ph': 4.0, 'profile': 'rect', 'builder': 'pipe'})
+  side(from=a-b)                                   n=1 (exp 1)  ['SurfaceOfRevolution']
+  side(from=a-b, along=spine0)                     n=1 (exp 1)  ['SurfaceOfRevolution']
+  side(from=b-c)                                   n=1 (exp 1)  ['Cylinder axis=(0.0,1.0,0.0)']
+  side(from=b-c, along=spine0)                     n=1 (exp 1)  ['Cylinder axis=(0.0,1.0,0.0)']
+  side(from=c-d)                                   n=1 (exp 1)  ['SurfaceOfRevolution']
+  side(from=c-d, along=spine0)                     n=1 (exp 1)  ['SurfaceOfRevolution']
+  side(from=d-a)                                   n=1 (exp 1)  ['Cylinder axis=(0.0,1.0,0.0)']
+  side(from=d-a, along=spine0)                     n=1 (exp 1)  ['Cylinder axis=(0.0,1.0,0.0)']
+  audit: {'false_deleted': 0, 'consumed': 8, 'missed_delete': 0}
+
+### sweep.pipe_closed_circle  ({'spine': 'closed', 'length': 40.0, 'bend_r': 20.0, 'pw': 6.0, 'ph': 4.0, 'profile': 'circle', 'builder': 'pipe'})
+  side(from=circle)                                n=1 (exp 1)  ['Torus']
+  side(from=circle, along=spine0)                  n=1 (exp 1)  ['Torus']
+  audit: {'false_deleted': 0, 'consumed': 2, 'missed_delete': 0}
+
+### draft.4sides  ({'angle': 5.0, 'faces': ['a-b', 'b-c', 'c-d', 'd-a']})
+  drafted(from=E.side(a-b))                        n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.09)']
+  drafted(from=E.side(b-c))                        n=1 (exp 1)  ['Plane n=(1.0,0.0,0.09)']
+  drafted(from=E.side(c-d))                        n=1 (exp 1)  ['Plane n=(0.0,1.0,0.09)']
+  drafted(from=E.side(d-a))                        n=1 (exp 1)  ['Plane n=(-1.0,0.0,0.09)']
+  modified(E.side(a-b))                            n=0 (exp 0)  []
+  modified(E.side(b-c))                            n=0 (exp 0)  []
+  modified(E.side(c-d))                            n=0 (exp 0)  []
+  modified(E.side(d-a))                            n=0 (exp 0)  []
+  derived lateral_edge(a) = edges_between(E.side(d-a), E.side(a-b)) n=1 (exp 1)  ['Line']
+  derived lateral_edge(b) = edges_between(E.side(a-b), E.side(b-c)) n=1 (exp 1)  ['Line']
+  derived lateral_edge(c) = edges_between(E.side(b-c), E.side(c-d)) n=1 (exp 1)  ['Line']
+  derived lateral_edge(d) = edges_between(E.side(c-d), E.side(d-a)) n=1 (exp 1)  ['Line']
+  [base] E.cap(START)                              n=1 (exp 1)  events=[('modified',)]
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(a-b)                               n=1 (exp 1)  events=[('regenerated',)]
+  [base] E.side(b-c)                               n=1 (exp 1)  events=[('regenerated',)]
+  [base] E.side(c-d)                               n=1 (exp 1)  events=[('regenerated',)]
+  [base] E.side(d-a)                               n=1 (exp 1)  events=[('regenerated',)]
+  notes: [{'spike01_ledger_counts': {'E.cap(START)': 1, 'E.cap(END)': 1, 'E.side(a-b)': 0, 'E.side(b-c)': 0, 'E.side(c-d)': 0, 'E.side(d-a)': 0, 'E.lateral_edge(a)': 0, 'E.lateral_edge(b)': 0, 'E.lateral_edge(c)': 0, 'E.lateral_edge(d)': 0}}, {'derived_lateral_edges': {'a': 1, 'b': 1, 'c': 1, 'd': 1}}]
+  audit: {'false_deleted': 0, 'consumed': 4, 'missed_delete': 20}
+
+### pattern.linear_holes  ({'kind': 'linear', 'n': 3, 'pitch': 12.0, 'd': 6.0, 'radius': 10.0, 'combine': 'tool_list'})
+  instance(0).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(1).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(2).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  [base] E.cap(START)                              n=1 (exp 1)  events=[('modified',)]
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+
+### pattern.circular_holes  ({'kind': 'circular', 'n': 6, 'pitch': 12.0, 'd': 6.0, 'radius': 10.0, 'combine': 'tool_list'})
+  instance(0).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(1).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(2).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(3).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(4).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(5).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  [base] E.cap(START)                              n=1 (exp 1)  events=[('modified',)]
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+
+### pattern.linear_holes_seq  ({'kind': 'linear', 'n': 3, 'pitch': 12.0, 'd': 6.0, 'radius': 10.0, 'combine': 'sequential'})
+  instance(0).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(1).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(2).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  [base] E.cap(START)                              n=1 (exp 1)  events=[('modified', 'modified', 'modified')]
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified', 'modified', 'modified')]
+
+### pattern.linear_bosses  ({'n': 3, 'pitch': 12.0, 'd': 6.0, 'combine': 'tool_list'})
+  instance(0).side                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(0).top                                  n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  instance(1).side                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(1).top                                  n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  instance(2).side                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(2).top                                  n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+
+### pattern.overlap_tool_list  ({'kind': 'linear', 'n': 2, 'pitch': 5, 'd': 6.0, 'radius': 10.0, 'combine': 'tool_list'})
+  instance(0).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(1).wall                                 n=2 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']   <-- MISMATCH
+  [base] E.cap(START)                              n=1 (exp 1)  events=[('modified',)]
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+
+### pattern.overlap_compound(neg)  ({'kind': 'linear', 'n': 2, 'pitch': 5, 'd': 6.0, 'radius': 10.0, 'combine': 'compound'})
+  instance(0).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  instance(1).wall                                 n=1 (exp 1)  ['Cylinder axis=(0.0,0.0,1.0)']
+  [base] E.cap(START)                              n=4 (exp 1)  events=[('split4',)]   <-- MISMATCH
+  [base] E.cap(END)                                n=4 (exp 1)  events=[('split4',)]   <-- MISMATCH
+
+### mirror.fuse  ({'gap': 0.0, 'join': True, 'clean': False})
+  image(of=E.cap(START))                           n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  image(of=E.cap(END))                             n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  image(of=E.side(o-p))                            n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  image(of=E.side(p-q))                            n=0 (exp 0)  []
+  image(of=E.side(q-r))                            n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  image(of=E.side(r-s))                            n=1 (exp 1)  ['Plane n=(-1.0,0.0,0.0)']
+  image(of=E.side(s-t))                            n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  image(of=E.side(t-o))                            n=1 (exp 1)  ['Plane n=(1.0,0.0,0.0)']
+  [base] E.cap(START)                              n=1 (exp 1)  events=[('modified',)]
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(o-p)                               n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(q-r)                               n=1 (exp 1)  events=[('modified',)]
+
+### mirror.disjoint  ({'gap': 5.0, 'join': True, 'clean': False})
+  image(of=E.cap(START))                           n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  image(of=E.cap(END))                             n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  image(of=E.side(o-p))                            n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  image(of=E.side(p-q))                            n=1 (exp 1)  ['Plane n=(-1.0,0.0,0.0)']
+  image(of=E.side(q-r))                            n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  image(of=E.side(r-s))                            n=1 (exp 1)  ['Plane n=(-1.0,0.0,0.0)']
+  image(of=E.side(s-t))                            n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  image(of=E.side(t-o))                            n=1 (exp 1)  ['Plane n=(1.0,0.0,0.0)']
+
+### mirror.fuse_clean  ({'gap': 0.0, 'join': True, 'clean': True})
+  image(of=E.cap(START))                           n=1 (exp 1)  ['Plane n=(0.0,0.0,-1.0)']
+  image(of=E.cap(END))                             n=1 (exp 1)  ['Plane n=(0.0,0.0,1.0)']
+  image(of=E.side(o-p))                            n=1 (exp 1)  ['Plane n=(0.0,-1.0,0.0)']
+  image(of=E.side(p-q))                            n=0 (exp 0)  []
+  image(of=E.side(q-r))                            n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  image(of=E.side(r-s))                            n=1 (exp 1)  ['Plane n=(-1.0,0.0,0.0)']
+  image(of=E.side(s-t))                            n=1 (exp 1)  ['Plane n=(0.0,1.0,0.0)']
+  image(of=E.side(t-o))                            n=1 (exp 1)  ['Plane n=(1.0,0.0,0.0)']
+  [base] E.cap(START)                              n=1 (exp 1)  events=[('modified', 'modified', 'merged')]
+  [base] E.cap(END)                                n=1 (exp 1)  events=[('modified', 'modified', 'merged')]
+  [base] E.side(o-p)                               n=1 (exp 1)  events=[('modified', 'modified', 'merged')]
+  [base] E.side(q-r)                               n=1 (exp 1)  events=[('modified', 'modified', 'merged')]
+  [base] E.side(r-s)                               n=1 (exp 1)  events=[('modified',)]
+  [base] E.side(t-o)                               n=1 (exp 1)  events=[('modified',)]
+
+[q1_roles finished in 0.9s]
+
+## Q2 stability sweeps
+| sweep | points | built | as declared | invalid | Euler fail | topology classes |
+|---|---|---|---|---|---|---|
+| revolve | 16 | 16 | 16 | 0 | 0 | 6 |
+| chamfer.two_edges | 10 | 8 | 8 | 0 | 0 | 1 |
+| chamfer.ridge | 8 | 6 | 6 | 0 | 0 | 1 |
+| chamfer.all12 | 6 | 4 | 4 | 0 | 0 | 1 |
+| shell.open_top | 8 | 8 | 7 | 1 | 1 | 3 |
+| shell.two_openings | 5 | 5 | 5 | 0 | 0 | 2 |
+| shell.closed_void | 6 | 5 | 4 | 1 | 0 | 2 |
+| loft.2sec | 15 | 15 | 15 | 0 | 0 | 2 |
+| loft.3sec | 6 | 6 | 6 | 0 | 0 | 2 |
+| loft.square_to_circle | 6 | 6 | 6 | 0 | 0 | 2 |
+| sweep.open | 24 | 24 | 22 | 2 | 0 | 1 |
+| sweep.closed | 6 | 6 | 6 | 0 | 0 | 2 |
+| draft | 12 | 10 | 10 | 0 | 0 | 1 |
+| pattern.linear_holes | 36 | 36 | 24 | 0 | 0 | 10 |
+| pattern.circular_holes | 16 | 16 | 12 | 1 | 0 | 10 |
+| pattern.linear_bosses | 12 | 12 | 8 | 2 | 0 | 7 |
+| mirror | 10 | 10 | 6 | 0 | 0 | 4 |
+
+## Q2 deviations (points not as declared, and kernel failures)
+- chamfer.two_edges {'d': 20}: KERNEL FAILURE: chamfer failed
+- chamfer.two_edges {'d': 25}: KERNEL FAILURE: chamfer failed
+- chamfer.ridge {'d': 15}: KERNEL FAILURE: chamfer failed
+- chamfer.ridge {'d': 16}: KERNEL FAILURE: chamfer failed
+- chamfer.all12 {'d': 10}: KERNEL FAILURE: chamfer failed
+- chamfer.all12 {'d': 12}: KERNEL FAILURE: chamfer failed
+- shell.open_top {'t': -15}: VEFRSH=[12, 20, 11, 0, 2, 0] INVALID; EULER FAIL; dS=1 (exp 0)
+- shell.closed_void {'t': 10}: VEFRSH=[12, 20, 12, 0, 2, 0] INVALID
+- shell.closed_void {'t': 12}: KERNEL FAILURE: kernel returned an empty/null shape without raising
+- sweep.open {'bend_r': 5, 'pw': 12, 'builder': 'pipe'}: VEFRSH=[12, 20, 10, 0, 1, 0] INVALID
+- sweep.open {'bend_r': 5, 'pw': 12, 'builder': 'pipeshell'}: VEFRSH=[12, 20, 10, 0, 1, 0] INVALID
+- draft {'angle': 37}: KERNEL FAILURE: draft failed
+- draft {'angle': 40}: KERNEL FAILURE: draft failed
+- pattern.linear_holes {'n': 2, 'pitch': 5, 'combine': 'tool_list'}: VEFRSH=[14, 21, 9, 2, 1, 1] dH=1 (exp 2); roles {'instance(1).wall': (2, 1)}
+- pattern.linear_holes {'n': 2, 'pitch': 5, 'combine': 'sequential'}: VEFRSH=[14, 21, 9, 2, 1, 1] dH=1 (exp 2); roles {'instance(1).wall': (2, 1)}
+- pattern.linear_holes {'n': 2, 'pitch': 5, 'combine': 'compound'}: VEFRSH=[16, 26, 14, 2, 3, 2] dS=2 (exp 0); base {'E.cap.START': (4, 1), 'E.cap.END': (4, 1)}
+- pattern.linear_holes {'n': 3, 'pitch': 5, 'combine': 'tool_list'}: VEFRSH=[18, 27, 11, 2, 1, 1] dH=1 (exp 3); roles {'instance(1).wall': (2, 1), 'instance(2).wall': (2, 1)}
+- pattern.linear_holes {'n': 3, 'pitch': 5, 'combine': 'sequential'}: VEFRSH=[18, 27, 11, 2, 1, 1] dH=1 (exp 3); roles {'instance(1).wall': (2, 1), 'instance(2).wall': (2, 1)}
+- pattern.linear_holes {'n': 3, 'pitch': 5, 'combine': 'compound'}: VEFRSH=[22, 37, 19, 2, 4, 3] dS=3 (exp 0); base {'E.cap.START': (6, 1), 'E.cap.END': (6, 1)}
+- pattern.linear_holes {'n': 4, 'pitch': 12, 'combine': 'tool_list'}: VEFRSH=[14, 21, 9, 6, 1, 3] dH=3 (exp 4); roles {'instance(3).wall': (0, 1)}
+- pattern.linear_holes {'n': 4, 'pitch': 12, 'combine': 'sequential'}: VEFRSH=[14, 21, 9, 6, 1, 3] dH=3 (exp 4); roles {'instance(3).wall': (0, 1)}
+- pattern.linear_holes {'n': 4, 'pitch': 12, 'combine': 'compound'}: VEFRSH=[14, 21, 9, 6, 1, 3] dH=3 (exp 4); roles {'instance(3).wall': (0, 1)}
+- pattern.linear_holes {'n': 4, 'pitch': 5, 'combine': 'tool_list'}: VEFRSH=[22, 33, 13, 2, 1, 1] dH=1 (exp 4); roles {'instance(1).wall': (2, 1), 'instance(2).wall': (2, 1), 'instance(3).wall': (2, 1)}
+- pattern.linear_holes {'n': 4, 'pitch': 5, 'combine': 'sequential'}: VEFRSH=[22, 33, 13, 2, 1, 1] dH=1 (exp 4); roles {'instance(1).wall': (2, 1), 'instance(2).wall': (2, 1), 'instance(3).wall': (2, 1)}
+- pattern.linear_holes {'n': 4, 'pitch': 5, 'combine': 'compound'}: VEFRSH=[28, 48, 24, 2, 5, 4] dS=4 (exp 0); base {'E.cap.START': (8, 1), 'E.cap.END': (8, 1)}
+- pattern.circular_holes {'n': 11, 'combine': 'tool_list'}: VEFRSH=[68, 102, 38, 2, 2, 1] dH=1 (exp 11); dS=1 (exp 0); roles {'instance(0).wall': (3, 1), 'instance(1).wall': (3, 1), 'instance(2).wall': (3, 1), 'instance(3).wall': (3, 1), 'instance(4).wall': (3, 1), 'instance(5).wall': (3, 1), 'instance(6).wall': (3, 1), 'instance(7).wall': (3, 1), 'instance(8).wall': (3, 1), 'instance(9).wall': (3, 1), 'instance(10).wall': (3, 1)}; base {'E.cap.START': (2, 1), 'E.cap.END': (2, 1)}
+- pattern.circular_holes {'n': 11, 'combine': 'compound'}: VEFRSH=[68, 124, 38, 2, 4, 14] INVALID; dH=14 (exp 11); dS=3 (exp 0); base {'E.cap.START': (13, 1), 'E.cap.END': (13, 1)}
+- pattern.circular_holes {'n': 12, 'combine': 'tool_list'}: VEFRSH=[74, 111, 41, 2, 2, 1] dH=1 (exp 12); dS=1 (exp 0); roles {'instance(0).wall': (3, 1), 'instance(1).wall': (3, 1), 'instance(2).wall': (3, 1), 'instance(3).wall': (3, 1), 'instance(4).wall': (3, 1), 'instance(5).wall': (3, 1), 'instance(6).wall': (3, 1), 'instance(7).wall': (3, 1), 'instance(8).wall': (3, 1), 'instance(9).wall': (3, 1), 'instance(10).wall': (3, 1), 'instance(11).wall': (3, 1)}; base {'E.cap.START': (2, 1), 'E.cap.END': (2, 1)}
+- pattern.circular_holes {'n': 12, 'combine': 'compound'}: VEFRSH=[74, 135, 65, 2, 13, 12] dS=12 (exp 0); base {'E.cap.START': (26, 1), 'E.cap.END': (26, 1)}
+- pattern.linear_bosses {'n': 2, 'pitch': 5, 'combine': 'tool_list'}: VEFRSH=[15, 24, 12, 1, 1, 0] roles {'instance(0).top': (2, 1), 'instance(1).side': (2, 1), 'instance(1).top': (2, 1)}
+- pattern.linear_bosses {'n': 2, 'pitch': 5, 'combine': 'compound'}: VEFRSH=[12, 18, 12, 2, 2, 0] INVALID; dS=1 (exp 0); base {'E.cap.END': (2, 1)}
+- pattern.linear_bosses {'n': 3, 'pitch': 5, 'combine': 'tool_list'}: VEFRSH=[20, 33, 16, 1, 1, 0] roles {'instance(0).top': (2, 1), 'instance(1).side': (2, 1), 'instance(1).top': (3, 1), 'instance(2).side': (2, 1), 'instance(2).top': (2, 1)}
+- pattern.linear_bosses {'n': 3, 'pitch': 5, 'combine': 'compound'}: VEFRSH=[14, 21, 16, 3, 3, 0] INVALID; dS=2 (exp 0); base {'E.cap.END': (3, 1)}
+- mirror {'gap': -5, 'clean': False}: VEFRSH=[24, 40, 18, 0, 1, 0] roles {'image(of=E.cap(START))': (2, 1), 'image(of=E.cap(END))': (2, 1), 'image(of=E.side(o-p))': (2, 1), 'image(of=E.side(p-q))': (0, 1), 'image(of=E.side(q-r))': (2, 1)}; base {'E.cap.START': (2, 1), 'E.cap.END': (2, 1), 'E.side.o-p': (2, 1), 'E.side.q-r': (2, 1), 'E.side.p-q': (0, 1)}
+- mirror {'gap': -5, 'clean': True}: VEFRSH=[16, 24, 10, 0, 1, 0] roles {'image(of=E.side(p-q))': (0, 1)}; base {'E.side.p-q': (0, 1)}
+- mirror {'gap': -1, 'clean': False}: VEFRSH=[24, 40, 18, 0, 1, 0] roles {'image(of=E.cap(START))': (2, 1), 'image(of=E.cap(END))': (2, 1), 'image(of=E.side(o-p))': (2, 1), 'image(of=E.side(p-q))': (0, 1), 'image(of=E.side(q-r))': (2, 1)}; base {'E.cap.START': (2, 1), 'E.cap.END': (2, 1), 'E.side.o-p': (2, 1), 'E.side.q-r': (2, 1), 'E.side.p-q': (0, 1)}
+- mirror {'gap': -1, 'clean': True}: VEFRSH=[16, 24, 10, 0, 1, 0] roles {'image(of=E.side(p-q))': (0, 1)}; base {'E.side.p-q': (0, 1)}
+
+## Q2 genealogy / descriptor stability within a topology class
+- revolve class 4e6de04eec73: 6 pts, distinct genealogies=1, distinct role descriptors=6
+- revolve class 9aebd30700b5: 6 pts, distinct genealogies=1, distinct role descriptors=6
+- revolve class 22b71fd48e8c: 1 pts, distinct genealogies=1, distinct role descriptors=1
+- revolve class 4b3a025e16bd: 1 pts, distinct genealogies=1, distinct role descriptors=1
+- revolve class a1c5f402d71c: 1 pts, distinct genealogies=1, distinct role descriptors=1
+- revolve class bec5a1b3f133: 1 pts, distinct genealogies=1, distinct role descriptors=1
+- chamfer.two_edges class cf1d047ca596: 8 pts, distinct genealogies=1, distinct role descriptors=1
+- chamfer.ridge class 590110513107: 6 pts, distinct genealogies=1, distinct role descriptors=1
+- chamfer.all12 class 853d3b96e879: 4 pts, distinct genealogies=1, distinct role descriptors=1
+- shell.open_top class e8497ad5f7f7: 6 pts, distinct genealogies=1, distinct role descriptors=1
+- shell.open_top class 1b6466001276: 1 pts, distinct genealogies=1, distinct role descriptors=1
+- shell.two_openings class 503a6001cac5: 4 pts, distinct genealogies=1, distinct role descriptors=1
+- shell.two_openings class 7a14a05bf8c6: 1 pts, distinct genealogies=1, distinct role descriptors=1
+- shell.closed_void class edfd1896450f: 4 pts, distinct genealogies=1, distinct role descriptors=1
+- loft.2sec class 234e926249e3: 14 pts, distinct genealogies=1, distinct role descriptors=1
+- loft.2sec class 49405aada1a8: 1 pts, distinct genealogies=1, distinct role descriptors=1
+- loft.3sec class b85f793730b4: 3 pts, distinct genealogies=1, distinct role descriptors=1
+- loft.3sec class cb9f56d85d75: 3 pts, distinct genealogies=1, distinct role descriptors=1
+- loft.square_to_circle class 64622d81b5eb: 3 pts, distinct genealogies=1, distinct role descriptors=1
+- loft.square_to_circle class bc2a04655eb5: 3 pts, distinct genealogies=1, distinct role descriptors=1
+- sweep.open class 73491537b25a: 22 pts, distinct genealogies=1, distinct role descriptors=2
+- sweep.closed class 7cb1ce780f90: 3 pts, distinct genealogies=1, distinct role descriptors=1
+- sweep.closed class e4c0fa0c0cd0: 3 pts, distinct genealogies=1, distinct role descriptors=1
+- draft class d03005ca6f9d: 10 pts, distinct genealogies=1, distinct role descriptors=10
+- pattern.linear_holes class f6b4264e49f0: 9 pts, distinct genealogies=1, distinct role descriptors=1
+- pattern.linear_holes class 90e3a243c7bb: 6 pts, distinct genealogies=2, distinct role descriptors=1
+- pattern.linear_holes class 00db7a62082f: 6 pts, distinct genealogies=2, distinct role descriptors=1
+- pattern.linear_holes class e8e3c0db1c71: 3 pts, distinct genealogies=2, distinct role descriptors=1
+- pattern.circular_holes class 4b3a025e16bd: 2 pts, distinct genealogies=1, distinct role descriptors=1
+- pattern.circular_holes class 082cfe106624: 2 pts, distinct genealogies=1, distinct role descriptors=1
+- pattern.circular_holes class 37485a6eb303: 2 pts, distinct genealogies=1, distinct role descriptors=1
+- pattern.circular_holes class e39dacdd6e4c: 2 pts, distinct genealogies=1, distinct role descriptors=1
+- pattern.circular_holes class b362048eb72f: 2 pts, distinct genealogies=1, distinct role descriptors=1
+- pattern.circular_holes class 433ff2e0b27e: 2 pts, distinct genealogies=1, distinct role descriptors=1
+- pattern.linear_bosses class 785f158eb425: 4 pts, distinct genealogies=1, distinct role descriptors=1
+- pattern.linear_bosses class c845c7514975: 2 pts, distinct genealogies=1, distinct role descriptors=1
+- pattern.linear_bosses class f4d113b0bf7c: 2 pts, distinct genealogies=1, distinct role descriptors=1
+- mirror class bbca3899e6da: 1 pts, distinct genealogies=1, distinct role descriptors=1
+- mirror class 676f66f4ef22: 1 pts, distinct genealogies=1, distinct role descriptors=1
+- mirror class f56cc8fdc974: 4 pts, distinct genealogies=1, distinct role descriptors=1
+
+[q2_stability finished in 6.8s]
+
+## Q3 determinism: 10 in-process builds (parallel BOP off/on) + 4 processes x 2 (distinct PYTHONHASHSEED, parallel alternating); number of DISTINCT values per model
+| model | builds | processes | VEFRSH | adj | adj_topo | brep | roles | roles_geom | median ms |
+|---|---|---|---|---|---|---|---|---|---|
+| revolve.partial | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 1.57 |
+| revolve.full | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 1.48 |
+| revolve.full_on_axis | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 1.59 |
+| chamfer.two_edges | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 21.56 |
+| chamfer.all12 | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 67.97 |
+| chamfer.two_distances | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 17.77 |
+| shell.open_top | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 16.94 |
+| shell.open_top_outward | 18 | 5 | 1 | 1 | 1 | 18 | 18 | 1 | 17.14 |
+| shell.two_openings | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 15.97 |
+| shell.no_openings | 18 | 5 | 1 | 1 | 1 | 17 | 17 | 1 | 20.38 |
+| shell.closed_void | 18 | 5 | 1 | 1 | 1 | 6 | 6 | 1 | 28.46 |
+| shell.cylinder_cup | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 7.57 |
+| loft.2sec | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 7.2 |
+| loft.3sec_ruled | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 8.78 |
+| loft.square_to_circle | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 11.99 |
+| sweep.pipe_open | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 6.39 |
+| sweep.pipeshell_open | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 5.12 |
+| sweep.pipe_closed | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 11.88 |
+| sweep.pipe_closed_circle | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 2.13 |
+| draft.4sides | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 4.37 |
+| pattern.linear_holes | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 19.28 |
+| pattern.circular_holes | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 27.41 |
+| pattern.linear_holes_seq | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 33.77 |
+| pattern.linear_bosses | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 12.58 |
+| pattern.overlap_tool_list | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 36.11 |
+| pattern.overlap_compound(neg) | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 22.26 |
+| mirror.fuse | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 14.84 |
+| mirror.disjoint | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 8.58 |
+| mirror.fuse_clean | 18 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 18.73 |
+
+models with any variation: ['shell.open_top_outward', 'shell.no_openings', 'shell.closed_void']
+models whose topology / geometry / role-geometry varied: none
+
+[q3_determinism finished in 31.7s]
+
+## Q4 clean() / UnifySameDomain
+
+### noop (plain block): VEFRSH [8, 12, 6, 0, 1, 0] -> [8, 12, 6, 0, 1, 0], valid=True, Euler=True, identity kept {'faces': '6/6', 'edges': '12/12', 'vertices': '8/8'}
+  history audit: false_deleted=0 consumed=0 missed_delete=0 modified_not_in_result=0
+  E.cap(START)                         n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  E.cap(END)                           n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  E.side(a-b)                          n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  E.side(b-c)                          n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  E.side(c-d)                          n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  E.side(d-a)                          n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  E.lateral_edge(a)                    n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  E.lateral_edge(b)                    n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  E.lateral_edge(c)                    n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  E.lateral_edge(d)                    n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+
+### spike-01 bracket: VEFRSH [34, 51, 19, 8, 1, 4] -> [34, 51, 19, 8, 1, 4], valid=True, Euler=True, identity kept {'faces': '19/19', 'edges': '51/51', 'vertices': '34/34'}
+  history audit: false_deleted=0 consumed=0 missed_delete=0 modified_not_in_result=0
+  E.cap(START)                         n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  E.cap(END)                           n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  E.side(wall)                         n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  E.side(mount)                        n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  E.side(shelf)                        n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  E.side(arm_under)                    n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  E.side(arm_tip)                      n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  E.side(leg_end)                      n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  G.side(hypotenuse)                   n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  G.cap(START)                         n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  G.cap(END)                           n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  W1.wall                              n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  W2.wall                              n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  K1.countersink                       n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  K2.countersink                       n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  C.wall                               n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  S.wall                               n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  F.blend(E.lateral_edge(inner))       n 2 -> 2  resolves=True  error_on_merge ok=True  last event=['-']
+
+### mirror + fuse: VEFRSH [20, 32, 14, 0, 1, 0] -> [16, 24, 10, 0, 1, 0], valid=True, Euler=True, identity kept {'faces': '2/14', 'edges': '8/32', 'vertices': '8/20'}
+  history audit: false_deleted=0 consumed=0 missed_delete=0 modified_not_in_result=0
+  E.cap(START)                         n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  M.cap(START)                         n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  E.side(o-p)                          n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  M.side(o-p)                          n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  E.side(r-s)                          n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  M.side(r-s)                          n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  E.cap(START) is M.cap(START) after clean: True
+
+### 2 x revolve(180) fused (seam merge): VEFRSH [8, 16, 8, 0, 1, 1] -> [4, 6, 4, 2, 1, 1], valid=True, Euler=True, identity kept {'faces': '0/8', 'edges': '2/16', 'vertices': '4/8'}
+  history audit: false_deleted=0 consumed=0 missed_delete=0 modified_not_in_result=0
+  R1.side(outer)                       n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  R1.side(inner)                       n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  R1.side(top)                         n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  R2.side(outer)                       n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  R2.side(inner)                       n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  R2.side(top)                         n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  fused_valid: True
+
+### overlapping holes, sequential (wall split at seam): VEFRSH [14, 21, 9, 2, 1, 1] -> [12, 18, 8, 2, 1, 1], valid=True, Euler=True, identity kept {'faces': '4/9', 'edges': '12/21', 'vertices': '8/14'}
+  history audit: false_deleted=0 consumed=0 missed_delete=0 modified_not_in_result=0
+  P.wall(instance0)                    n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['modified']
+  P.wall(instance1)                    n 2 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+
+### sweep line+arc: VEFRSH [12, 20, 10, 0, 1, 0] -> [12, 18, 8, 0, 1, 0], valid=True, Euler=True, identity kept {'faces': '6/10', 'edges': '18/20', 'vertices': '12/12'}
+  history audit: false_deleted=0 consumed=0 missed_delete=0 modified_not_in_result=0
+  S.cap(START)                         n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  S.cap(END)                           n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  S.side(from=a-b, along=spine0)       n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  S.side(from=a-b, along=spine1)       n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  S.side(from=b-c, along=spine0)       n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  S.side(from=b-c, along=spine1)       n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  S.side(from=c-d, along=spine0)       n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  S.side(from=c-d, along=spine1)       n 1 -> 1  resolves=True  error_on_merge ok=False  last event=['merged']
+  S.side(from=d-a, along=spine0)       n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+  S.side(from=d-a, along=spine1)       n 1 -> 1  resolves=True  error_on_merge ok=True  last event=['-']
+
+[q4_clean finished in 0.5s]
