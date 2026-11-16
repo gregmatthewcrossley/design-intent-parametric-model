@@ -28,3 +28,7 @@ The project is built around a split between **intent** (reasoned about, learned,
 - **Passes:** multiple passes, including a virtual-prototype walkthrough, refine solutions until a computable idiomatic score is met.
 - **Engine:** OpenCascade is the kernel, behind a backend interface. The project owns the sketch solver, the reference layer, and the checks. This is provisional: yes until proven otherwise.
 - **Product shape:** standalone for now, with Onshape as an export target. The browser is the primary GUI, served by a local engine, and supports redline (red-marker) review. WebAssembly is the planned sandbox for shared packages.
+
+## License
+
+[Apache License 2.0](LICENSE).
