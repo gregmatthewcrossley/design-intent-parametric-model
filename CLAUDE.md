@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-Early build phase. The project aims to turn physical design intent (text, sketches, images, drawings, 3D geometry) into parametric CAD that encodes *intent as relations* ("hole centered on face"), not measured coordinates. The repo holds design docs, two feasibility spikes, and the v0 DSL core in `src/dipm/` (placeholder package name). **The docs are the source of truth for decisions**; `src/dipm/NOTES.md` records implementation decisions and TODOs. Read the relevant one before proposing designs:
+The project and its Python package are named **dipm** (pronounced "dip-em"; plain `dip` is taken on PyPI, npm, crates.io and RubyGems). Early build phase. The project aims to turn physical design intent (text, sketches, images, drawings, 3D geometry) into parametric CAD that encodes *intent as relations* ("hole centered on face"), not measured coordinates. The repo holds design docs, two feasibility spikes, and the v0 DSL core in `src/dipm/`. **The docs are the source of truth for decisions**; `src/dipm/NOTES.md` records implementation decisions and TODOs. Read the relevant one before proposing designs:
 
 - `docs/architecture.md`: intent tree → deterministic DSL "solution"; checks and the determinism ladder (§4.1); rule/human packs; assumptions; passes (§5); idiomatic score (§6); worked shelf-bracket example (§8); open questions (§10).
 - `docs/dsl.md`: core vs. intent layers, packages, reference rules (§3.4), invariants run on every solid (§5), engine/backends (§6), open risks (§7).
@@ -37,6 +37,16 @@ DSL core (from the repo root):
 
 The CLI exits 0 on PASS, 1 on an invariant or reference failure, and 2 on bad parameters.
 
+Web GUI (needs Node ≥ 20; toolchain pinned to what runs on 20.12, see NOTES #40):
+
+```bash
+uv pip install --python .venv/bin/python -e ".[test]"   # server deps + test extras
+(cd gui && npm ci && npm run build)                     # builds into src/dipm/server/static/ (gitignored)
+.venv/bin/python -m dipm serve examples/shelf_bracket.py   # localhost only; opens the browser
+(cd gui && npm test && npm run typecheck)               # vitest + tsc
+(cd gui && npm run build && npm run e2e)                # Playwright acceptance tests (first run: npx playwright install chromium)
+```
+
 Spikes (run from the spike directory; modules import each other by bare name):
 
 ```bash
@@ -65,6 +75,8 @@ No linter or build system is configured yet.
 - **Intent layer:** `intent_layer.py` (relations, fastener stand-ins, `Hole`).
 - **Sketches:** `sketch.py` (named-point profiles with a winding branch tag; no solver yet).
 - **Edit tests:** `stability.py`.
+- **Connections:** `connections.py` (intent tree derivation, per-feature *uses* and parameter dependencies, diagnostics).
+- **Server:** `server/` (Starlette API, deterministic mesh, file watching). Frontend source is in `gui/` (Preact + three.js); see `gui/README.md`.
 - **Interpretations:** `interpret.py`. Ambiguous intent-word slots (hole extent, `centered_on`) list readings. Readings are eliminated by checks across sample points, then sensitivity is graded and a ranked default chosen. Results go to a lock file next to the design; preferences are kept in JSON. Spec: architecture §10 item 2.
 
 Designs are pure functions of declared parameters, so tests re-build with new values instead of mutating state. Every feature carries intent tags (intent-tree node ids); keep them flowing through any new op so `Build.why()` can explain every face.

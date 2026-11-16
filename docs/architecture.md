@@ -578,6 +578,7 @@ The first working system will likely use a frontier model as the intent engine (
    - **Choose a default by a ranked prior:** the package default with its rationale, then the simplest relation (MDL), then a learned prior.
    - **Record the choice** as an assumption (§4.8) with its computed sensitivity.
    - **Ask only when it matters:** when readings diverge within range *and* all pass the checks.
+   - **Flag silent substitutions.** If the default reading is eliminated, a *default overridden* notice is raised only when the chosen reading interacts with features the default would not have (e.g. `through_all` drilling into the gusset). An elimination for structural impossibility, such as a placement point that isn't on the face, is ordinary (v0, 2026-11-16).
    - **Remember the answer** as a preference in a user or house-style package, so the same question isn't asked again.
 
    Real-world data is needed for one part only: improving the learned prior, i.e. which reading designers usually mean. Feature-tree datasets record exactly these choices, such as extrude and hole end conditions, subject to license caveats. The designer's own answers become data too.

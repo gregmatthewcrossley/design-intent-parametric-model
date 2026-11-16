@@ -15,6 +15,32 @@ The solution side is deterministic (architecture principle 2). The source of tru
 
 Geometry is rebuilt from these exactly, like a compiled binary. It is not committed.
 
+### 1.1 Storage formats (decided 2026-11-16)
+
+**Text files are the source of truth; databases hold only derived, rebuildable data.**
+
+| Data | Format | Why |
+|---|---|---|
+| Intent tree: statements, checks, assumptions, context (`<design>.intent.yaml`) | **Schema-validated YAML**, always rewritten in canonical form | Versioned in git, reviewable line diffs, readable and writable by designers and by Claude, small per design |
+| Solution (`<design>.py`) | The DSL (embedded Python today; possibly a dedicated textual DSL later) | Code |
+| Machine-written locks (`<design>.interpretations.json`, …) | JSON | Unambiguous; not hand-edited |
+| Caches, build history, telemetry | **SQLite** (gitignored, deletable, regenerated from text) | Fast queries, transactions |
+| Large datasets (procedural training corpus, later) | SQLite or Parquet | Volume; machine-only |
+
+**YAML rules.**
+- Use a safe subset with a schema, so values can't silently change type (the "Norway problem").
+- Round-trip editing keeps comments (ruamel.yaml).
+- Keys are written in a stable order, so diffs stay minimal.
+- All reads and writes go through one small load/save module, so the format can be swapped without touching the rest of the code.
+
+**Noted alternative: KDL**, a node-based document language. It fits the intent tree best: `intent "A.P" "Wall screw pattern" { check … }` maps directly onto id, statement, and children. It reads like a design document and has no type surprises. It was not chosen now because its Python tooling is less mature, especially comment-preserving rewrites, and models write YAML more reliably. Revisit if the tooling matures, or fold intent into a dedicated textual DSL if one is built. (CUE, which unifies data, schema, and constraints, was considered as inspiration only, since it overlaps the project's own check system.)
+
+**Concurrent edits** (GUI, a text editor, and Claude on the same file):
+- Writes are atomic (temp file + rename).
+- Every GUI write carries the content hash it was based on. A stale write is rejected, and the GUI reloads and re-applies or shows the conflict, rather than overwriting.
+
+**Later, multi-user:** a server plus a CRDT (e.g. Automerge) for live collaboration, still exporting canonical text for versioning and review.
+
 ## 2. Versioning
 
 **Git or similar.**

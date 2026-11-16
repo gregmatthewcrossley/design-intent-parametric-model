@@ -1,6 +1,6 @@
 # Web GUI: Iteration 1 Spec
 
-*Status: agreed 2026-11-16 (scope, layout, and style chosen by the user). Context: [`user-experience.md`](user-experience.md) §3. Engine: [`src/dipm/NOTES.md`](../src/dipm/NOTES.md).*
+*Status: agreed 2026-11-16 (scope, layout, and style chosen by the user). **Iteration 1 built 2026-11-16**: see [`gui/README.md`](../gui/README.md) (build, run, develop) and `src/dipm/NOTES.md` DECISIONS #32–43; all §6 criteria verified headless (Playwright). Context: [`user-experience.md`](user-experience.md) §3. Engine: [`src/dipm/NOTES.md`](../src/dipm/NOTES.md).*
 
 ## 1. Goal
 
@@ -88,6 +88,12 @@ The same visual language as the overnight review page:
 | `POST /api/answer` `{assumption_id, reading}` | Record a preference (same semantics as `dipm answer`), re-resolve, rebuild |
 | `WS /api/events` | `design-changed`, `rebuilt` |
 
+**Implementation notes (iteration 1):**
+- Meshing runs on a *copy* of the solid, so triangulations never enter the canonical BRep. It is single-threaded with fixed deflections, and the mesh is byte-identical across processes.
+- A stale interpretations lock doesn't block a rebuild: the server re-resolves in the background and pushes a second `rebuilt` event.
+- *Uses* = resolved references plus implicit geometric reads (NOTES #33).
+- Diagnostics: no intent, intent with no feature, several intents, and cross-intent dependency (NOTES #35).
+
 **Determinism:** tessellation uses fixed deflection settings, so the same build produces the same mesh. Mesh face ids are derived from the build's face order and tied to `why()`.
 
 **Code layout:**
@@ -102,7 +108,7 @@ The same visual language as the overnight review page:
 2. Dragging `shelf_depth` 200 → 300 rebuilds visibly. The holes re-spread and the cable hole stays at the exposed-plate midpoint.
 3. Clicking a countersink face shows `A.P.holes.countersink(1)` · `hole@A.P.2` · `pattern@A.P (wall screw pattern)`, and highlights A.P.2 in the tree.
 4. Clicking A.P in the tree highlights both screw holes' faces and nothing else.
-5. The interpretations panel shows four slots. The A.3 *default overridden* notice is visible and distinct, and there are zero questions.
+5. The interpretations panel shows four slots, zero questions, and **zero notices**. Under the refined notice rule (architecture §10.2), A.3's centroid elimination is ordinary. The negative-control fixture (shelf screw over the gusset) shows a *default overridden* notice naming `C.gusset`, visibly distinct.
 6. A fixture design with divergent readings shows a question. Clicking an answer writes the preference, the question disappears, and the model rebuilds.
 7. Building with a deliberately failing parameter (e.g. a negative-control fixture) shows the failure in the checks panel, the tree, and the tinted faces, while the last good model stays visible.
 8. Editing and saving the design file triggers a rebuild in the open browser within about a second, keeping the camera and selection.
@@ -110,7 +116,91 @@ The same visual language as the overnight review page:
 10. Light and dark themes both read well.
 11. Python API tests (pytest + TestClient) cover every endpoint. The frontend builds cleanly; type-checking passes.
 
-## 7. Open items for later iterations
+## 7. Iteration 2 (draft): editable intent
+
+*Drafted 2026-11-16. Scope choice pending: **2a only**, or **2a + 2b** together.*
+
+### 7.1 Goal
+
+Make intent **editable in the GUI** without pretending that editing intent changes the geometry. Moving from intent to solution is the learned step, so an edited intent marks its solution **stale** until the solution is updated (2b) or the designer confirms it still fits.
+
+### 7.2 Iteration 2a: intent file and GUI editing
+
+**Intent file.** The intent tree moves out of the Python code into `<design>.intent.yaml` (format: see [`user-experience.md` §1.1](user-experience.md#11-storage-formats-decided-2026-11-16)).
+
+```yaml
+# shelf_bracket.intent.yaml (illustrative)
+design: shelf_bracket
+context: {process: fdm_printing, material: PETG, style: minimal_industrial}
+intents:
+  - id: R
+    statement: Support a shelf on a wall
+    checks:
+      - {id: R.c1, kind: analysis, source: world, statement: "Carries load at shelf front edge, SF ≥ 2"}
+    assumptions:
+      - {id: R.a1, statement: "Static point load at arm tip", made_by: model, status: proposed}
+    children:
+      - id: A
+        statement: Wall mounting
+        children:
+          - id: A.P
+            statement: Wall screw pattern
+            checks:
+              - {id: A.P.c1, kind: relation, statement: symmetric about mount face centerline}
+```
+
+- **DSL ↔ intent link.** Features keep referencing intent nodes by id (`tags=intent("A.P", …)`). Labels and statements come from the intent file, replacing `Design.label_intent`. Existing diagnostics flag mismatches in both directions: a feature with no intent, an intent with no feature, an id used in the DSL but missing from the file.
+- **Store module** (`dipm/intent_store.py`): load, validate against the schema, canonical save with comments preserved. This is the only place that knows the format, so a KDL swap stays contained.
+- **Concurrency:** atomic writes; each write carries the content hash it was based on; a stale write gets HTTP 409, and the GUI reloads and re-applies or shows the conflict.
+
+**GUI editing operations** (WHY view and inspector):
+
+| Operation | Notes |
+|---|---|
+| Edit a statement | Inline |
+| Add a child intent | Gets the next free dotted id; starts with "no feature" (an honest diagnostic) |
+| Delete an intent | In-page confirmation. If features reference it, they become "feature with no intent" |
+| Move / reparent (drag in WHY view) | **Ids stay stable** (see 7.4). Hierarchy is stored by nesting, so display order changes but the id does not |
+| Add / edit / remove checks | Kind, source, statement, priority. Checks are descriptive in 2a unless they map to an existing computable check (checks as first-class objects is engine TODO 4) |
+| Assumptions | Accept / challenge (status), edit rationale |
+| Interpretations | Answer questions (already in iteration 1) |
+| Parameters | Live, as in iteration 1; nothing saved |
+
+**Stale-solution status.**
+- Each intent node's content (statement, checks, assumptions) is hashed. When the designer accepts a solution, the hashes are recorded in `<design>.review.json`.
+- An edited node shows **"intent changed · solution not reviewed"** in the tree, the HOW view, and the connections view, together with the features that realize it.
+- In 2a the designer can **mark it reviewed** ("solution still fits") or edit the DSL by hand. 2b adds "ask Claude".
+
+**Acceptance criteria (2a):**
+1. The bracket's intent tree loads from `shelf_bracket.intent.yaml`, and the GUI looks identical to iteration 1.
+2. Editing A.3's statement in the GUI writes the file (comments and key order preserved; the line diff is minimal). A.3 and `A.3.cable` show as stale, and marking them reviewed clears it.
+3. Adding a child intent under B creates `B.2`, flagged "no feature".
+4. Deleting C asks for confirmation; afterwards `C.gusset` shows "no intent".
+5. Saving the intent file in an editor while the GUI has unsaved edits produces a conflict, not a silent overwrite.
+6. Round-trip property tests: load → save produces byte-identical canonical output, and schema violations get readable errors.
+
+### 7.3 Iteration 2b: the model in the loop (proposals and diff review)
+
+- **Trigger:** on a stale node, **Ask Claude** (later: a redline mark, or a free-form request).
+- **Route (proposed):** dipm exposes an **MCP server** with tools such as `get_design`, `build`, `why`, `get_intent`, and `propose_patch`. Claude, e.g. a Claude Code session, reads the changed intent and submits a **proposal**: a patch to the DSL (and, if needed, the intent file) against a base content hash. This reuses the designer's existing Claude access, with no API keys in the app. A direct API integration remains an option.
+- **Review UI:** a **Proposals** panel shows:
+  - a semantic diff (intent tree, checks, features, interpretations);
+  - the DSL text diff;
+  - **geometry before/after**, overlaid or side by side, with changed faces highlighted;
+  - the check results for the proposed solution.
+
+  The designer **accepts** (the patch is applied, hashes are recorded, staleness clears) or **rejects with a comment** (fed back to Claude). Proposals against a stale base are rejected and regenerated.
+- **Safety:** proposals are inert until accepted; every accepted patch is a normal file change, visible in git.
+
+**Acceptance criteria (2b):** changing A.3's intent from "centered on the plate" to "offset 10 mm above the lower screw" yields a proposal whose DSL diff changes A.3's placement relation. The before/after geometry shows the cable hole moving, all checks pass, accepting applies it and clears staleness, and rejecting with a comment produces a revised proposal.
+
+### 7.4 Open decisions for iteration 2
+
+- **Ids vs. position.** Dotted ids (A.P.1) encode hierarchy, but moving a node shouldn't break DSL references. Proposed: ids are stable labels and never rewritten on move. A separate, explicit "rename id" action updates references in the DSL, using a safe codemod over the intent-id string literals in `tags=`, or via a 2b proposal.
+- **Where parameters live:** they stay in the DSL for 2a (they're "true design parameters", architecture §8.1). Moving them to the intent file is a later question.
+- **How formal checks are in the file:** free text plus kind/source for now; an expression language later (architecture §10, open question 1).
+
+## 8. Open items for later iterations
 
 - Redline layer: marks resolve to structural references and become comments on intent nodes (user-experience §3.1).
 - Previewing a reading's geometry before answering a question.
