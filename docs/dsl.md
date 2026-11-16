@@ -1,6 +1,6 @@
 # DSL and Engine Design
 
-*Status: working draft, 2026-11-15. Direction agreed in conversation; details provisional. Engine assumptions tested in [`spikes/01-occt-feasibility/RESULTS.md`](../spikes/01-occt-feasibility/RESULTS.md). Grounding and citations: [`reports/DSL mathematical foundations.md`](../reports/DSL%20mathematical%20foundations.md). Architecture context: [`architecture.md`](architecture.md).*
+*Status: working draft, 2026-11-15. Direction agreed in conversation; details provisional. First implementation: [`src/dipm/`](../src/dipm/NOTES.md) (v0; no constructive solver or explicit core IR yet). Engine assumptions tested in [`spikes/01-occt-feasibility/RESULTS.md`](../spikes/01-occt-feasibility/RESULTS.md) and [`spikes/02-operation-history/RESULTS.md`](../spikes/02-operation-history/RESULTS.md). Grounding and citations: [`reports/DSL mathematical foundations.md`](../reports/DSL%20mathematical%20foundations.md). Architecture context: [`architecture.md`](architecture.md).*
 
 ---
 
@@ -83,7 +83,11 @@ Requicha's r-set theory means a well-formed core tree denotes a valid solid. Val
 - Geometric predicates carry explicit tolerances and return *sets* on ties. **Ordinal indices (`face[17]`) are never used.**
 - **No identity references to contingent entities** such as fragments left by a later cut. Kernel history gives them no stable order. This costs some expressiveness, deliberately.
 - **Named exports** (architecture §2.3) carry explicit split/merge policies: `propagate_all`, `error_on_split`, `error_on_merge`. These policies apply to *any* reference, not just exports.
-- **Supported creator roles (validated in spike 01):** extrude caps (start/end), side faces from a sketch edge, edges from a sketch vertex, hole walls, cut rim edges, and fillet blend faces. A spike reference layer of about 80 lines resolved all 18 shelf-bracket references with declared cardinality and stayed stable across a 20-rebuild parameter sweep. Spike 01 also confirmed that fragment order after a split is arbitrary: it reverses with the sketch's start vertex. That justifies the ban on referencing contingent fragments by position.
+- **Supported creator roles.** Spike 01 validated extrude caps (start/end), side faces from a sketch edge, edges from a sketch vertex, hole walls, cut rim edges, and fillet blend faces. [spike 02](../spikes/02-operation-history/RESULTS.md) extended this to revolve, chamfer, shell, loft (partial), sweep, draft (partial), pattern, mirror, and `clean()`. Its **§6 role-vocabulary table** is the current per-operation reference (e.g. `R.cap(END)`, `C.corner(at=v)`, `Sh.rim(opening=f)`, `P.instance(k).wall`, `M.image(of=r)`).
+- **Derived references are structural.** `edges_between(face_ref, face_ref)` and similar intersections of structural references count as structural. They are the *only* way to name edges after draft and offset, whose edge history the kernel drops.
+- **A pattern instance index `k` is a declared index, not an ordinal.**
+- **Merges are explicit.** `clean()`, coplanar fuses, and mirrors can make two references alias one face. The ledger emits `merged` events: a warning by default, an error under `error_on_merge`.
+- **References to a shell's opening face continue onto the rim**, unless a policy forbids it. A spike reference layer of about 80 lines resolved all 18 shelf-bracket references with declared cardinality and stayed stable across a 20-rebuild parameter sweep. Spike 01 also confirmed that fragment order after a split is arbitrary: it reverses with the sketch's start vertex. That justifies the ban on referencing contingent fragments by position.
 
 ### 3.5 Kept out of the core
 
@@ -105,11 +109,22 @@ Requicha's r-set theory means a well-formed core tree denotes a valid solid. Val
 
 ### 4.3 Trusted primitives
 
-Some operations have no closure theorem but are indispensable: **fillet, chamfer, shell/offset, draft, sweep, loft, thicken.** They come from the kernel as trusted primitives. Each must:
+Some operations have no closure theorem but are indispensable: **fillet, chamfer, shell/offset, draft, sweep, loft, thicken.** They come from the kernel as trusted primitives. "Trusted" means *checked after every use*. Each must:
 
 - declare its expected topological deltas and the roles of the entities it creates (e.g. a fillet creates `blend` faces generated from each input edge)
 - be followed by the validity checks in §5
 - act only on named exports with split/merge policies
+- be followed by validity, ΔH/ΔS, and **volume-sign** checks ("material removed > 0" for cuts)
+
+**Three failure classes**, each observed in [spike 02](../spikes/02-operation-history/RESULTS.md):
+
+| Class | Example | Caught by |
+|---|---|---|
+| **Fails loudly** | chamfer or draft overreach raises | exception |
+| **Silently invalid** | collapsing shell; self-intersecting sweep (passes Euler!) | BRepCheck |
+| **Silently wrong but valid** | overlapping pattern instances passed as *one compound tool* cut nothing; the result passes BRepCheck *and* Euler | only ΔS, volume, and reference cardinality |
+
+The third class is why per-feature ΔS and volume checks are mandatory, not optional. Booleans always take a *list* of tools, never a possibly self-overlapping compound.
 
 ---
 
@@ -122,12 +137,14 @@ These are the rung-1 checks (architecture §4.1) that run regardless of intent:
    - count each sub-shape once by identity *plus location, ignoring orientation*, so seam edges count once;
    - **exclude degenerated edges**, which appear at sphere and cone poles *and at fillet corners*;
    - **never** count by underlying shape (`TShape`) alone: an extrude's end cap shares its start cap's `TShape`, which inflates H.
-3. **Per-feature topological deltas** derived from intent. Each feature *computes its expected deltas from how it interacts with existing geometry*; there is no fixed rule per feature type. A through-hole usually adds 1 to H, but one that crosses an existing hole adds 2 (spike 01). A blind hole adds 0; "split into two parts" adds a shell or solid. This check catches faults that reference checks miss: in spike 01, a shelf hole that turned blind against the gusset still resolved all its references, but its ΔH was wrong.
+
+   Spike 02 confirmed the rule on revolve, sweep, and torus seams with no refinement.
+3. **Per-feature topological deltas (ΔH *and* ΔS)** derived from intent. ΔS is as important as ΔH: it was the only invariant that caught the compound-tool error above. The per-operation ΔH/ΔS rules are tabulated in [spike 02](../spikes/02-operation-history/RESULTS.md) §2. Each feature *computes its expected deltas from how it interacts with existing geometry*; there is no fixed rule per feature type. A through-hole usually adds 1 to H, but one that crosses an existing hole adds 2 (spike 01). A blind hole adds 0; "split into two parts" adds a shell or solid. This check catches faults that reference checks miss: in spike 01, a shelf hole that turned blind against the gusset still resolved all its references, but its ΔH was wrong.
 4. **Topological signature** stored with each solution: (V, E, F, R, S, H) plus **two** canonical, order-independent face-adjacency hashes, alongside pinned versions (§6):
    - **geometry-inclusive:** detects any change;
    - **topology-only:** stays constant across legitimate parameter edits, so a change signals a structural flip.
 
-   **Canonical serialization is OCCT's BRep text format**, which was byte-identical across 64 builds per model in spike 01. STEP is an interchange format only: it embeds a timestamp and a per-process product-name counter, both of which must be stripped before comparing.
+   **Canonical serialization is OCCT's BRep text format**, which was byte-identical across 64 builds per model in spike 01 and for 26 of 29 models in spike 02. **Exception:** `BRepOffset` join mode (shells with no openings, outward shells, closed voids) produces different BRep bytes on every build, even single-threaded, while geometry and reference resolution stay identical. For those, compare (V,E,F,R,S,H), the adjacency hashes, and an **order-free role-geometry fingerprint** (each role's rounded centroid and area). A canonicalizing serializer is an open item. The topology-only hash should not include surface type, which equal loft sections can flip without any topology change. STEP is an interchange format only: it embeds a timestamp and a per-process product-name counter, both of which must be stripped before comparing.
 5. **Sketch constraint health:** structural degree-of-freedom counting at compile time (Laman-style; exact in 2D), plus Jacobian rank, redundancy, and conflict detection at evaluation time. 3D point-distance rigidity is an open problem, so we promise nothing for free 3D point constraints.
 6. **Reference determinism:** cardinality declared and met; no ordinals; tolerances explicit.
 7. **Stability harness:** perturb each design parameter across its declared range, rebuild, and assert that every reference keeps its cardinality and genealogy, and every branch tag holds. This doubles as the *edit stability* component of the idiomatic score (architecture §6).
@@ -169,7 +186,14 @@ These are the rung-1 checks (architecture §4.1) that run regardless of intent:
 | Tolerance quirks; seam and degenerate edges | Calibrate invariants on primitives; lint for near-coincident geometry |
 | Parallel Boolean modes may break determinism | Pin version; verify determinism in CI by rebuild-and-compare. Spike 01: byte-identical BRep with parallel mode both on and off, on one machine; cross-platform not yet tested |
 | History must come from OCP-level operations | build123d's own history API is too coarse (can't tell an end cap from a side face); the reference layer wraps OCP builders directly |
-| `IsDeleted` is unreliable after fillets (reports untouched edges as deleted) | Infer deletion from `Modified`/`Generated` and from presence in the result, never trust `IsDeleted` alone |
+| `IsDeleted` is unreliable for fillet **and chamfer** (reports untouched edges as deleted) | Infer deletion from `Modified`/`Generated` and from presence in the result, never trust `IsDeleted` alone |
+| Draft and offset report face images via `Generated`, not `Modified`, and give no edge history | Ledger follows same-type `Generated` (opt-in per primitive); edges via `edges_between` |
+| Full 360° revolve: `Generated` empty for profile edges perpendicular to the axis | Fall back to `MakeRevol.Revol().Shape(edge)` |
+| `MakeThickSolid` with no openings makes an offset, not a hollow | Lower "hollow" to offset + cut |
+| Collapsing offsets return invalid/null shapes without raising | Post-checks after every trusted primitive |
+| Compound tools that self-overlap make booleans silently cut nothing | Booleans take a list of tools |
+| `BRepOffset` join mode isn't byte-deterministic | Fingerprint comparison for those ops (§5.4) |
+| `clean()` (UnifySameDomain) merges faces | Its `History()` was complete and correct; run it **explicitly** after boolean-like ops, history-chained, never implicitly via build123d |
 | Python iteration over OCP lists is slow (~2.5 ms per list) | Use the workaround from spike 01 (`topo.py`); shelf bracket builds with all checks in ~33 ms |
 | Dense documentation | Use through build123d / OCP |
 
@@ -199,6 +223,6 @@ If any backend becomes a bottleneck, it is swapped behind the interface; the pro
 2. "Valid by construction" holds for the program, not the kernel's floating-point output.
 3. ~~OCCT counting conventions may break a naive Euler check.~~ **Resolved by spike 01:** the counting rule is in §5.2.
 4. Coarse kernel history: contingent entities can't be named stably (accepted restriction).
-5. build123d's history is too coarse; the reference layer uses OCP directly (spike 01). **Still untested:** history for revolve, shell, chamfer, loft, sweep, draft, and pattern, and build123d's face-merging `clean()` step.
+5. build123d's history is too coarse; the reference layer uses OCP directly. History is now validated for revolve, chamfer, shell, loft (partial), sweep, draft (partial), pattern, mirror, and `clean()` ([spike 02](../spikes/02-operation-history/RESULTS.md)). **Still untested:** feature-level mirror/pattern, fillet corner faces, sweep and loft options, and FeatureScript parity (see spike 02 §9).
 6. Branch tags add authoring burden unless the intent layer infers them reliably.
 7. **Cross-platform determinism is untested.** Spike 01 ran on one macOS/arm64 machine with OCCT 8.0.1. Linux/x86 and other OCCT versions are the main remaining risk (see also explore-further §4 on WASM).

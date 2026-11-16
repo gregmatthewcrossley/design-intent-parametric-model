@@ -533,6 +533,8 @@ fillet(inner_corner, radius=t)
 
 > Note `between(wall_pts[0], wall_pts[1])` for A.3: is that intent, or false coupling? If the cable hole's real intent is "centered on the plate," it should reference `mount_face.center()` instead. This is exactly the kind of ambiguity the tree must resolve from *purpose*, and it should be written as an explicit check so an edit test can tell the difference. Open question kept in the example deliberately.
 
+> **Implementation finding (v0 core, 2026-11-16).** Choosing "centered on the plate" exposed a second issue: with the §8.4a option-2 layout, the mount face's literal center lies *under the gusset footprint* at every shelf_depth. The v0 example interprets "the plate" as the exposed part of the mount face below the gusset (see `src/dipm/NOTES.md` DECISIONS #8). This is a real design conflict between C (gusset) and A.3. A tree-level resolution, re-examining option 1 (twin edge gussets) or redefining A.3's intent, is a good test case for upward verification and consolidation.
+
 ### 8.6 Edit tests
 
 | Edit | Expected | Verifies |
@@ -569,7 +571,16 @@ The first working system will likely use a frontier model as the intent engine (
 ## 10. Open questions
 
 1. **Check language.** How formal? A small expression language over kernel queries (as in §4.3) vs. natural language with a learned verifier. Likely: formal for *relation*/*rule*, free-form for *judgment*.
-2. **Intent ambiguity.** When geometry or text underdetermines intent (§8.5 note), prefer the simplest relational explanation, or ask the user? Probably both: an MDL-style prior plus a clarification budget.
+2. **Intent ambiguity → interpretations (proposed 2026-11-16; v0 implemented in `src/dipm/interpret.py`, see `src/dipm/NOTES.md` §6 and DECISIONS #23–31).** Ambiguities like "centered on *which* plate?" or "through *what*?" will keep arising, and the designer can't be asked about each one. Proposed mechanism:
+   - **Declare readings.** Each intent word lists its candidate readings in its package. Examples: `centered_on` → face centroid / exposed-region midpoint / between siblings; hole extent → through this plate / through all / up to next face / blind.
+   - **Eliminate by checks.** Each reading is lowered and evaluated against the node's checks across the declared parameter ranges. Readings that fail are dropped automatically (e.g. the face centroid lies under the gusset).
+   - **Measure whether it matters.** If the surviving readings produce the same geometry everywhere in range, the ambiguity has zero sensitivity and nobody is asked.
+   - **Choose a default by a ranked prior:** the package default with its rationale, then the simplest relation (MDL), then a learned prior.
+   - **Record the choice** as an assumption (§4.8) with its computed sensitivity.
+   - **Ask only when it matters:** when readings diverge within range *and* all pass the checks.
+   - **Remember the answer** as a preference in a user or house-style package, so the same question isn't asked again.
+
+   Real-world data is needed for one part only: improving the learned prior, i.e. which reading designers usually mean. Feature-tree datasets record exactly these choices, such as extrude and hole end conditions, subject to license caveats. The designer's own answers become data too.
 3. **Analysis checks.** When to bring in FEA, and what hand-calc approximations are good enough for early versions.
 4. **Library governance.** When does a recurring leaf solution become a library function, and how is it versioned?
 5. **Inputs beyond text.** How images, drawings, and meshes enter the tree — as root intents, as evidence attached to nodes, or as checks ("matches this silhouette")?

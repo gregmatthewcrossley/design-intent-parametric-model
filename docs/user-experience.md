@@ -50,6 +50,8 @@ A designer thinks spatially, so a text-only tool would fail them. The GUI doesn'
 
 **Architecture:** a headless engine with a CLI and API first, the browser GUI on top, and the same engine exposed as an **MCP server** so AI agents can drive it.
 
+Iteration 1 of the browser GUI is specified in [`gui.md`](gui.md).
+
 ### 3.1 Redline review: feedback with a red marker
 
 Designers already review drawings by **redlining** them. The GUI makes this a first-class input:
