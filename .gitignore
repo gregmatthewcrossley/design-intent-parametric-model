@@ -28,3 +28,6 @@ gui/playwright-report/
 
 # Preferences written by answering questions in fixtures (local state)
 tests/fixtures/*.prefs.json
+
+# Proposals and "Ask Claude" requests next to a design (dipm serve / dipm mcp; docs/gui.md §7.3)
+.dipm/
